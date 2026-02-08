@@ -17,6 +17,11 @@ budokan_interfaces = { git = "https://github.com/Provable-Games/budokan.git", br
 budokan_entry_requirement = { git = "https://github.com/Provable-Games/budokan.git", branch = "main" }
 game_components_minigame = { git = "https://github.com/Provable-Games/game-components.git", branch = "main"}
 
+[profile.dev.cairo]
+unstable-add-statements-functions-debug-info = true
+unstable-add-statements-code-locations-debug-info = true
+inlining-strategy = "avoid"
+
 [tool.snforge]
 # exit_first = true
 
