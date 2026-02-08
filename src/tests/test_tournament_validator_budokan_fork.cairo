@@ -9,9 +9,6 @@ use budokan_extensions::tests::constants::{
 use budokan_interfaces::budokan::{
     GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
-};
 use budokan_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
@@ -132,8 +129,7 @@ fn test_tournament_validator_any_mode_participants() {
     // Configure extension: [QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN,
     // top_positions, tournament_id]
     let extension_config: Span<felt252> = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -171,8 +167,7 @@ fn test_tournament_validator_any_mode_winners() {
     // Configure extension: [QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN,
     // top_positions, tournament_id]
     let extension_config = array![
-        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -206,9 +201,8 @@ fn test_tournament_validator_any_mode_multiple_qualifying_tournaments() {
 
     // Configure with multiple qualifying tournaments
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_1.into(), qualifying_tournament_2.into(),
-        qualifying_tournament_3.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_1.into(),
+        qualifying_tournament_2.into(), qualifying_tournament_3.into(),
     ]
         .span();
 
@@ -253,8 +247,8 @@ fn test_tournament_validator_any_per_tournament_mode() {
     // QUALIFYING_MODE_PER_TOKEN, top_positions, tournament_ids...]
     // Entry tracking is now per-token (like a "punch card")
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_1.into(), qualifying_tournament_2.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_1.into(),
+        qualifying_tournament_2.into(),
     ]
         .span();
 
@@ -304,8 +298,8 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_1.into(), qualifying_tournament_2.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_1.into(),
+        qualifying_tournament_2.into(),
     ]
         .span();
 
@@ -344,11 +338,11 @@ fn test_tournament_validator_all_mode_participants() {
         contract_address: validator_address,
     };
 
-        let qualifying_tournament_1: u64 = 1;
+    let qualifying_tournament_1: u64 = 1;
     let qualifying_tournament_2: u64 = 2;
     let qualifying_tournament_3: u64 = 3;
 
-        // Configure extension: [QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, top_positions,
+    // Configure extension: [QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, top_positions,
     // tournament_ids...]
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, qualifying_tournament_1.into(),
@@ -356,30 +350,30 @@ fn test_tournament_validator_all_mode_participants() {
     ]
         .span();
 
-        start_cheat_caller_address(validator_address, budokan);
+    start_cheat_caller_address(validator_address, budokan);
     validator.add_config(600, 0, extension_config);
     stop_cheat_caller_address(validator_address);
 
-        assert!(
+    assert!(
         tournament_validator.get_qualifying_mode(600) == QUALIFYING_MODE_ALL,
         "Qualifying mode should be ALL",
     );
 
-        let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(600);
+    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(600);
     assert!(qualifying_ids.len() == 3, "Should have 3 qualifying tournaments");
 
-        // For ALL mode with PARTICIPANTS:
+    // For ALL mode with PARTICIPANTS:
     // Qualification proof should be: [token_id_1, token_id_2, token_id_3]
     let token_id_1: u64 = 10;
     let token_id_2: u64 = 20;
     let token_id_3: u64 = 30;
 
-        let qualification: Span<felt252> = array![
+    let qualification: Span<felt252> = array![
         token_id_1.into(), token_id_2.into(), token_id_3.into(),
     ]
         .span();
 
-        // Note: Actual validation would require these tokens to exist and belong to player
+    // Note: Actual validation would require these tokens to exist and belong to player
     // This test verifies the configuration structure
     assert!(qualification.len() == 3, "Qualification should have 3 token IDs");
 }
@@ -529,8 +523,7 @@ fn test_tournament_validator_insufficient_config() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Try to configure with insufficient params (missing tournament ID)
-    let extension_config = array![QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0]
-        .span();
+    let extension_config = array![QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0].span();
 
     start_cheat_caller_address(validator_address, budokan);
     validator.add_config(1100, 0, extension_config);
@@ -558,8 +551,7 @@ fn test_tournament_validator_unlimited_entries() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -600,8 +592,7 @@ fn test_tournament_validator_per_entry_mode_basic() {
     // Configure extension: AT_LEAST_ONE mode with 2 entries per qualifying token
     // Entries are tracked per-token (like a "punch card")
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -648,8 +639,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
 
     // Configure with 3 entries per token
     let extension_config = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -692,8 +682,7 @@ fn test_tournament_validator_top_positions_configuration() {
     // Configure with top_positions=3 (only top 3 count as winners)
     let qualifying_tournament_id: u64 = 10;
     let extension_config = array![
-        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 3,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 3, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -719,8 +708,7 @@ fn test_tournament_validator_top_positions_zero_means_unlimited() {
     // Configure with top_positions=0 (all positions qualify)
     let qualifying_tournament_id: u64 = 11;
     let extension_config = array![
-        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament_id.into(),
+        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
     ]
         .span();
 
@@ -836,7 +824,7 @@ fn test_tournament_validator_all_mode_tokens_blocked_after_transfer() {
     let minigame = minigame_address_sepolia();
     let player1 = test_account_sepolia();
     // Use a different address for player2
-    let player2: ContractAddress = starknet::contract_address_const::<0x123456>();
+    let player2: ContractAddress = 0x123456.try_into().unwrap();
 
     // Create 2 qualifying tournaments where player1 participates
     let (tournament_id_1, token_id_1) = create_qualifying_tournament_with_player(

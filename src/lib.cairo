@@ -4,6 +4,7 @@ pub mod examples {
     pub mod opus_troves_validator;
     pub mod snapshot_validator;
     pub mod tournament_validator;
+    pub mod zkpassport_validator;
 }
 
 pub mod tests {

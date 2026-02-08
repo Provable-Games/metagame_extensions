@@ -13,9 +13,14 @@ openzeppelin_access = { git = "https://github.com/OpenZeppelin/cairo-contracts.g
 openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
 opus = { git = "https://github.com/lindy-labs/opus_contracts", tag = "v1.1.0" }
 wadray = { git = "https://github.com/lindy-labs/wadray.git", tag = "v0.3.0" }
-budokan_interfaces = { git = "https://github.com/Provable-Games/budokan.git", branch = "feat/re-architecture" }
-budokan_entry_requirement = { git = "https://github.com/Provable-Games/budokan.git", branch = "feat/re-architecture" }
+budokan_interfaces = { git = "https://github.com/Provable-Games/budokan.git", branch = "main" }
+budokan_entry_requirement = { git = "https://github.com/Provable-Games/budokan.git", branch = "main" }
 game_components_minigame = { git = "https://github.com/Provable-Games/game-components.git", branch = "main"}
+
+[profile.dev.cairo]
+unstable-add-statements-functions-debug-info = true
+unstable-add-statements-code-locations-debug-info = true
+inlining-strategy = "avoid"
 
 [tool.snforge]
 # exit_first = true
@@ -31,7 +36,7 @@ block_id.tag = "latest"
 [[tool.snforge.fork]]
 name = "mainnet"
 url = "https://api.cartridge.gg/x/starknet/mainnet"
-block_id.tag = "latest"
+block_id.number = "6123632"
 
 [dev-dependencies]
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.53.0" }
