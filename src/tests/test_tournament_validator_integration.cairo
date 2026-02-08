@@ -220,8 +220,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifying_tournament.id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament.id.into(),
     ]
         .span();
 
@@ -332,8 +331,8 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifier_1.id.into(), qualifier_2.id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifier_1.id.into(),
+        qualifier_2.id.into(),
     ]
         .span();
 
@@ -883,8 +882,8 @@ fn test_entries_left_cumulative_per_tournament_mode() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
-        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0,
-        qualifier1.id.into(), qualifier2.id.into(),
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifier1.id.into(),
+        qualifier2.id.into(),
     ]
         .span();
 

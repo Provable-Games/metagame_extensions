@@ -22,9 +22,8 @@ use budokan_interfaces::entry_validator::{
 };
 use opus::types::AssetBalance;
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address,
-    start_cheat_block_timestamp_global, stop_cheat_block_timestamp_global,
-    stop_cheat_caller_address,
+    ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
+    start_cheat_caller_address, stop_cheat_block_timestamp_global, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
 use wadray::Wad;
@@ -38,7 +37,10 @@ pub trait IERC20<TState> {
 #[starknet::interface]
 pub trait IAbbot<TState> {
     fn open_trove(
-        ref self: TState, yang_assets: Span<AssetBalance>, forge_amount: Wad, max_forge_fee_pct: Wad,
+        ref self: TState,
+        yang_assets: Span<AssetBalance>,
+        forge_amount: Wad,
+        max_forge_fee_pct: Wad,
     ) -> u64;
     fn forge(ref self: TState, trove_id: u64, amount: Wad, max_forge_fee_pct: Wad);
     fn melt(ref self: TState, trove_id: u64, amount: Wad);
@@ -94,9 +96,7 @@ fn test_game_config(minigame_address: ContractAddress) -> GameConfig {
 fn test_schedule() -> Schedule {
     let current_time = get_block_timestamp();
     Schedule {
-        registration: Option::Some(
-            Period { start: current_time + 100, end: current_time + 4000 },
-        ),
+        registration: Option::Some(Period { start: current_time + 100, end: current_time + 4000 }),
         game: Period { start: current_time + 4001, end: current_time + 8000 },
         submission_duration: 3600,
     }
@@ -130,7 +130,7 @@ fn test_opus_validator_debt_based() {
     stop_cheat_caller_address(strk_token_address());
 
     let yang_asset = AssetBalance {
-        address: strk_token_address(), amount: 1000000000000000000000, // 1000 STRK
+        address: strk_token_address(), amount: 1000000000000000000000 // 1000 STRK
     };
 
     start_cheat_caller_address(abbot_address(), account);
@@ -138,7 +138,7 @@ fn test_opus_validator_debt_based() {
         .open_trove(
             array![yang_asset].span(),
             20000000000000000000_u128.into(), // Forge 20 yin initially (well above threshold)
-            10_u128.into(), // 10% max fee
+            10_u128.into() // 10% max fee
         );
     stop_cheat_caller_address(abbot_address());
 
@@ -168,7 +168,7 @@ fn test_opus_validator_debt_based() {
             asset_count.into(), // Asset count (0 = wildcard)
             threshold.into(), // Threshold (wad units)
             value_per_entry.into(), // Value per entry (wad units)
-            max_entries.into(), // Max entries
+            max_entries.into() // Max entries
         ]
             .span(),
     };
@@ -280,16 +280,14 @@ fn test_opus_validator_debt_threshold_and_banning() {
     strk_token.approve(opus_strk_gate_address(), 1000000000000000000000);
     stop_cheat_caller_address(strk_token_address());
 
-    let yang_asset = AssetBalance {
-        address: strk_token_address(), amount: 1000000000000000000000,
-    };
+    let yang_asset = AssetBalance { address: strk_token_address(), amount: 1000000000000000000000 };
 
     start_cheat_caller_address(abbot_address(), account);
     let trove_id = abbot
         .open_trove(
             array![yang_asset].span(),
             30000000000000000000_u128.into(), // Forge 30 yin (safer LTV)
-            10_u128.into(), // 10% max fee
+            10_u128.into() // 10% max fee
         );
     stop_cheat_caller_address(abbot_address());
 
@@ -302,7 +300,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
     let extension_config = ExtensionConfig {
         address: validator_address,
         config: array![
-            asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into()
+            asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into(),
         ]
             .span(),
     };
@@ -339,7 +337,10 @@ fn test_opus_validator_debt_threshold_and_banning() {
 
     // Step 6: Melt yin to drop below threshold
     start_cheat_caller_address(abbot_address(), account);
-    abbot.melt(trove_id, 22000000000000000000_u128.into()); // Melt 22 yin, leaving ~8 (below 10 threshold)
+    abbot
+        .melt(
+            trove_id, 22000000000000000000_u128.into(),
+        ); // Melt 22 yin, leaving ~8 (below 10 threshold)
     stop_cheat_caller_address(abbot_address());
 
     // Step 7: Should now be invalid (below threshold)
@@ -375,7 +376,7 @@ fn test_opus_validator_asset_filtering() {
     stop_cheat_caller_address(strk_token_address());
 
     let yang_asset = AssetBalance {
-        address: strk_token_address(), amount: 1000000000000000000000, // 1000 STRK
+        address: strk_token_address(), amount: 1000000000000000000000 // 1000 STRK
     };
 
     start_cheat_caller_address(abbot_address(), account);
@@ -383,7 +384,7 @@ fn test_opus_validator_asset_filtering() {
         .open_trove(
             array![yang_asset].span(),
             20000000000000000000_u128.into(), // Forge 20 yin
-            10_u128.into(), // 10% max fee
+            10_u128.into() // 10% max fee
         );
     stop_cheat_caller_address(abbot_address());
 
@@ -400,7 +401,7 @@ fn test_opus_validator_asset_filtering() {
             strk_token_address().into(), // STRK address
             threshold.into(), // Threshold (wad)
             value_per_entry.into(), // Value per entry (wad)
-            max_entries.into(), // Max entries
+            max_entries.into() // Max entries
         ]
             .span(),
     };
@@ -465,7 +466,7 @@ fn test_opus_validator_config_zero_threshold() {
     stop_cheat_caller_address(strk_token_address());
 
     let yang_asset = AssetBalance {
-        address: strk_token_address(), amount: 1000000000000000000000, // 1000 STRK
+        address: strk_token_address(), amount: 1000000000000000000000 // 1000 STRK
     };
 
     start_cheat_caller_address(abbot_address(), account);
@@ -491,7 +492,7 @@ fn test_opus_validator_config_zero_threshold() {
     let extension_config = ExtensionConfig {
         address: validator_address,
         config: array![
-            asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into()
+            asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into(),
         ]
             .span(),
     };

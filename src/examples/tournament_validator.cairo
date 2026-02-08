@@ -275,7 +275,9 @@ pub mod TournamentValidator {
                 self
                     .emit(
                         EntryRecorded {
-                            tournament_id, qualifying_token_id: first_token, entries_used: current_entries + 1,
+                            tournament_id,
+                            qualifying_token_id: first_token,
+                            entries_used: current_entries + 1,
                         },
                     );
             } else {
@@ -367,7 +369,12 @@ pub mod TournamentValidator {
 
             self
                 .validate_token_participation(
-                    tournament_id, qualifying_tournament_id, token_id, player_address, qualification, 2,
+                    tournament_id,
+                    qualifying_tournament_id,
+                    token_id,
+                    player_address,
+                    qualification,
+                    2,
                 )
         }
 

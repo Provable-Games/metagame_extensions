@@ -359,7 +359,8 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     let budokan_addr = budokan_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let player1 = test_account_mainnet();
-    let player2: ContractAddress = 0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac
+    let player2: ContractAddress =
+        0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac
         .try_into()
         .unwrap(); // Known address with governance tokens on mainnet
 
@@ -413,9 +414,10 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     start_cheat_caller_address(budokan_addr, player1);
     let (token_id_1, entry_1) = budokan
         .enter_tournament(
-            tournament.id, 'player1', player1, Option::Some(
-                QualificationProof::Extension(array![].span()),
-            ),
+            tournament.id,
+            'player1',
+            player1,
+            Option::Some(QualificationProof::Extension(array![].span())),
         );
     stop_cheat_caller_address(budokan_addr);
 
@@ -433,8 +435,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     println!("Player2 balance after receiving: {}", governance_token.balance_of(player2));
 
     // KEY TEST: Player1's existing entry is no longer valid (would be banned)
-    let player1_still_valid = validator
-        .valid_entry(tournament.id, player1, array![].span());
+    let player1_still_valid = validator.valid_entry(tournament.id, player1, array![].span());
     assert(!player1_still_valid, 'Player1 no longer valid');
     println!("Player1 existing entry would be banned: {}", !player1_still_valid);
 
@@ -447,9 +448,10 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         start_cheat_caller_address(budokan_addr, player2);
         let (token_id_2, entry_2) = budokan
             .enter_tournament(
-                tournament.id, 'player2', player2, Option::Some(
-                    QualificationProof::Extension(array![].span()),
-                ),
+                tournament.id,
+                'player2',
+                player2,
+                Option::Some(QualificationProof::Extension(array![].span())),
             );
         stop_cheat_caller_address(budokan_addr);
 
@@ -718,4 +720,5 @@ fn test_governance_validator_cross_tournament_independence() {
 //       Entries = (vote_count - balance_threshold) / votes_per_entry
 //       Higher voting power = more entries
 // ==============================================
+
 

@@ -1,7 +1,9 @@
 //! Opus Troves Validator - Debt Based
 //!
-//! This validator calculates tournament entries based on borrowed yin (stablecoin) from Opus Protocol.
-//! Players with active debt positions can enter tournaments, with entries scaling based on amount borrowed.
+//! This validator calculates tournament entries based on borrowed yin (stablecoin) from Opus
+//! Protocol.
+//! Players with active debt positions can enter tournaments, with entries scaling based on amount
+//! borrowed.
 //!
 //! ## How It Works:
 //! - Sums debt across ALL troves owned by a player
@@ -86,7 +88,7 @@ pub mod OpusTrovesValidator {
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use wadray::Wad;
     use super::{
-        IAbbotDispatcher, IAbbotDispatcherTrait, IShrineDispatcher, IShrineDispatcherTrait, Health,
+        Health, IAbbotDispatcher, IAbbotDispatcherTrait, IShrineDispatcher, IShrineDispatcherTrait,
     };
 
     // Opus mainnet addresses
@@ -254,7 +256,7 @@ pub mod OpusTrovesValidator {
                     .unwrap();
                 self.tournament_assets.write((tournament_id, i), asset_address);
                 i += 1;
-            };
+            }
 
             // Parse remaining config (offset by asset_count)
             let offset: usize = (1 + asset_count).into();
@@ -334,7 +336,7 @@ pub mod OpusTrovesValidator {
                 }
 
                 i += 1;
-            };
+            }
 
             // No matching assets found
             false
@@ -371,7 +373,7 @@ pub mod OpusTrovesValidator {
                     },
                     Option::None => { break; },
                 }
-            };
+            }
 
             total_debt >= threshold
         }
@@ -440,7 +442,7 @@ pub mod OpusTrovesValidator {
                     },
                     Option::None => { break; },
                 }
-            };
+            }
 
             // Calculate total entries based on total debt (all in wad units)
             let total_entries: u128 = if total_debt_wad > threshold {
@@ -452,13 +454,11 @@ pub mod OpusTrovesValidator {
             // Convert to u8 with cap at 255
             let mut total_entries_u8: u8 = match total_entries.try_into() {
                 Option::Some(val) => val,
-                Option::None => {
-                    if total_entries > 255 {
-                        255_u8
-                    } else {
-                        0
-                    }
-                },
+                Option::None => { if total_entries > 255 {
+                    255_u8
+                } else {
+                    0
+                } },
             };
 
             // Apply max entries cap if set

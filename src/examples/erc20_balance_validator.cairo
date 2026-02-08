@@ -85,7 +85,8 @@ pub mod ERC20BalanceValidator {
         }
 
         /// Check if an existing entry should be banned
-        /// Returns true if the player's balance dropped below minimum/exceeded maximum OR is over quota
+        /// Returns true if the player's balance dropped below minimum/exceeded maximum OR is over
+        /// quota
         fn should_ban_entry(
             self: @ContractState,
             tournament_id: u64,
