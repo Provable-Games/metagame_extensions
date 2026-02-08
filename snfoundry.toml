@@ -3,22 +3,22 @@
 
 [sncast.default]
 account = "deployer"
-url = "https://api.cartridge.gg/x/starknet/sepolia"
+url = "https://api.cartridge.gg/x/starknet/sepolia/rpc/v0_10"
 
 [sncast.sepolia]
 account = "deployer"
-url = "https://api.cartridge.gg/x/starknet/sepolia"
+url = "https://api.cartridge.gg/x/starknet/sepolia/rpc/v0_10"
 
 [sncast.mainnet]
 account = "deployer"
-url = "https://api.cartridge.gg/x/starknet/mainnet"
+url = "https://api.cartridge.gg/x/starknet/mainnet/rpc/v0_10"
 
 [[tool.snforge.fork]]
 name = "sepolia"
-url = "https://api.cartridge.gg/x/starknet/sepolia"
-block_id.tag = "latest"
+url = "https://api.cartridge.gg/x/starknet/sepolia/rpc/v0_10"
+block_id.number = "6326561"
 
 [[tool.snforge.fork]]
 name = "mainnet"
-url = "https://api.cartridge.gg/x/starknet/mainnet"
+url = "https://api.cartridge.gg/x/starknet/mainnet/rpc/v0_10"
 block_id.number = "6123632"

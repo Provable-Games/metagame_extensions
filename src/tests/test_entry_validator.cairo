@@ -122,8 +122,7 @@ fn test_entry_status_changes_after_transfer() {
     let can_enter = entry_validator.valid_entry(tournament_id, player1, array![].span());
     assert(can_enter, 'Player1 should enter initially');
 
-    // Verify player2 can also enter (mock returns same for all)
-    // Actually we need to simulate transfer: stop mock, set balance to 0
+    // Simulate transfer: player1's balance becomes 0
     stop_mock_call(erc721_address(), selector!("balance_of"));
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
 
