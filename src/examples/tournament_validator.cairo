@@ -47,11 +47,15 @@ pub trait ITournamentValidator<TState> {
 
 #[starknet::contract]
 pub mod TournamentValidator {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
-    use budokan_interfaces::budokan::{IBudokanDispatcher, IBudokanDispatcherTrait, Phase};
-    use budokan_interfaces::registration::{IRegistrationDispatcher, IRegistrationDispatcherTrait};
-    use game_components_minigame::interface::{IMinigameDispatcher, IMinigameDispatcherTrait};
+    use budokan_extensions::deps::budokan::budokan::{
+        IBudokanDispatcher, IBudokanDispatcherTrait, Phase,
+    };
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::registration::{
+        IRegistrationDispatcher, IRegistrationDispatcherTrait,
+    };
+    use budokan_extensions::deps::game_components::{IMinigameDispatcher, IMinigameDispatcherTrait};
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;

@@ -2,237 +2,36 @@
 version = 1
 
 [[package]]
-name = "access_control"
-version = "0.3.0"
-source = "git+https://github.com/lindy-labs/access_control.git?tag=v0.3.0#8fdfc97e15c4fb1b6cb1aa0da91d94e5956c3b1a"
-
-[[package]]
-name = "alexandria_bytes"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-dependencies = [
- "alexandria_data_structures",
- "alexandria_math",
-]
-
-[[package]]
-name = "alexandria_data_structures"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-
-[[package]]
-name = "alexandria_encoding"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-dependencies = [
- "alexandria_bytes",
- "alexandria_data_structures",
- "alexandria_math",
- "alexandria_numeric",
-]
-
-[[package]]
-name = "alexandria_math"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-
-[[package]]
-name = "alexandria_numeric"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-dependencies = [
- "alexandria_math",
- "alexandria_searching",
-]
-
-[[package]]
-name = "alexandria_searching"
-version = "0.7.0"
-source = "git+https://github.com/keep-starknet-strange/alexandria.git?tag=v0.7.0#06e3019612cfcbbdb66cbd849840451ede7ee6aa"
-dependencies = [
- "alexandria_data_structures",
-]
-
-[[package]]
-name = "budokan_entry_requirement"
-version = "0.0.1"
-source = "git+https://github.com/Provable-Games/budokan.git?branch=main#57ce7e7a6c32455daa6c1f23c019f6f3b09fb742"
-dependencies = [
- "budokan_interfaces",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
-]
-
-[[package]]
 name = "budokan_extensions"
 version = "0.1.0"
 dependencies = [
- "budokan_entry_requirement",
- "budokan_interfaces",
- "game_components_minigame",
- "openzeppelin_access",
- "openzeppelin_governance",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
- "openzeppelin_token",
- "openzeppelin_utils",
- "opus",
  "snforge_std",
- "wadray",
-]
-
-[[package]]
-name = "budokan_interfaces"
-version = "0.0.1"
-source = "git+https://github.com/Provable-Games/budokan.git?branch=main#57ce7e7a6c32455daa6c1f23c019f6f3b09fb742"
-
-[[package]]
-name = "game_components_metagame"
-version = "1.5.1"
-source = "git+https://github.com/Provable-Games/game-components.git?branch=main#88c145062c59e2db0495f281ae2931531dfd5111"
-dependencies = [
- "game_components_minigame",
- "game_components_token",
- "game_components_utils",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_token",
-]
-
-[[package]]
-name = "game_components_minigame"
-version = "1.5.1"
-source = "git+https://github.com/Provable-Games/game-components.git?branch=main#88c145062c59e2db0495f281ae2931531dfd5111"
-dependencies = [
- "game_components_metagame",
- "game_components_token",
- "game_components_utils",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_token",
-]
-
-[[package]]
-name = "game_components_test_starknet"
-version = "1.5.1"
-source = "git+https://github.com/Provable-Games/game-components.git?branch=main#88c145062c59e2db0495f281ae2931531dfd5111"
-dependencies = [
- "game_components_metagame",
- "game_components_minigame",
- "game_components_token",
- "game_components_utils",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_token",
-]
-
-[[package]]
-name = "game_components_token"
-version = "1.5.1"
-source = "git+https://github.com/Provable-Games/game-components.git?branch=main#88c145062c59e2db0495f281ae2931531dfd5111"
-dependencies = [
- "game_components_metagame",
- "game_components_minigame",
- "game_components_test_starknet",
- "game_components_utils",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_token",
-]
-
-[[package]]
-name = "game_components_utils"
-version = "1.5.1"
-source = "git+https://github.com/Provable-Games/game-components.git?branch=main#88c145062c59e2db0495f281ae2931531dfd5111"
-dependencies = [
- "alexandria_encoding",
- "game_components_metagame",
- "game_components_minigame",
- "game_components_token",
- "graffiti",
-]
-
-[[package]]
-name = "graffiti"
-version = "0.1.0"
-source = "git+https://github.com/ponderingdemocritus/graffiti?rev=bc569531791dbc71c6cd8d9bc154c34eedad31fe#bc569531791dbc71c6cd8d9bc154c34eedad31fe"
-
-[[package]]
-name = "openzeppelin_access"
-version = "3.0.0-alpha.3"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
-dependencies = [
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
-]
-
-[[package]]
-name = "openzeppelin_governance"
-version = "3.0.0-alpha.3"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
-dependencies = [
- "openzeppelin_access",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_token",
- "openzeppelin_utils",
 ]
 
 [[package]]
 name = "openzeppelin_interfaces"
-version = "2.1.0-alpha.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
+version = "2.1.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 
 [[package]]
 name = "openzeppelin_introspection"
-version = "3.0.0-alpha.3"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
+version = "3.0.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 dependencies = [
  "openzeppelin_interfaces",
-]
-
-[[package]]
-name = "openzeppelin_token"
-version = "3.0.0-alpha.3"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
-dependencies = [
- "openzeppelin_access",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "openzeppelin_utils",
-]
-
-[[package]]
-name = "openzeppelin_utils"
-version = "2.1.0-alpha.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0-alpha.3#ba2228ec4070c9a7ac08d2833ebcf6bcf7ff70ac"
-dependencies = [
- "openzeppelin_interfaces",
-]
-
-[[package]]
-name = "opus"
-version = "1.1.0"
-source = "git+https://github.com/lindy-labs/opus_contracts?tag=v1.1.0#1f93bb46cff403625b11ddad3c2a23633e946911"
-dependencies = [
- "access_control",
- "wadray",
 ]
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.53.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.53.0#c953d8695197843ed5b69705613733c4d7a1b1eb"
+version = "0.55.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.55.0#8891212a4fe99f1787298042f828ebd4e4abe9a3"
 
 [[package]]
 name = "snforge_std"
-version = "0.53.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.53.0#c953d8695197843ed5b69705613733c4d7a1b1eb"
+version = "0.55.0"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.55.0#8891212a4fe99f1787298042f828ebd4e4abe9a3"
 dependencies = [
  "snforge_scarb_plugin",
 ]
-
-[[package]]
-name = "wadray"
-version = "0.3.0"
-source = "git+https://github.com/lindy-labs/wadray.git?tag=v0.3.0#9b1f0e21abac6811b09d8a9e861b5d53e6a52d9c"

@@ -1,8 +1,8 @@
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::examples::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use core::poseidon::poseidon_hash_span;
 use snforge_std::{

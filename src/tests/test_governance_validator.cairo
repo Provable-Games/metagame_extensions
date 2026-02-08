@@ -1,4 +1,4 @@
-use budokan_interfaces::entry_validator::{
+use budokan_extensions::deps::budokan::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use snforge_std::{

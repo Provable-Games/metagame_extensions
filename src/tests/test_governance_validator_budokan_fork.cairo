@@ -1,15 +1,15 @@
+use budokan_extensions::deps::budokan::budokan::{
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
+};
+use budokan_extensions::deps::budokan::entry_requirement::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
+};
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::tests::constants::{
     budokan_address_mainnet, governance_token_address, governor_address, minigame_address_mainnet,
     test_account_mainnet,
-};
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
@@ -444,7 +444,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
         start_cheat_caller_address(budokan_addr, player2);
-        let (token_id_2, entry_2) = budokan
+        let (token_id_2, _entry_2) = budokan
             .enter_tournament(
                 tournament.id,
                 'player2',

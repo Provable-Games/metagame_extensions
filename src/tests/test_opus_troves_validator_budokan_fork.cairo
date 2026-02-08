@@ -5,28 +5,28 @@
 //! - Forging yin increases entries
 //! - Melting yin decreases entries (can trigger banning)
 
+use budokan_extensions::deps::budokan::budokan::{
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
+};
+use budokan_extensions::deps::budokan::entry_requirement::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig,
+};
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
+use budokan_extensions::deps::opus::AssetBalance;
+use budokan_extensions::deps::wadray::Wad;
 use budokan_extensions::examples::opus_troves_validator::{
     IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
 };
 use budokan_extensions::tests::constants::{
     budokan_address_mainnet, minigame_address_mainnet, test_account_mainnet,
 };
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
-};
-use opus::types::AssetBalance;
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
     start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
-use wadray::Wad;
 
 #[starknet::interface]
 pub trait IERC20<TState> {
@@ -54,8 +54,8 @@ pub trait IShrine<TState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: wadray::Ray,
-    pub ltv: wadray::Ray,
+    pub threshold: budokan_extensions::deps::wadray::Ray,
+    pub ltv: budokan_extensions::deps::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }
@@ -381,7 +381,7 @@ fn test_opus_validator_asset_filtering() {
     };
 
     start_cheat_caller_address(abbot_address(), account);
-    let trove_id = abbot
+    let _trove_id = abbot
         .open_trove(
             array![yang_asset].span(),
             20000000000000000000_u128.into(), // Forge 20 yin
@@ -471,7 +471,7 @@ fn test_opus_validator_config_zero_threshold() {
     };
 
     start_cheat_caller_address(abbot_address(), account);
-    let trove_id = abbot
+    let _trove_id = abbot
         .open_trove(
             array![yang_asset].span(),
             5000000000000000000_u128.into(), // Forge 5 yin (5e18 in wad)

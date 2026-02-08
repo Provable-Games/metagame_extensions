@@ -8,11 +8,11 @@
 // Query: age >= 18
 // Verifier: 0x06ad2f4c866eabb03443098ecc798af1791952bc138bd32904dd215d8585c655
 
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::examples::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use core::poseidon::poseidon_hash_span;
 use snforge_std::fs::{FileTrait, read_txt};

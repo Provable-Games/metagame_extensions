@@ -1,3 +1,5 @@
+pub mod deps;
+
 pub mod examples {
     pub mod erc20_balance_validator;
     pub mod governance_validator;
@@ -11,7 +13,6 @@ pub mod tests {
     pub mod constants;
     pub mod mocks {
         pub mod entry_validator_mock;
-        pub mod erc721_mock;
         pub mod open_entry_validator_mock;
     }
     #[cfg(test)]
