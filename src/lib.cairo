@@ -32,4 +32,8 @@ pub mod tests {
     pub mod test_tournament_validator_budokan_fork;
     #[cfg(test)]
     pub mod test_tournament_validator_integration;
+    #[cfg(test)]
+    pub mod test_zkpassport_fork;
+    #[cfg(test)]
+    pub mod test_zkpassport_validator;
 }
