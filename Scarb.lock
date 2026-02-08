@@ -56,7 +56,7 @@ dependencies = [
 [[package]]
 name = "budokan_entry_requirement"
 version = "0.0.1"
-source = "git+https://github.com/Provable-Games/budokan.git?branch=feat%2Fre-architecture#ecee85c6c7786df189f5faaf9d8f8e1c86ba7d28"
+source = "git+https://github.com/Provable-Games/budokan.git?branch=main#57ce7e7a6c32455daa6c1f23c019f6f3b09fb742"
 dependencies = [
  "budokan_interfaces",
  "openzeppelin_interfaces",
@@ -84,7 +84,7 @@ dependencies = [
 [[package]]
 name = "budokan_interfaces"
 version = "0.0.1"
-source = "git+https://github.com/Provable-Games/budokan.git?branch=feat%2Fre-architecture#ecee85c6c7786df189f5faaf9d8f8e1c86ba7d28"
+source = "git+https://github.com/Provable-Games/budokan.git?branch=main#57ce7e7a6c32455daa6c1f23c019f6f3b09fb742"
 
 [[package]]
 name = "game_components_metagame"
