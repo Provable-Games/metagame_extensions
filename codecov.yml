@@ -18,6 +18,9 @@ ignore:
   # Test files
   - "**/tests/**"
 
+  # Vendored upstream dependencies (derive-generated Serde/Event code)
+  - "src/deps/"
+
   # Build outputs
   - "target/"
   - ".snfoundry_cache/"
