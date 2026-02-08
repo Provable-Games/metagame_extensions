@@ -223,6 +223,16 @@ pub mod ZkPassportValidator {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u8> {
+            // Check nullifier if qualification data is provided
+            if qualification.len() >= 2 {
+                let nullifier_low: felt252 = *qualification.at(0);
+                let nullifier_high: felt252 = *qualification.at(1);
+                let nullifier_hash = InternalImpl::hash_nullifier(nullifier_low, nullifier_high);
+                if self.used_nullifiers.read((tournament_id, nullifier_hash)) {
+                    return Option::Some(0);
+                }
+            }
+
             let entry_limit = self.tournament_entry_limit.read(tournament_id);
             if entry_limit == 0 {
                 return Option::None;
