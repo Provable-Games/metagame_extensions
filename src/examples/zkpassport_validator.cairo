@@ -55,6 +55,8 @@ pub mod ZkPassportValidator {
         IZkPassportValidator,
     };
 
+    const EXPECTED_PUBLIC_INPUTS_LEN: u32 = 7;
+
     component!(path: EntryValidatorComponent, storage: entry_validator, event: EntryValidatorEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -135,7 +137,7 @@ pub mod ZkPassportValidator {
             };
 
             // 5. Assert public_inputs length
-            if public_inputs.len() != 7 {
+            if public_inputs.len() != EXPECTED_PUBLIC_INPUTS_LEN {
                 return false;
             }
 
