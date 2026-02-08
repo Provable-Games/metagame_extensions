@@ -381,7 +381,7 @@ fn test_opus_validator_asset_filtering() {
     };
 
     start_cheat_caller_address(abbot_address(), account);
-    let trove_id = abbot
+    let _trove_id = abbot
         .open_trove(
             array![yang_asset].span(),
             20000000000000000000_u128.into(), // Forge 20 yin
@@ -471,7 +471,7 @@ fn test_opus_validator_config_zero_threshold() {
     };
 
     start_cheat_caller_address(abbot_address(), account);
-    let trove_id = abbot
+    let _trove_id = abbot
         .open_trove(
             array![yang_asset].span(),
             5000000000000000000_u128.into(), // Forge 5 yin (5e18 in wad)

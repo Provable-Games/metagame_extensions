@@ -444,7 +444,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
         start_cheat_caller_address(budokan_addr, player2);
-        let (token_id_2, entry_2) = budokan
+        let (token_id_2, _entry_2) = budokan
             .enter_tournament(
                 tournament.id,
                 'player2',

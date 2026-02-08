@@ -598,7 +598,7 @@ fn test_erc20_validator_direct_validation() {
     stop_cheat_caller_address(validator_address);
 
     // Test validation - account should have ETH on mainnet
-    let is_valid = validator.valid_entry(tournament_id, account, array![].span());
+    let _is_valid = validator.valid_entry(tournament_id, account, array![].span());
     // Note: This may pass or fail depending on the account's actual ETH balance
     // In a real test, you'd use an account known to have sufficient balance
 
