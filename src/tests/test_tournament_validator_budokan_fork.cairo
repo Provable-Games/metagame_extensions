@@ -9,9 +9,6 @@ use budokan_extensions::tests::constants::{
 use budokan_interfaces::budokan::{
     GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
-};
 use budokan_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
@@ -827,7 +824,7 @@ fn test_tournament_validator_all_mode_tokens_blocked_after_transfer() {
     let minigame = minigame_address_sepolia();
     let player1 = test_account_sepolia();
     // Use a different address for player2
-    let player2: ContractAddress = starknet::contract_address_const::<0x123456>();
+    let player2: ContractAddress = 0x123456.try_into().unwrap();
 
     // Create 2 qualifying tournaments where player1 participates
     let (tournament_id_1, token_id_1) = create_qualifying_tournament_with_player(

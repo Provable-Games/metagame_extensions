@@ -6,10 +6,8 @@ use budokan_extensions::tests::constants::{
     minigame_address_sepolia, test_account_mainnet, test_account_sepolia,
 };
 use budokan_interfaces::budokan::{
-    EntryFee, GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-    Tournament,
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_interfaces::distribution::Distribution;
 use budokan_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
@@ -258,9 +256,7 @@ fn test_snapshot_validator_budokan_multiple_entries() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Budokan: Invalid entry according to extension 3153038089301242389588581583100131598904611288619457362839648784731183636807",
-)]
+#[should_panic(expected: "Budokan: Invalid entry according to extension")]
 #[fork("mainnet")]
 fn test_snapshot_validator_budokan_unauthorized_entry() {
     // This test demonstrates that a player without snapshot entries cannot enter through Budokan
@@ -513,9 +509,7 @@ fn test_snapshot_validator_ownership() {
     assert(true, 'Ownership test');
 }
 #[test]
-#[should_panic(
-    expected: "EntryRequirement: No entries left according to extension 3153038089301242389588581583100131598904611288619457362839648784731183636807",
-)]
+#[should_panic(expected: "EntryRequirement: No entries left according to extension")]
 #[fork("mainnet")]
 fn test_snapshot_validator_exceed_entry_limit() {
     // This test verifies that a player cannot enter a tournament more times

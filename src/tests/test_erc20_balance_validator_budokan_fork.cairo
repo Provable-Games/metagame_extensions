@@ -7,10 +7,8 @@ use budokan_extensions::tests::constants::{
     test_account_sepolia,
 };
 use budokan_interfaces::budokan::{
-    EntryFee, GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-    Tournament,
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_interfaces::distribution::Distribution;
 use budokan_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };

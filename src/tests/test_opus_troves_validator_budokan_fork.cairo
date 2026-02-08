@@ -23,7 +23,7 @@ use budokan_interfaces::entry_validator::{
 use opus::types::AssetBalance;
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
-    start_cheat_caller_address, stop_cheat_block_timestamp_global, stop_cheat_caller_address,
+    start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
 use wadray::Wad;
@@ -336,11 +336,12 @@ fn test_opus_validator_debt_threshold_and_banning() {
     // Expected: (30-10)/5 = 4 entries
 
     // Step 6: Melt yin to drop below threshold
+    // Account may have pre-existing trove debt at this block, so melt aggressively
     start_cheat_caller_address(abbot_address(), account);
     abbot
         .melt(
-            trove_id, 22000000000000000000_u128.into(),
-        ); // Melt 22 yin, leaving ~8 (below 10 threshold)
+            trove_id, 28000000000000000000_u128.into(),
+        ); // Melt 28 yin, leaving ~2 (well below 10 threshold)
     stop_cheat_caller_address(abbot_address());
 
     // Step 7: Should now be invalid (below threshold)
