@@ -47,8 +47,8 @@
 //! → Player with 25 yin debt gets (25e18 - 5e18) / 2e18 = 10 entries
 //! ```
 
+use budokan_extensions::deps::wadray::Wad;
 use starknet::ContractAddress;
-use wadray::Wad;
 
 #[starknet::interface]
 pub trait IAbbot<TContractState> {
@@ -65,8 +65,8 @@ pub trait IShrine<TContractState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: wadray::Ray,
-    pub ltv: wadray::Ray,
+    pub threshold: budokan_extensions::deps::wadray::Ray,
+    pub ltv: budokan_extensions::deps::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }
@@ -80,13 +80,13 @@ pub trait IOpusTrovesValidator<TState> {
 
 #[starknet::contract]
 pub mod OpusTrovesValidator {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::wadray::Wad;
     use core::num::traits::Zero;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
-    use wadray::Wad;
     use super::{
         Health, IAbbotDispatcher, IAbbotDispatcherTrait, IShrineDispatcher, IShrineDispatcherTrait,
     };

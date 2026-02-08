@@ -7,8 +7,8 @@ pub trait IEntryValidatorMock<TState> {
 
 #[starknet::contract]
 pub mod entry_validator_mock {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use core::num::traits::Zero;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;

@@ -1,3 +1,9 @@
+use budokan_extensions::deps::budokan::budokan::{
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
+};
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::examples::tournament_validator::{
     ITournamentValidatorDispatcher, ITournamentValidatorDispatcherTrait,
     QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
@@ -5,12 +11,6 @@ use budokan_extensions::examples::tournament_validator::{
 };
 use budokan_extensions::tests::constants::{
     budokan_address_sepolia, minigame_address_sepolia, test_account_sepolia,
-};
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,

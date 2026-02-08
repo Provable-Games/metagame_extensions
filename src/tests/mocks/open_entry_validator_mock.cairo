@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod open_entry_validator_mock {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};

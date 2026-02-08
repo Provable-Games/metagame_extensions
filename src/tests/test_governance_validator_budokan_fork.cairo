@@ -1,15 +1,15 @@
+use budokan_extensions::deps::budokan::budokan::{
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
+};
+use budokan_extensions::deps::budokan::entry_requirement::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
+};
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::tests::constants::{
     budokan_address_mainnet, governance_token_address, governor_address, minigame_address_mainnet,
     test_account_mainnet,
-};
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{

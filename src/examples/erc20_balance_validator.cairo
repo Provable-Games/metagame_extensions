@@ -19,8 +19,8 @@ pub trait IEntryValidatorMock<TState> {
 
 #[starknet::contract]
 pub mod ERC20BalanceValidator {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};

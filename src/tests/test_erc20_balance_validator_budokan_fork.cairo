@@ -1,3 +1,12 @@
+use budokan_extensions::deps::budokan::budokan::{
+    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
+};
+use budokan_extensions::deps::budokan::entry_requirement::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
+};
+use budokan_extensions::deps::budokan::entry_validator::{
+    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+};
 use budokan_extensions::examples::erc20_balance_validator::{
     IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
 };
@@ -5,15 +14,6 @@ use budokan_extensions::tests::constants::{
     budokan_address_mainnet, budokan_address_sepolia, eth_token_address, lords_token_address,
     minigame_address_mainnet, minigame_address_sepolia, strk_token_address, test_account_mainnet,
     test_account_sepolia,
-};
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
-};
-use budokan_interfaces::entry_validator::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,

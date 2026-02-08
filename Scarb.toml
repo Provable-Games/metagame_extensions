@@ -4,18 +4,9 @@ version = "0.1.0"
 edition = "2024_07"
 
 [dependencies]
-starknet = "2.13.1"
-openzeppelin_token = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-openzeppelin_governance = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-openzeppelin_utils = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-openzeppelin_access = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0-alpha.3" }
-opus = { git = "https://github.com/lindy-labs/opus_contracts", tag = "v1.1.0" }
-wadray = { git = "https://github.com/lindy-labs/wadray.git", tag = "v0.3.0" }
-budokan_interfaces = { git = "https://github.com/Provable-Games/budokan.git", branch = "main" }
-budokan_entry_requirement = { git = "https://github.com/Provable-Games/budokan.git", branch = "main" }
-game_components_minigame = { git = "https://github.com/Provable-Games/game-components.git", branch = "main"}
+starknet = "2.15.1"
+openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
+openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
 
 [profile.dev.cairo]
 unstable-add-statements-functions-debug-info = true
@@ -31,7 +22,7 @@ inlining-strategy = "avoid"
 [[tool.snforge.fork]]
 name = "sepolia"
 url = "https://api.cartridge.gg/x/starknet/sepolia"
-block_id.tag = "latest"
+block_id.number = "6326561"
 
 [[tool.snforge.fork]]
 name = "mainnet"
@@ -39,7 +30,7 @@ url = "https://api.cartridge.gg/x/starknet/mainnet"
 block_id.number = "6123632"
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.53.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.55.0" }
 
 [scripts]
 test = "snforge test"

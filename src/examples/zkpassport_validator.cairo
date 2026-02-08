@@ -43,8 +43,8 @@ pub trait IZkPassportValidator<TState> {
 
 #[starknet::contract]
 pub mod ZkPassportValidator {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent;
+    use budokan_extensions::deps::budokan::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
     use openzeppelin_introspection::src5::SRC5Component;
