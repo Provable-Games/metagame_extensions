@@ -65,7 +65,7 @@ pub mod MyValidator {
 }
 ```
 
-### Validators (in `src/examples/`)
+### Validators (in `src/presets/`)
 
 | Validator                 | Config Parameters                                                                          | Banning | Key Concept                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------ |
@@ -105,7 +105,7 @@ The `test-contracts` workflow runs `scarb fmt --check` then `snforge test --cove
 
 ## Adding a New Validator
 
-1. Create `src/examples/my_validator.cairo` following the contract structure pattern above
+1. Create `src/presets/my_validator.cairo` following the contract structure pattern above
 2. Add the module to `src/lib.cairo` under `pub mod examples`
 3. Create tests (at minimum a fork test) and register in `src/lib.cairo` under `pub mod tests`
 4. Add a deployment script in `scripts/`

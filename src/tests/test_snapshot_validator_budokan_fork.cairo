@@ -7,7 +7,7 @@ use budokan_extensions::deps::budokan::entry_requirement::{
 use budokan_extensions::deps::budokan::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_extensions::examples::snapshot_validator::{
+use budokan_extensions::presets::snapshot_validator::{
     Entry, ISnapshotValidatorDispatcher, ISnapshotValidatorDispatcherTrait, SnapshotStatus,
 };
 use budokan_extensions::tests::constants::{

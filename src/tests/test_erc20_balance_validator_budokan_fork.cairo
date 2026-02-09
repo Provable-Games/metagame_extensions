@@ -7,7 +7,7 @@ use budokan_extensions::deps::budokan::entry_requirement::{
 use budokan_extensions::deps::budokan::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_extensions::examples::erc20_balance_validator::{
+use budokan_extensions::presets::erc20_balance_validator::{
     IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
 };
 use budokan_extensions::tests::constants::{

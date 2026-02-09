@@ -5,7 +5,7 @@ use budokan_extensions::deps::budokan::budokan::{
 use budokan_extensions::deps::budokan::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_extensions::examples::tournament_validator::{
+use budokan_extensions::presets::tournament_validator::{
     ITournamentValidatorDispatcher, ITournamentValidatorDispatcherTrait,
     QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
     QUALIFYING_MODE_PER_TOKEN,

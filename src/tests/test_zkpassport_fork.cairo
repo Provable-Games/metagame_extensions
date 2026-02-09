@@ -11,7 +11,7 @@
 use budokan_extensions::deps::budokan::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_extensions::examples::zkpassport_validator::{
+use budokan_extensions::presets::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
 use core::poseidon::poseidon_hash_span;

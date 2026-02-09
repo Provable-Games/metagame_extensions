@@ -16,7 +16,7 @@ use budokan_extensions::deps::budokan::entry_validator::{
 };
 use budokan_extensions::deps::opus::AssetBalance;
 use budokan_extensions::deps::wadray::Wad;
-use budokan_extensions::examples::opus_troves_validator::{
+use budokan_extensions::presets::opus_troves_validator::{
     IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
 };
 use budokan_extensions::tests::constants::{

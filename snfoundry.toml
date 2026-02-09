@@ -10,7 +10,7 @@ account = "deployer"
 url = "https://api.cartridge.gg/x/starknet/sepolia/rpc/v0_10"
 
 [sncast.mainnet]
-account = "deployer"
+account = "mainnet-deployer"
 url = "https://api.cartridge.gg/x/starknet/mainnet/rpc/v0_10"
 
 [[tool.snforge.fork]]

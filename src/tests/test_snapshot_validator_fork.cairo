@@ -1,7 +1,7 @@
 use budokan_extensions::entry_validator::interface::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_extensions::examples::snapshot_validator::{
+use budokan_extensions::presets::snapshot_validator::{
     ISnapshotValidatorDispatcher, ISnapshotValidatorDispatcherTrait, Snapshot,
 };
 use snforge_std::{
