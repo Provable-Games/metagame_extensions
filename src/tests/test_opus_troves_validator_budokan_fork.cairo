@@ -148,11 +148,8 @@ fn test_opus_validator_debt_based() {
     let shrine = IShrineDispatcher { contract_address: shrine_address() };
     let health_initial: Health = shrine.get_trove_health(trove_id);
 
-    println!("Initial debt (Wad): {}", health_initial.debt.val);
-
     // Debt is in 18 decimals (yin decimals), not 36
-    let initial_debt_simple: u128 = health_initial.debt.val / 1000000000000000000;
-    println!("Initial debt (simple): {}", initial_debt_simple);
+    let _initial_debt_simple: u128 = health_initial.debt.val / 1000000000000000000;
 
     // Step 4: Configure validator for DEBT mode (wildcard - all troves)
     // Config format: [asset_count, threshold, value_per_entry, max_entries]
@@ -211,19 +208,16 @@ fn test_opus_validator_debt_based() {
 
     // Step 8: Debug - check if we can see the trove
     let abbot_check = IAbbotDispatcher { contract_address: abbot_address() };
-    let trove_ids = abbot_check.get_user_trove_ids(account);
-    println!("Number of troves for account: {}", trove_ids.len());
+    let _trove_ids = abbot_check.get_user_trove_ids(account);
 
     // Step 8: Validate entry and check entries based on initial debt
     let is_valid = validator.valid_entry(tournament.id, account, array![].span());
-    println!("Is valid: {}", is_valid);
     assert(is_valid, 'Player should be valid');
 
     let entries_left_initial = validator.entries_left(tournament.id, account, array![].span());
     assert(entries_left_initial.is_some(), 'Should have entries');
 
     let initial_entries = entries_left_initial.unwrap();
-    println!("Initial entries (debt={}): {}", initial_debt_simple, initial_entries);
     assert(initial_entries > 0, 'Should have initial entries');
 
     // Expected: (initial_debt_simple - 5) / 2
@@ -236,23 +230,15 @@ fn test_opus_validator_debt_based() {
 
     // Step 10: Check new debt and entries
     let health_after_forge: Health = shrine.get_trove_health(trove_id);
-    let new_debt_simple: u128 = health_after_forge.debt.val / 1000000000000000000;
-    println!("New debt after forge (simple): {}", new_debt_simple);
+    let _new_debt_simple: u128 = health_after_forge.debt.val / 1000000000000000000;
 
     let entries_left_after_forge = validator.entries_left(tournament.id, account, array![].span());
     let new_entries = entries_left_after_forge.unwrap();
-    println!("New entries (debt={}): {}", new_debt_simple, new_entries);
 
     // Entries should have increased!
     // Expected: (new_debt_simple - 5) / 2
     // If new_debt_simple = 40, then (40-5)/2 = 17 entries
     assert(new_entries > initial_entries, 'Entries should increase');
-
-    println!(
-        "Debt mode VERIFIED: More borrowed yin = More entries ({} -> {})",
-        initial_entries,
-        new_entries,
-    );
 }
 
 // ==============================================
@@ -331,8 +317,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
     let is_valid_initial = validator.valid_entry(tournament.id, account, array![].span());
     assert(is_valid_initial, 'Should be valid initially');
 
-    let initial_entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
-    println!("Initial entries with 30 yin debt: {}", initial_entries);
+    let _initial_entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
     // Expected: (30-10)/5 = 4 entries
 
     // Step 6: Melt yin to drop below threshold
@@ -347,8 +332,6 @@ fn test_opus_validator_debt_threshold_and_banning() {
     // Step 7: Should now be invalid (below threshold)
     let is_valid_after_melt = validator.valid_entry(tournament.id, account, array![].span());
     assert(!is_valid_after_melt, 'Should be invalid');
-
-    println!("SUCCESS: Melting below threshold correctly invalidates entry");
 }
 
 // ==============================================
@@ -434,10 +417,7 @@ fn test_opus_validator_asset_filtering() {
     assert(is_valid, 'Should be valid with STRK');
 
     let entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
-    println!("Entries with STRK-backed trove: {}", entries);
     assert(entries > 0, 'Should have entries');
-
-    println!("SUCCESS: Asset filtering works - STRK troves counted");
 }
 
 // ==============================================
@@ -533,13 +513,8 @@ fn test_opus_validator_config_zero_threshold() {
     assert(is_valid, 'Should be valid');
 
     let entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
-    println!("Entries with config [0, 0, 1e18, 0]: {}", entries);
 
     // With threshold=0 and value_per_entry=1e18, entries = total_debt_wad / 1e18
     // Should have at least 5 entries (may be more if account has existing debt)
     assert(entries >= 5, 'Should have at least 5');
-
-    println!("SUCCESS: Config [0, 0, 1e18, 0] works correctly with wad units");
-    println!("NOTE: threshold and value_per_entry NOW use WAD UNITS (18 decimals)");
-    println!("      For 1 yin per entry, use value_per_entry=1000000000000000000 (1e18)");
 }

@@ -5,8 +5,8 @@ edition = "2024_07"
 
 [dependencies]
 starknet = "2.15.1"
-openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
-openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
+openzeppelin_introspection = "3.0.0" 
+openzeppelin_interfaces = "2.1.0"
 
 [profile.dev.cairo]
 unstable-add-statements-functions-debug-info = true
@@ -30,7 +30,7 @@ url = "https://api.cartridge.gg/x/starknet/mainnet/rpc/v0_10"
 block_id.number = "6123632"
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.55.0" }
+snforge_std = "0.56.0"
 
 [scripts]
 test = "snforge test"

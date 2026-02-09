@@ -13,25 +13,29 @@ dependencies = [
 [[package]]
 name = "openzeppelin_interfaces"
 version = "2.1.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:f69fdb36eb894a0e0732385e723c5ff56d8cb4c1d49b29446c77eefac00b02a5"
 
 [[package]]
 name = "openzeppelin_introspection"
 version = "3.0.0"
-source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:ee491981a69736cde220f8b7dd290b6d8620c85ee6b83c81f665f5bef78b62b1"
 dependencies = [
  "openzeppelin_interfaces",
 ]
 
 [[package]]
 name = "snforge_scarb_plugin"
-version = "0.55.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.55.0#8891212a4fe99f1787298042f828ebd4e4abe9a3"
+version = "0.56.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:d5f2d878f7ae36c8149c517e2d618a95d7833598a76083cb12ea3f00da06a618"
 
 [[package]]
 name = "snforge_std"
-version = "0.55.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.55.0#8891212a4fe99f1787298042f828ebd4e4abe9a3"
+version = "0.56.0"
+source = "registry+https://scarbs.xyz/"
+checksum = "sha256:87dfe06ffd5cf1d5a075b7a5c8dff442b66d0eeaf27921140cf446213eb29a68"
 dependencies = [
  "snforge_scarb_plugin",
 ]

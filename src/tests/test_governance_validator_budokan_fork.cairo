@@ -316,7 +316,6 @@ fn test_governance_validator_validate_entries_ban() {
     // Get balance before transfer
     let governance_token = IERC20Dispatcher { contract_address: governance_token_address() };
     let player_balance_before = governance_token.balance_of(player1);
-    println!("Player balance before transfer: {}", player_balance_before);
 
     // Transfer governance tokens away to make player no longer meet requirements
     let recipient: ContractAddress = 0x999.try_into().unwrap();
@@ -327,12 +326,10 @@ fn test_governance_validator_validate_entries_ban() {
 
     // Check balance after transfer
     let player_balance_after = governance_token.balance_of(player1);
-    println!("Player balance after transfer: {}", player_balance_after);
     assert(player_balance_after == 0, 'Balance should be 0');
 
     // Verify player no longer meets requirements
     let is_valid_after_transfer = validator.valid_entry(tournament.id, player1, array![].span());
-    println!("Is valid after transfer: {}", is_valid_after_transfer);
     assert(!is_valid_after_transfer, 'Should no longer be valid');
 
     // This demonstrates the ban validation flow:
@@ -429,17 +426,12 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     governance_token.transfer(player2, player1_balance);
     stop_cheat_caller_address(governance_token_address());
 
-    println!("Player1 balance after transfer: {}", governance_token.balance_of(player1));
-    println!("Player2 balance after receiving: {}", governance_token.balance_of(player2));
-
     // KEY TEST: Player1's existing entry is no longer valid (would be banned)
     let player1_still_valid = validator.valid_entry(tournament.id, player1, array![].span());
     assert(!player1_still_valid, 'Player1 no longer valid');
-    println!("Player1 existing entry would be banned: {}", !player1_still_valid);
 
     // KEY TEST: Player2 can still enter NEW entries (has governance tokens)
     let player2_can_enter = validator.valid_entry(tournament.id, player2, array![].span());
-    println!("Player2 can enter new entries: {}", player2_can_enter);
 
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
@@ -454,7 +446,6 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         stop_cheat_caller_address(budokan_addr);
 
         assert(token_id_2 > token_id_1, 'Player2 token ID higher');
-        println!("Player2 successfully entered: token_id={}", token_id_2);
     }
 
     // DEMONSTRATION:
