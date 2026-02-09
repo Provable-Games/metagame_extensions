@@ -49,11 +49,11 @@ scarb fmt                               # Format Cairo files
 scarb fmt --check                       # Check formatting (used in CI)
 ```
 
-## Mainnet Contracts
+## Deployed Contracts
 
-| Validator | Address | Verified |
-| --------- | ------- | -------- |
-| **ZK Passport** | [`0x01a25f04d151c1295ba3223f7e63b89ec89762fe29d68c5f1896f86cadf62f4c`](https://starkscan.co/contract/0x01a25f04d151c1295ba3223f7e63b89ec89762fe29d68c5f1896f86cadf62f4c) | [Voyager](https://voyager.online/class/0x077e217af8d07dc10e2e6e8e079de726aad124ba5bef1ca543637115182d11ed) |
+| Validator | Mainnet | Sepolia |
+| --------- | ------- | ------- |
+| **ZK Passport** | [`0x01a2...2f4c`](https://voyager.online/contract/0x01a25f04d151c1295ba3223f7e63b89ec89762fe29d68c5f1896f86cadf62f4c) | [`0x046a...0c7f`](https://sepolia.voyager.online/contract/0x046af2c4fe14ddf0f6a3bf91a3981e71c1b150e85701d387a05a201b1c530c7f) |
 
 ## Deployment
 
