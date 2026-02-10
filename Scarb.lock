@@ -2,9 +2,35 @@
 version = 1
 
 [[package]]
-name = "budokan_extensions"
+name = "budokan_entry_validator"
 version = "0.1.0"
 dependencies = [
+ "budokan_interfaces",
+ "openzeppelin_introspection",
+]
+
+[[package]]
+name = "budokan_interfaces"
+version = "0.1.0"
+
+[[package]]
+name = "budokan_test_common"
+version = "0.1.0"
+dependencies = [
+ "budokan_entry_validator",
+ "budokan_interfaces",
+ "openzeppelin_interfaces",
+ "openzeppelin_introspection",
+ "snforge_std",
+]
+
+[[package]]
+name = "budokan_validators"
+version = "0.1.0"
+dependencies = [
+ "budokan_entry_validator",
+ "budokan_interfaces",
+ "budokan_test_common",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
  "snforge_std",

@@ -2,34 +2,59 @@
 
 **budokan-extensions** is a Cairo smart contract library providing modular **entry validators** for the [Budokan](https://github.com/Provable-Games/budokan) tournament platform on Starknet. Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
 
+The repo is structured as a Scarb workspace with four packages:
+
+| Package | Path | Purpose |
+|---------|------|---------|
+| `budokan_interfaces` | `packages/interfaces/` | Pure traits and types (`IEntryValidator`, `IBudokan`, etc.) |
+| `budokan_entry_validator` | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators |
+| `budokan_validators` | `packages/validators/` | All 6 pre-built validator contracts + tests |
+| `budokan_test_common` | `packages/test_common/` | Shared mocks and test constants |
+
 ## Build & Test Commands
 
 ```bash
-scarb build                    # Compile contracts
-scarb run test                 # Run all tests (alias for snforge test)
-snforge test                   # Run all tests directly
-snforge test <test_name>       # Run a specific test by name filter
-snforge test --coverage        # Run tests with code coverage (used in CI)
-scarb fmt                      # Format all Cairo files
-scarb fmt --check              # Check formatting without modifying (used in CI)
+scarb build                                    # Compile all packages
+snforge test --workspace                       # Run all tests
+snforge test -p budokan_validators             # Run validator tests only
+snforge test -p budokan_validators <filter>    # Run a specific test by name filter
+snforge test --workspace --coverage            # Run tests with code coverage (used in CI)
+scarb fmt --workspace                          # Format all Cairo files
+scarb fmt --check --workspace                  # Check formatting without modifying (used in CI)
 ```
 
 Fork testing (against live Starknet state):
 
 ```bash
-snforge test --fork-name sepolia    # Test against Sepolia
-snforge test --fork-name mainnet    # Test against Mainnet
+snforge test -p budokan_validators --fork-name sepolia    # Test against Sepolia
+snforge test -p budokan_validators --fork-name mainnet    # Test against Mainnet
 ```
 
 ## Toolchain Versions
 
-Pinned in `.tool-versions` — currently Scarb 2.13.1, Starknet Foundry 0.53.0, Rust 1.89.0.
+Pinned in `.tool-versions` — currently Scarb 2.15.1, Starknet Foundry 0.56.0, Rust 1.89.0.
 
 ## Architecture
 
+### Package Dependency Graph
+
+```
+starknet (external)
+    |
+budokan_interfaces ─── depends on: starknet only
+    |
+budokan_entry_validator ─── depends on: budokan_interfaces, openzeppelin_introspection
+    |
+budokan_validators ─── depends on: budokan_interfaces, budokan_entry_validator,
+    |                               openzeppelin_introspection, openzeppelin_interfaces
+    |
+budokan_test_common ─── depends on: budokan_interfaces, budokan_entry_validator,
+                                     openzeppelin_introspection, openzeppelin_interfaces, snforge_std
+```
+
 ### EntryValidator Trait
 
-All validators implement the `EntryValidator` trait from `budokan_entry_requirement`. The core lifecycle:
+All validators implement the `EntryValidator` trait from `budokan_entry_validator`. The core lifecycle:
 
 1. **`add_config(tournament_id, entry_limit, config)`** — Called by Budokan when a tournament registers this validator. Asserts caller is Budokan. Deserializes `config: Span<felt252>` into validator-specific settings stored in per-tournament Maps.
 2. **`validate_entry(tournament_id, player_address, qualification)`** — Returns bool. Checks if player meets entry criteria.
@@ -65,7 +90,7 @@ pub mod MyValidator {
 }
 ```
 
-### Validators (in `src/presets/`)
+### Validators (in `packages/validators/src/`)
 
 | Validator                 | Config Parameters                                                                          | Banning | Key Concept                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------ |
@@ -85,27 +110,31 @@ pub mod MyValidator {
 
 ### Test Organization
 
-- **Unit tests**: `test_entry_validator.cairo` — mock-based basic validation
+- **Unit tests**: `packages/validators/src/tests/test_entry_validator.cairo` — mock-based basic validation
 - **Fork tests** (`*_budokan_fork`): Run against live Sepolia/Mainnet Budokan contracts
 - **Integration tests** (`*_integration`): Multi-contract workflows with locally deployed contracts
-- **Mocks** (`src/tests/mocks/`): `entry_validator_mock`, `open_entry_validator_mock`, `erc721_mock`
-- **Constants** (`src/tests/constants.cairo`): Mainnet/Sepolia addresses for Budokan, tokens, governance
+- **Mocks** (`packages/test_common/src/mocks/`): `entry_validator_mock`, `open_entry_validator_mock`
+- **Constants** (`packages/test_common/src/constants.cairo`): Mainnet/Sepolia addresses for Budokan, tokens, governance
+- **Examples** (`examples/`): Uncompiled reference/WIP validators (not part of any package)
 
 ### Dependencies
 
-- **budokan_interfaces** / **budokan_entry_requirement**: Core Budokan traits (from `Provable-Games/budokan`, branch `main`)
-- **OpenZeppelin Cairo v3.0.0-alpha.3**: Token, governance, SRC5, access control
-- **opus** (v1.1.0): Opus Protocol lending contracts (for troves validator)
-- **wadray** (v0.3.0): Fixed-point WAD/RAY math
-- **game_components_minigame**: Game components from Provable-Games
+- **openzeppelin_introspection** (3.0.0): SRC5 interface detection
+- **openzeppelin_interfaces** (2.1.0): ERC20, ERC721, Governor, Votes interfaces
+- **snforge_std** (0.56.0): Starknet Foundry test framework (dev-dependency)
+
+External protocol type stubs are vendored in `packages/validators/src/externals/`:
+- `wadray.cairo` — Fixed-point WAD/RAY math (from Opus)
+- `opus.cairo` — Opus Protocol types (AssetBalance)
+- `game_components.cairo` — IMinigame interface (from Provable-Games)
 
 ## CI
 
-The `test-contracts` workflow runs `scarb fmt --check` then `snforge test --coverage` on every PR and push to main. Code coverage is uploaded to Codecov with a 90% patch target.
+The `test-contracts` workflow runs `scarb fmt --check --workspace` then `snforge test --workspace --coverage` on every PR and push to main. Code coverage is uploaded to Codecov with a 90% patch target.
 
 ## Adding a New Validator
 
-1. Create `src/presets/my_validator.cairo` following the contract structure pattern above
-2. Add the module to `src/lib.cairo` under `pub mod examples`
-3. Create tests (at minimum a fork test) and register in `src/lib.cairo` under `pub mod tests`
+1. Create `packages/validators/src/my_validator.cairo` following the contract structure pattern above
+2. Add the module to `packages/validators/src/lib.cairo`
+3. Create tests in `packages/validators/src/tests/` and register in `lib.cairo` under `#[cfg(test)] pub mod tests`
 4. Add a deployment script in `scripts/`

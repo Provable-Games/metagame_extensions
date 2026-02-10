@@ -6,6 +6,15 @@
 
 Modular entry validators for the [Budokan](https://github.com/Provable-Games/budokan) tournament platform on Starknet. Each validator defines qualification criteria that determine who can enter a tournament and how many entries they receive.
 
+## Packages
+
+| Package | Description |
+| ------- | ----------- |
+| [`budokan_interfaces`](packages/interfaces/) | Pure traits and types for entry validators |
+| [`budokan_entry_validator`](packages/entry_validator/) | `EntryValidatorComponent` SDK for building validators |
+| [`budokan_validators`](packages/validators/) | Pre-built validator contracts |
+| [`budokan_test_common`](packages/test_common/) | Shared test mocks and constants |
+
 ## Validators
 
 | Validator         | Description                                                   |
@@ -29,24 +38,23 @@ Toolchain versions are pinned in `.tool-versions`:
 ### Build
 
 ```bash
-scarb build
+scarb build                             # Build all packages
 ```
 
 ### Test
 
 ```bash
-scarb run test                          # Run all tests
-snforge test <test_name>                # Run a specific test
-snforge test --coverage                 # Run with code coverage
-snforge test --fork-name sepolia        # Run against live Sepolia state
-snforge test --fork-name mainnet        # Run against live Mainnet state
+snforge test --workspace                # Run all tests
+snforge test -p budokan_validators      # Run validator tests only
+snforge test -p budokan_validators <name> # Run a specific test by filter
+snforge test --workspace --coverage     # Run with code coverage
 ```
 
 ### Format
 
 ```bash
-scarb fmt                               # Format Cairo files
-scarb fmt --check                       # Check formatting (used in CI)
+scarb fmt --workspace                   # Format Cairo files
+scarb fmt --check --workspace           # Check formatting (used in CI)
 ```
 
 ## Deployed Contracts

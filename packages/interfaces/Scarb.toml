@@ -1,0 +1,9 @@
+[package]
+name = "budokan_interfaces"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+
+[lib]

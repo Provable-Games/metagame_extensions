@@ -29,7 +29,7 @@ jobs:
         with:
           scarb-version: ${{ env.SCARB_VERSION }}
 
-      - run: scarb fmt --check
+      - run: scarb fmt --check --workspace
 
   scarb-test:
     needs: scarb-fmt
@@ -68,7 +68,7 @@ jobs:
         run: curl -L https://raw.githubusercontent.com/software-mansion/cairo-coverage/main/scripts/install.sh | sh
 
       - name: Run Tests
-        run: snforge test --coverage
+        run: snforge test --workspace --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
