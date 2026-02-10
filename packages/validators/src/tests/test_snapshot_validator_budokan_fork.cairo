@@ -252,6 +252,15 @@ fn test_snapshot_validator_budokan_multiple_entries() {
     let entries_after = entry_validator.entries_left(tournament_id, player, array![].span());
     assert(entries_after.unwrap() == 2, '2 entries left');
 
+    // Remove entry and verify restoration; second remove is a no-op
+    start_cheat_caller_address(validator_address, budokan_addr);
+    entry_validator.remove_entry(tournament_id, 0, player, array![].span());
+    entry_validator.remove_entry(tournament_id, 0, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_final = entry_validator.entries_left(tournament_id, player, array![].span());
+    assert(entries_final.unwrap() == 3, 'rm rest');
+
     assert(true, 'Multiple entries test');
 }
 
@@ -919,5 +928,4 @@ fn test_snapshot_validator_independent_tournament_tracking() {
 //    - Return remaining entries for the player
 //    - Ensure snapshot data cannot be modified once locked
 // ==============================================
-
 

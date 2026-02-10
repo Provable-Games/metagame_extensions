@@ -18,6 +18,9 @@ ignore:
   # Test files
   - "**/tests/**"
 
+  # Interfaces
+  - "packages/interfaces"
+
   # Test mocks and constants
   - "packages/test_common/**"
 
@@ -32,6 +35,7 @@ ignore:
   # Configuration, scripts, and examples
   - "scripts/"
   - "examples/"
+  - "snapshot-ui/"
 
 github_checks:
   annotations: false

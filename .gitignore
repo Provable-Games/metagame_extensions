@@ -11,3 +11,6 @@ scripts/delegate_votes/node_modules/
 scripts/delegate_votes/package-lock.json
 
 argent_account_mainnet.json
+
+**/snfoundry_trace
+**/coverage

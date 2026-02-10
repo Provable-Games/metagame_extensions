@@ -524,3 +524,156 @@ fn test_just_above_threshold_balance() {
 
     assert(can_enter, 'Just above threshold passes');
 }
+
+#[test]
+fn test_should_ban_when_requirements_not_met() {
+    let tournament_id: u64 = 90;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0xAAA);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    configure_governance_validator(
+        validator_address, tournament_id, 3, governor, governance_token, 1000, 0, false, 0, 0,
+    );
+
+    // Below threshold means requirements fail -> should ban
+    start_mock_call(governance_token, selector!("balance_of"), 100_u256);
+    start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let should_ban = validator.should_ban(tournament_id, 1, player, array![].span());
+    assert(should_ban, 'ban req');
+}
+
+#[test]
+fn test_should_ban_when_votes_quota_exceeded() {
+    let tournament_id: u64 = 91;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0x123);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    // total allowed entries = (5000 - 1000) / 1000 = 4
+    configure_governance_validator(
+        validator_address, tournament_id, 0, governor, governance_token, 1000, 777, false, 0, 1000,
+    );
+
+    start_mock_call(governance_token, selector!("balance_of"), 1500_u256);
+    start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
+    start_mock_call(governor, selector!("proposal_snapshot"), 100_u256);
+    start_mock_call(governor, selector!("get_votes"), 5000_u256);
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    // Use 5 entries -> exceeds current quota of 4
+    start_cheat_caller_address(validator_address, budokan_address());
+    validator.add_entry(tournament_id, 1, player, array![].span());
+    validator.add_entry(tournament_id, 2, player, array![].span());
+    validator.add_entry(tournament_id, 3, player, array![].span());
+    validator.add_entry(tournament_id, 4, player, array![].span());
+    validator.add_entry(tournament_id, 5, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let should_ban = validator.should_ban(tournament_id, 9, player, array![].span());
+    assert(should_ban, 'ban quota');
+}
+
+#[test]
+fn test_should_ban_false_for_fixed_limit_when_requirements_met() {
+    let tournament_id: u64 = 92;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0xABC);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    configure_governance_validator(
+        validator_address, tournament_id, 3, governor, governance_token, 1000, 0, false, 0, 0,
+    );
+
+    start_mock_call(governance_token, selector!("balance_of"), 1500_u256);
+    start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let should_ban = validator.should_ban(tournament_id, 1, player, array![].span());
+    assert(!should_ban, 'no ban');
+}
+
+#[test]
+fn test_on_entry_removed_noop_when_zero_entries() {
+    let tournament_id: u64 = 93;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0x123);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    configure_governance_validator(
+        validator_address, tournament_id, 3, governor, governance_token, 1000, 0, false, 0, 0,
+    );
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    start_cheat_caller_address(validator_address, budokan_address());
+    validator.remove_entry(tournament_id, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    assert(entries_left == Option::Some(3), 'rm noop');
+}
+
+#[test]
+fn test_on_entry_removed_decrements_entry_count() {
+    let tournament_id: u64 = 94;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0x123);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    configure_governance_validator(
+        validator_address, tournament_id, 3, governor, governance_token, 1000, 0, false, 0, 0,
+    );
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    start_cheat_caller_address(validator_address, budokan_address());
+    validator.add_entry(tournament_id, 1, player, array![].span());
+    validator.add_entry(tournament_id, 2, player, array![].span());
+    validator.remove_entry(tournament_id, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    assert(entries_left == Option::Some(2), 'rm dec');
+}
+
+#[test]
+fn test_valid_entry_votes_per_entry_with_used_entries() {
+    let tournament_id: u64 = 95;
+    let validator_address = deploy_governance_validator();
+    let player: ContractAddress = mock_address(0x321);
+    let governance_token: ContractAddress = mock_address(0x999);
+    let governor: ContractAddress = mock_address(0x888);
+
+    // total allowed entries = (4000 - 1000) / 1000 = 3
+    configure_governance_validator(
+        validator_address, tournament_id, 0, governor, governance_token, 1000, 777, false, 0, 1000,
+    );
+
+    start_mock_call(governance_token, selector!("balance_of"), 1500_u256);
+    start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
+    start_mock_call(governor, selector!("proposal_snapshot"), 100_u256);
+    start_mock_call(governor, selector!("get_votes"), 4000_u256);
+
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    // used_entries == 0 path in has_entries_available
+    let first_valid = validator.valid_entry(tournament_id, player, array![].span());
+    assert(first_valid, 'valid0');
+
+    // used_entries > 0 path in has_entries_available
+    start_cheat_caller_address(validator_address, budokan_address());
+    validator.add_entry(tournament_id, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let second_valid = validator.valid_entry(tournament_id, player, array![].span());
+    assert(second_valid, 'valid1');
+}
