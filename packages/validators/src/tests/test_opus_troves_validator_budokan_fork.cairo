@@ -227,7 +227,9 @@ fn test_opus_validator_debt_based() {
     validator.add_entry(tournament.id, 1, account, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_add = validator.entries_left(tournament.id, account, array![].span()).unwrap();
+    let entries_after_add = validator
+        .entries_left(tournament.id, account, array![].span())
+        .unwrap();
     assert(entries_after_add < initial_entries, 'add dec');
 
     start_cheat_caller_address(validator_address, budokan_addr);
@@ -235,7 +237,8 @@ fn test_opus_validator_debt_based() {
     validator.remove_entry(tournament.id, 1, account, array![].span()); // no-op when zero
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_remove = validator.entries_left(tournament.id, account, array![].span())
+    let entries_after_remove = validator
+        .entries_left(tournament.id, account, array![].span())
         .unwrap();
     assert(entries_after_remove == initial_entries, 'rm rest');
 
