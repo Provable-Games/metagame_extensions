@@ -6,31 +6,152 @@ SCOPE BOUNDARY (from `.github/workflows/codex-review.yml`)
 - Do not raise findings for files outside this domain (`scripts/**`, `examples/**`, `snapshot-ui/**`, and unrelated repo areas).
 - If there are no actionable findings inside the scoped diff, say so explicitly.
 
-Focus on these 5 areas:
+Focus on these 7 areas:
 
 1. SECURITY
 
-- Access control: missing owner/admin checks, unprotected state mutations
-- Cross-contract calls: unchecked return values, reentrancy via external calls
-- felt252 arithmetic: underflow on subtraction, overflow on multiplication
-- u256/felt252 conversion safety: truncation, overflow, sign/width mismatches on casts
-- StorePacking bit-width correctness: verify packed fields don't exceed allocated bits
-- Event key/data split: indexed fields in keys, large data in data section
-- Checks-effects-interactions pattern: state changes before external calls
-- Token transfer return values: always check ERC20 transfer/transferFrom results
-- Unbounded loops and attacker-controlled iteration: flag potential DoS or block gas limit risks
-- Caller/context assumptions: verify get_caller_address/auth logic is valid for account abstraction flows
-- External call failure handling: ensure revert/error paths are explicitly handled and tested
+Prioritize findings by exploitability and blast radius (fund loss, unauthorized entry/state mutation, permanent DoS):
+
+Authorization and privilege boundaries:
+
+- Every privileged mutation path must have an explicit guard (owner/role/Budokan caller/etc.)
+- Check for guard bypasses across alternate entrypoints (`#[external]`, `#[abi(embed_v0)]`, component-embedded APIs, internal helper exposure)
+- Ensure role setup is safe: initializer/constructor seeds admin roles correctly and cannot be re-run
+- Review role-admin graph for privilege escalation or accidental lockout
+- Validate zero-address handling for critical authorities/dependencies when non-zero is required
+- Verify caller assumptions are account-abstraction safe; do not treat `get_caller_address` as an EOA/human proof
+
+External interactions and reentrancy:
+
+- Enumerate cross-contract calls and enforce checks-effects-interactions on each risky path
+- Ensure replay/double-spend prevention state is committed before untrusted external calls
+- Verify external call failure semantics are explicit and tested (revert bubbles, optional-return handling, fallback behavior)
+- If untrusted callbacks are possible, require a reentrancy defense or a convincing non-reentrant state-machine argument
+- Flag attacker-controlled loops that make external calls (DoS and griefing surface)
+
+Input/config and arithmetic integrity:
+
+- For serialized config (`Span<felt252>`), validate expected length/order/ranges before deserialization and reject malformed/trailing payloads
+- Verify domain constraints on thresholds/limits/IDs/timestamps are enforced at registration and use sites
+- Check `felt252 <-> u*` / `u256 <-> smaller ints` casts for truncation/overflow risk; require safe conversion patterns
+- Validate arithmetic boundaries in counters, accumulation, and multiplication/division paths
+- When `StorePacking` is used, verify bit allocations and masks prevent overlap/corruption
+
+State-machine and accounting invariants:
+
+- Confirm lifecycle hooks maintain invariants across add/validate/ban/remove transitions
+- Ensure every increment/credit path has a matching decrement/cleanup path (including revert/ban/removal flows)
+- Check map keys and composite identifiers for collision/overwrite risk
+- Ensure security-critical state cannot be left stale after ownership or eligibility changes
+
+Token and asset handling:
+
+- Always validate ERC20/ERC721 interaction outcomes; do not assume transfer success on non-standard tokens
+- Verify token/account addresses are trusted or validated before use
+- Ensure external balance/vote/debt reads cannot be misinterpreted due to decimals/units/domain mismatch
+
+Evidence and testing requirement for security findings:
+
+- Security findings must include concrete trigger path, impacted invariant, and realistic impact
+- High-severity claims require a reproducible scenario or a clearly articulated exploit sequence
+- Require negative-path tests for each guard and for external-call failure/revert paths touched by the change
 
 2. CAIRO IDIOMS
 
-- contract_address_const is deprecated; use felt literal .try_into().unwrap()
-- Self::method() does not work in 'impl ... of Trait' blocks; use named InternalImpl::method()
-- Module file conventions: use examples.cairo alongside examples/ directory, NOT examples/mod.cairo
-- Missing derive macros (Copy, Drop, Serde, Introspect) on structs/enums
-- Prefer expect('msg') over unwrap() for better error context
+Prefer canonical Cairo/Starknet patterns that improve readability, auditability, and compiler-aligned correctness:
 
-3. TESTING (leveraging Starknet Foundry's full feature set)
+Contract organization and function boundaries:
+
+- Keep external API in `#[starknet::interface]` traits and expose via focused `#[abi(embed_v0)]` impl blocks
+- Keep business logic in internal helper impls (`#[generate_trait]`), with thin external wrappers
+- In `impl ... of Trait` blocks, avoid unsupported `Self::method()` patterns; call a named internal impl (`InternalImpl::method(...)`)
+- Use guard/helper methods (authorization, validation, invariant checks) to avoid duplicated inline logic across entrypoints
+
+Types, derives, and storage integration:
+
+- Require appropriate derives on domain types used in calldata/storage/events (`Drop`, `Serde`, `starknet::Store`, plus `Copy` where semantically valid)
+- For storage enums, ensure a safe default variant is defined when required for uninitialized reads
+- Prefer precise integer types over `felt252` when bounds are known; avoid type-erasing domain values
+- Treat casts/conversions as review hotspots; ensure conversion intent and failure behavior are explicit
+- `contract_address_const` is deprecated; use felt literals with explicit conversion (`.try_into().unwrap()`), or equivalent typed construction
+
+Error handling and panic semantics:
+
+- Prefer `expect('...')` over bare `unwrap()` so failures carry actionable context
+- Ensure panic/assert messages are specific and stable enough for `#[should_panic(expected: ...)]` tests
+- Avoid opaque panic strings that hide which guard or invariant failed
+
+Module and codebase conventions:
+
+- Follow file/module conventions consistently (for this repo: `examples.cairo` alongside `examples/`, not `examples/mod.cairo`)
+- Flag PRs that mix unrelated concerns into one module when a contract/component split would improve maintainability
+- Keep naming and impl aliases explicit enough that reviewers can map API, storage, and internal logic without inference
+
+3. COMPONENT ARCHITECTURE
+
+Use Cairo Components as a first-class design lens when reviewing contract structure:
+
+Component model checks:
+
+- A component (`#[starknet::component]`) encapsulates concern-specific `Storage`, `Event`, embeddable ABI impl(s), and internal impl(s)
+- Verify the generated `HasComponent<TContractState>` flow is respected through component wiring instead of ad-hoc state plumbing
+- Check that embeddable impls (`#[embeddable_as(...)]` + `#[abi(embed_v0)]`) expose only intended public API, while internal impls keep privileged logic non-external
+
+Integration wiring checks:
+
+- `component!(path: ..., storage: ..., event: ...)` declarations exist and aliases match contract storage/event names
+- Component storage is mounted via `#[substorage(v0)]` in the contract `Storage`
+- Component events are exposed in contract `Event` with correct flattening strategy
+- Internal impl aliases are present and used for guards, invariants, and initialization routines
+- Constructor path calls required component initializers exactly once
+
+Architectural opportunity checks (flag when present):
+
+- Repeated access control, pause, validation, accounting, or lifecycle logic across contracts
+- Large storage structs with mixed concerns and unclear ownership boundaries
+- Feature-specific events mixed into one global event surface without clear ownership
+- Duplicated checks/invariants that could be centralized in one reusable component
+- Contracts that share identical hooks but vary only by data source/threshold/config
+
+Decision guidance:
+
+- Recommend component extraction/adoption when it reduces duplication, improves test isolation, shrinks audit surface, or clarifies ownership of invariants and events
+- Avoid over-componentization when added indirection does not deliver reuse, security, or maintainability gains
+
+4. ARCHITECTURE
+
+Enforce a layered design where contract entrypoints are orchestration and state boundaries, not business-logic containers:
+
+Contract-layer responsibilities (thin orchestration):
+
+- Read required state from storage/components and normalize inputs
+- Perform onchain-only checks that require context (caller, block data, external state, permissions)
+- Call pure Cairo library functions for business rules, scoring, transformations, and decisions
+- Persist state updates and emit events
+- Keep entrypoints short, linear, and easy to audit
+
+Business-logic layer responsibilities (pure Cairo libs):
+
+- Place data-operation logic in pure/side-effect-free library functions whenever possible
+- Pass data in and results out explicitly; avoid hidden state dependencies
+- Keep library APIs deterministic and domain-focused (inputs, outputs, invariants)
+- Reuse the same library logic across contracts/validators to prevent divergence
+
+Review signals for architecture quality:
+
+- Flag entrypoints that mix storage I/O, authorization, external calls, and heavy domain logic in one block
+- Flag duplicated business rules implemented separately across contracts instead of shared libs
+- Flag logic that is hard to unit test because it is embedded directly in contract stateful paths
+- Prefer a clear `load -> validate -> compute -> persist -> emit` flow in each entrypoint
+
+Testing and auditability expectations:
+
+- Complex decision logic should be covered by unit tests at the pure-library level
+- Contract tests should focus on integration concerns (wiring, permissions, storage transitions, events, external-call behavior)
+- If logic cannot be moved out of contract code, require a clear justification
+- Contract functions should remain simple, intuitive, and straightforward for security review
+
+5. TESTING (leveraging Starknet Foundry's full feature set)
 
 Cheatcodes — verify the right cheats are used for the scenario:
 
@@ -82,14 +203,49 @@ Coverage discipline:
 - Bug fixes must include a regression test that fails before and passes after the change
 - Test both external-call success and failure/revert paths when integration behavior is touched
 
-4. GAS OPTIMIZATION
+6. GAS OPTIMIZATION
 
-- Storage packing opportunities: multiple small fields in one felt252
-- Repeated storage reads that should be cached in local variables
-- Map vs array trade-offs for large collections
-- Unnecessary cloning or copying of large structs
+Prioritize storage I/O reductions first (highest impact on Starknet fees):
 
-5. REVIEW DISCIPLINE (NOISE CONTROL)
+- Flag repeated `.read()` of the same slot or map entry within one function; cache it in a local variable
+- Flag paths that write the same slot multiple times; compute in memory and perform one final `.write()`
+- Flag read-after-write patterns where the in-memory value is already available
+- Flag writes where the value is unchanged and the write can be skipped
+
+Storage model and packing:
+
+- Look for `StorePacking` opportunities when multiple fields can safely fit into one slot
+- Verify packed-layout safety (bit widths, masks, and conversion checks) so gas savings do not introduce corruption risk
+- Prefer the smallest safe integer types (`u8/u16/u32/u64/u128`) over `u256` where full 256-bit range is unnecessary
+- Flag repeated `u256 <-> felt252` conversions in hot paths
+
+Loops and data structures:
+
+- Flag unbounded iteration over storage-backed collections, especially with user-controlled size
+- Prefer maps for sparse membership/lookup; flag linear scans of arrays used as sets
+- Hoist invariant computations and key derivations out of loops
+- Flag per-item external calls inside loops when batching or precomputation is feasible
+
+External calls and syscalls:
+
+- Minimize the number of cross-contract calls/syscalls per entrypoint
+- Ensure cheap reject checks run before expensive external interactions
+- Cache external-call results reused in the same execution path
+- Flag repeated calls to the same getter when one local variable would suffice
+
+ABI, calldata, and events:
+
+- Keep calldata and return payloads minimal; avoid moving large arrays/ByteArrays unless required
+- Flag unnecessary cloning/copying of large structs, arrays, and intermediate buffers
+- Keep events lean; include only fields needed for downstream indexing/consumption
+- Flag duplicate or redundant event emission for a single state transition
+
+Review standard for gas findings:
+
+- Report gas findings only when backed by concrete repeated-path or hot-path impact in the diff
+- For non-trivial gas refactors, require behavior-preserving tests and call out readability/complexity tradeoffs
+
+7. REVIEW DISCIPLINE (NOISE CONTROL)
 
 - Report only actionable findings backed by concrete code evidence in the PR diff
 - Avoid speculative or stylistic nits unless they impact correctness, security, gas, or maintainability
