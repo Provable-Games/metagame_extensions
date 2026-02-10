@@ -1,0 +1,18 @@
+[package]
+name = "budokan_test_common"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+openzeppelin_introspection.workspace = true
+openzeppelin_interfaces.workspace = true
+snforge_std.workspace = true
+budokan_interfaces.workspace = true
+budokan_entry_validator.workspace = true
+
+[lib]
+
+[[target.starknet-contract]]
+sierra = true
+casm = true

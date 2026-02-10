@@ -18,16 +18,20 @@ ignore:
   # Test files
   - "**/tests/**"
 
-  # Vendored upstream dependencies (derive-generated Serde/Event code)
-  - "src/deps/"
+  # Test mocks and constants
+  - "packages/test_common/**"
+
+  # External protocol type stubs
+  - "packages/validators/src/externals/**"
 
   # Build outputs
   - "target/"
   - ".snfoundry_cache/"
   - "snfoundry_trace/"
 
-  # Configuration and scripts
+  # Configuration, scripts, and examples
   - "scripts/"
+  - "examples/"
 
 github_checks:
   annotations: false

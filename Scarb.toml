@@ -1,42 +1,32 @@
-[package]
-name = "budokan_extensions"
+[workspace]
+members = [
+    "packages/interfaces",
+    "packages/entry_validator",
+    "packages/validators",
+    "packages/test_common",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024_07"
 
-[dependencies]
+[workspace.dependencies]
 starknet = "2.15.1"
-openzeppelin_introspection = "3.0.0" 
+openzeppelin_introspection = "3.0.0"
 openzeppelin_interfaces = "2.1.0"
+snforge_std = "0.56.0"
+budokan_interfaces = { path = "packages/interfaces" }
+budokan_entry_validator = { path = "packages/entry_validator" }
+budokan_validators = { path = "packages/validators" }
+budokan_test_common = { path = "packages/test_common" }
+
+[workspace.tool.fmt]
+sort-module-level-items = true
+
+[workspace.scripts]
+test = "snforge test --workspace"
 
 [profile.dev.cairo]
 unstable-add-statements-functions-debug-info = true
 unstable-add-statements-code-locations-debug-info = true
 inlining-strategy = "avoid"
-
-[tool.snforge]
-# exit_first = true
-
-# Fork configuration for testing against deployed contracts
-# To use a fork, run: snforge test --fork-name sepolia
-# Or: snforge test --fork-name mainnet
-[[tool.snforge.fork]]
-name = "sepolia"
-url = "https://api.cartridge.gg/x/starknet/sepolia/rpc/v0_10"
-block_id.number = "6326561"
-
-[[tool.snforge.fork]]
-name = "mainnet"
-url = "https://api.cartridge.gg/x/starknet/mainnet/rpc/v0_10"
-block_id.number = "6123632"
-
-[dev-dependencies]
-snforge_std = "0.56.0"
-
-[scripts]
-test = "snforge test"
-
-[[target.starknet-contract]]
-sierra = true
-casm = true
-
-[lib]
