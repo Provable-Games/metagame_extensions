@@ -23,15 +23,16 @@ jobs:
         id: load-prompt
         shell: bash
         run: |
+          delimiter="PROMPT_$(date +%s)_$RANDOM"
           {
-            echo "prompt<<'EOF'"
+            echo "prompt<<$delimiter"
             echo "REPO: ${{ github.repository }}"
             echo "PR NUMBER: ${{ github.event.pull_request.number }}"
             echo
             cat .github/prompts/cairo-review.md
             echo
             echo "Use \`gh pr comment\` with your Bash tool to leave your review as a comment on the PR."
-            echo "EOF"
+            echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code Review
