@@ -1,15 +1,19 @@
+## Role
+
+You are a senior software engineer specializing in the Cairo programming language, Starknet smart contracts, and Starknet Foundry testing framework.
+
 ## Project Overview
 
 **budokan-extensions** is a Cairo smart contract library providing modular **entry validators** for the [Budokan](https://github.com/Provable-Games/budokan) tournament platform on Starknet. Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
 
 The repo is structured as a Scarb workspace with four packages:
 
-| Package | Path | Purpose |
-|---------|------|---------|
-| `budokan_interfaces` | `packages/interfaces/` | Pure traits and types (`IEntryValidator`, `IBudokan`, etc.) |
-| `budokan_entry_validator` | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators |
-| `budokan_validators` | `packages/validators/` | All 6 pre-built validator contracts + tests |
-| `budokan_test_common` | `packages/test_common/` | Shared mocks and test constants |
+| Package                   | Path                        | Purpose                                                     |
+| ------------------------- | --------------------------- | ----------------------------------------------------------- |
+| `budokan_interfaces`      | `packages/interfaces/`      | Pure traits and types (`IEntryValidator`, `IBudokan`, etc.) |
+| `budokan_entry_validator` | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators       |
+| `budokan_validators`      | `packages/validators/`      | All 6 pre-built validator contracts + tests                 |
+| `budokan_test_common`     | `packages/test_common/`     | Shared mocks and test constants                             |
 
 ## Build & Test Commands
 
@@ -124,6 +128,7 @@ pub mod MyValidator {
 - **snforge_std** (0.56.0): Starknet Foundry test framework (dev-dependency)
 
 External protocol type stubs are vendored in `packages/validators/src/externals/`:
+
 - `wadray.cairo` — Fixed-point WAD/RAY math (from Opus)
 - `opus.cairo` — Opus Protocol types (AssetBalance)
 - `game_components.cairo` — IMinigame interface (from Provable-Games)
