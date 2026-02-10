@@ -17,7 +17,7 @@ use budokan_validators::erc20_balance_validator::{
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
-    start_cheat_caller_address, stop_cheat_caller_address,
+    start_cheat_caller_address, start_mock_call, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
 
@@ -387,6 +387,99 @@ fn test_erc20_validator_rejects_qualification_data() {
 
     // Try to validate with non-empty qualification data - should panic
     let _is_valid = validator.valid_entry(tournament_id, player, array![1].span());
+}
+
+#[test]
+fn test_erc20_validator_should_ban_when_balance_below_min() {
+    let budokan_addr = mock_budokan_address();
+    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let tournament_id: u64 = 20;
+    let player: ContractAddress = 0x123.try_into().unwrap();
+    let token_addr: ContractAddress = 0x456.try_into().unwrap();
+
+    let config = create_erc20_config(token_addr, 100, 0, 0, 0);
+
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_config(tournament_id, 5, config);
+    stop_cheat_caller_address(validator_address);
+
+    // Player no longer meets min threshold
+    start_mock_call(token_addr, selector!("balance_of"), 50_u256);
+
+    let should_ban = validator.should_ban(tournament_id, 1, player, array![].span());
+    assert(should_ban, 'Balance below min should ban');
+}
+
+#[test]
+fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
+    let budokan_addr = mock_budokan_address();
+    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let tournament_id: u64 = 21;
+    let player: ContractAddress = 0x777.try_into().unwrap();
+    let token_addr: ContractAddress = 0x456.try_into().unwrap();
+
+    // (balance - min) / value_per_entry = (600-100)/100 = 5, but cap to max_entries=2
+    let config = create_erc20_config(token_addr, 100, 0, 100, 2);
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_config(tournament_id, 0, config);
+    stop_cheat_caller_address(validator_address);
+
+    start_mock_call(token_addr, selector!("balance_of"), 600_u256);
+
+    // Use 3 entries, exceeding capped allowance (2)
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_entry(tournament_id, 1, player, array![].span());
+    validator.add_entry(tournament_id, 2, player, array![].span());
+    validator.add_entry(tournament_id, 3, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let should_ban = validator.should_ban(tournament_id, 99, player, array![].span());
+    assert(should_ban, 'ban quota');
+}
+
+#[test]
+fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
+    let budokan_addr = mock_budokan_address();
+    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let tournament_id: u64 = 22;
+    let player: ContractAddress = 0x888.try_into().unwrap();
+    let token_addr: ContractAddress = 0x456.try_into().unwrap();
+
+    // total allowed = (500-100)/100 = 4
+    let config = create_erc20_config(token_addr, 100, 0, 100, 0);
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_config(tournament_id, 0, config);
+    stop_cheat_caller_address(validator_address);
+
+    start_mock_call(token_addr, selector!("balance_of"), 500_u256);
+
+    // used_entries == 0 path
+    let first_valid = validator.valid_entry(tournament_id, player, array![].span());
+    assert(first_valid, 'valid0');
+
+    // used_entries > 0 path
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_entry(tournament_id, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+    let second_valid = validator.valid_entry(tournament_id, player, array![].span());
+    assert(second_valid, 'valid1');
+
+    // Exhaust quota: use 5 entries total while allowed is 4
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_entry(tournament_id, 2, player, array![].span());
+    validator.add_entry(tournament_id, 3, player, array![].span());
+    validator.add_entry(tournament_id, 4, player, array![].span());
+    validator.add_entry(tournament_id, 5, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let final_valid = validator.valid_entry(tournament_id, player, array![].span());
+    assert(!final_valid, 'invalid');
 }
 
 // ==============================================

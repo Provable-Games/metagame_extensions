@@ -216,19 +216,38 @@ fn test_opus_validator_debt_based() {
 
     let entries_left_initial = validator.entries_left(tournament.id, account, array![].span());
     assert(entries_left_initial.is_some(), 'Should have entries');
-
     let initial_entries = entries_left_initial.unwrap();
     assert(initial_entries > 0, 'Should have initial entries');
 
     // Expected: (initial_debt_simple - 5) / 2
     // If initial_debt_simple = 20, then (20-5)/2 = 7 entries (capped at max_entries if needed)
 
-    // Step 9: Forge more yin to increase debt
+    // Step 9: Exercise add/remove entry hooks directly
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.add_entry(tournament.id, 1, account, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_after_add = validator
+        .entries_left(tournament.id, account, array![].span())
+        .unwrap();
+    assert(entries_after_add < initial_entries, 'add dec');
+
+    start_cheat_caller_address(validator_address, budokan_addr);
+    validator.remove_entry(tournament.id, 1, account, array![].span());
+    validator.remove_entry(tournament.id, 1, account, array![].span()); // no-op when zero
+    stop_cheat_caller_address(validator_address);
+
+    let entries_after_remove = validator
+        .entries_left(tournament.id, account, array![].span())
+        .unwrap();
+    assert(entries_after_remove == initial_entries, 'rm rest');
+
+    // Step 10: Forge more yin to increase debt
     start_cheat_caller_address(abbot_address(), account);
     abbot.forge(trove_id, 20000000000000000000_u128.into(), 10_u128.into()); // Forge 20 more yin
     stop_cheat_caller_address(abbot_address());
 
-    // Step 10: Check new debt and entries
+    // Step 11: Check new debt and entries
     let health_after_forge: Health = shrine.get_trove_health(trove_id);
     let _new_debt_simple: u128 = health_after_forge.debt.val / 1000000000000000000;
 
@@ -332,6 +351,10 @@ fn test_opus_validator_debt_threshold_and_banning() {
     // Step 7: Should now be invalid (below threshold)
     let is_valid_after_melt = validator.valid_entry(tournament.id, account, array![].span());
     assert(!is_valid_after_melt, 'Should be invalid');
+
+    // Existing entries should now be bannable
+    let should_ban = validator.should_ban(tournament.id, 1, account, array![].span());
+    assert(should_ban, 'should ban');
 }
 
 // ==============================================

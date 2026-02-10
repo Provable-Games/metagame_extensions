@@ -965,3 +965,109 @@ fn test_tournament_validator_all_mode_multiple_qualifying_tournaments() {
     let entries_final = validator.entries_left(2300, player, qualification);
     assert!(entries_final.unwrap() == 0, "Should have 0 entries left");
 }
+
+#[test]
+#[fork("sepolia")]
+fn test_tournament_validator_direct_valid_entry_call() {
+    let budokan = budokan_address_sepolia();
+    let minigame = minigame_address_sepolia();
+    let player = test_account_sepolia();
+
+    let (qualifying_tournament_id, token_id) = create_qualifying_tournament_with_player(
+        budokan, minigame, player,
+    );
+
+    let validator_address = deploy_tournament_validator(budokan);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let extension_config = array![
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
+    ]
+        .span();
+
+    start_cheat_caller_address(validator_address, budokan);
+    validator.add_config(2400, 2, extension_config);
+    stop_cheat_caller_address(validator_address);
+
+    let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
+    let is_valid = validator.valid_entry(2400, player, qualification);
+    assert!(is_valid, "direct valid");
+}
+
+#[test]
+#[fork("sepolia")]
+fn test_tournament_validator_on_entry_removed_per_token_mode() {
+    let budokan = budokan_address_sepolia();
+    let minigame = minigame_address_sepolia();
+    let player = test_account_sepolia();
+
+    let (qualifying_tournament_id, token_id) = create_qualifying_tournament_with_player(
+        budokan, minigame, player,
+    );
+
+    let validator_address = deploy_tournament_validator(budokan);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let extension_config = array![
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
+    ]
+        .span();
+
+    start_cheat_caller_address(validator_address, budokan);
+    validator.add_config(2401, 2, extension_config);
+    stop_cheat_caller_address(validator_address);
+
+    let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
+    let before = validator.entries_left(2401, player, qualification);
+    assert!(before.unwrap() == 2, "start with 2");
+
+    start_cheat_caller_address(validator_address, budokan);
+    validator.add_entry(2401, 1, player, qualification);
+    validator.remove_entry(2401, 1, player, qualification);
+    validator.remove_entry(2401, 1, player, qualification); // no-op at zero
+    stop_cheat_caller_address(validator_address);
+
+    let after = validator.entries_left(2401, player, qualification);
+    assert!(after.unwrap() == 2, "rm rest");
+}
+
+#[test]
+#[fork("sepolia")]
+fn test_tournament_validator_on_entry_removed_all_mode() {
+    let budokan = budokan_address_sepolia();
+    let minigame = minigame_address_sepolia();
+    let player = test_account_sepolia();
+
+    let (tournament_id_1, token_id_1) = create_qualifying_tournament_with_player(
+        budokan, minigame, player,
+    );
+    let (tournament_id_2, token_id_2) = create_qualifying_tournament_with_player(
+        budokan, minigame, player,
+    );
+
+    let validator_address = deploy_tournament_validator(budokan);
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+
+    let extension_config = array![
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, tournament_id_1.into(),
+        tournament_id_2.into(),
+    ]
+        .span();
+
+    start_cheat_caller_address(validator_address, budokan);
+    validator.add_config(2402, 2, extension_config);
+    stop_cheat_caller_address(validator_address);
+
+    let qualification = array![token_id_1.into(), token_id_2.into()].span();
+    let before = validator.entries_left(2402, player, qualification);
+    assert!(before.unwrap() == 2, "start with 2");
+
+    start_cheat_caller_address(validator_address, budokan);
+    validator.add_entry(2402, 1, player, qualification);
+    validator.add_entry(2402, 2, player, qualification);
+    validator.remove_entry(2402, 2, player, qualification);
+    stop_cheat_caller_address(validator_address);
+
+    let after = validator.entries_left(2402, player, qualification);
+    assert!(after.unwrap() == 1, "rm all");
+}

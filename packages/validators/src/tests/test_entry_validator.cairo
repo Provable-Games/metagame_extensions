@@ -46,6 +46,15 @@ fn deploy_open_entry_validator() -> ContractAddress {
     contract_address
 }
 
+fn configure_open_entry_validator(
+    validator_address: ContractAddress, tournament_id: u64, entry_limit: u8,
+) {
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    start_cheat_caller_address(validator_address, budokan_address());
+    validator.add_config(tournament_id, entry_limit, array![].span());
+    stop_cheat_caller_address(validator_address);
+}
+
 #[test]
 fn test_valid_entry_with_token_ownership() {
     // Deploy and configure entry validator
@@ -274,4 +283,69 @@ fn test_compare_open_vs_token_gated_validators() {
     let can_enter_open_without = open_validator
         .valid_entry(0, player_without_token, array![].span());
     assert(can_enter_open_without, 'Open: without token enters');
+}
+
+#[test]
+fn test_token_gated_should_ban_after_token_loss() {
+    let tournament_id: u64 = 77;
+    let validator_address = deploy_entry_validator();
+    configure_entry_validator(validator_address, tournament_id, 0, erc721_address());
+    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let player: ContractAddress = 0xABC.try_into().unwrap();
+
+    start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
+    let should_ban_initial = validator.should_ban(tournament_id, 1, player, array![].span());
+    assert(!should_ban_initial, 'Owner should not be banned');
+
+    stop_mock_call(erc721_address(), selector!("balance_of"));
+    start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
+    let should_ban_after = validator.should_ban(tournament_id, 1, player, array![].span());
+    assert(should_ban_after, 'Non-owner should be banned');
+}
+
+#[test]
+fn test_open_validator_should_never_ban() {
+    let open_validator_address = deploy_open_entry_validator();
+    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let player: ContractAddress = 0xDDD.try_into().unwrap();
+
+    let should_ban = open_validator.should_ban(0, 1, player, array![].span());
+    assert(!should_ban, 'Open validator should never ban');
+}
+
+#[test]
+fn test_open_validator_entries_left_and_remove_tracking() {
+    let tournament_id: u64 = 5;
+    let player: ContractAddress = 0xEEE.try_into().unwrap();
+    let open_validator_address = deploy_open_entry_validator();
+    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+
+    configure_open_entry_validator(open_validator_address, tournament_id, 2);
+
+    let initial = open_validator.entries_left(tournament_id, player, array![].span());
+    assert(initial.is_some(), 'Should have limited entries');
+    assert(initial.unwrap() == 2, 'Should start with 2 entries');
+
+    start_cheat_caller_address(open_validator_address, budokan_address());
+    open_validator.add_entry(tournament_id, 0, player, array![].span());
+    open_validator.add_entry(tournament_id, 0, player, array![].span());
+    stop_cheat_caller_address(open_validator_address);
+
+    let after_add = open_validator.entries_left(tournament_id, player, array![].span());
+    assert(after_add.unwrap() == 0, 'after add');
+
+    start_cheat_caller_address(open_validator_address, budokan_address());
+    open_validator.remove_entry(tournament_id, 0, player, array![].span());
+    stop_cheat_caller_address(open_validator_address);
+
+    let after_remove = open_validator.entries_left(tournament_id, player, array![].span());
+    assert(after_remove.unwrap() == 1, 'after rm');
+
+    start_cheat_caller_address(open_validator_address, budokan_address());
+    open_validator.remove_entry(tournament_id, 0, player, array![].span());
+    open_validator.remove_entry(tournament_id, 0, player, array![].span());
+    stop_cheat_caller_address(open_validator_address);
+
+    let final_left = open_validator.entries_left(tournament_id, player, array![].span());
+    assert(final_left.unwrap() == 2, 'rm noop');
 }
