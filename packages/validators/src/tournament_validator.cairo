@@ -3,8 +3,8 @@
 //! Tournament Validator
 //!
 //! This extension contract validates tournament entry based on participation/winning
-//! in qualifying tournaments. It delegates to an external contract (Budokan) to query
-//! registration and leaderboard data.
+//! in qualifying tournaments. It delegates to the owner contract (which must implement
+//! `ITournament` + `IRegistration`) to query registration and leaderboard data.
 //!
 //! Qualifying Modes:
 //! - PER_TOKEN (0): Each qualifying token grants `entry_limit` entries (like a "punch card").

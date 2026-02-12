@@ -1,6 +1,8 @@
 #[starknet::component]
 pub mod EntryValidatorComponent {
-    use entry_validator_interfaces::entry_validator::{IENTRY_VALIDATOR_ID, IEntryValidator};
+    use entry_validator_interfaces::entry_validator::{
+        IENTRY_VALIDATOR_ID, IEntryValidator, LEGACY_IENTRY_VALIDATOR_ID,
+    };
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
@@ -161,6 +163,7 @@ pub mod EntryValidatorComponent {
 
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IENTRY_VALIDATOR_ID);
+            src5_component.register_interface(LEGACY_IENTRY_VALIDATOR_ID);
         }
 
         fn get_owner_address(self: @ComponentState<TContractState>) -> ContractAddress {
