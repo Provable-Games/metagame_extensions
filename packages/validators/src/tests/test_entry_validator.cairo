@@ -1,7 +1,7 @@
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::mocks::entry_validator_mock::{
+use entry_validator_test_common::mocks::entry_validator_mock::{
     IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
 };
 use snforge_std::{
@@ -10,8 +10,8 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 
-// Mock budokan/tournament address used across tests
-fn budokan_address() -> ContractAddress {
+// Mock owner address used across tests
+fn owner_address() -> ContractAddress {
     0x1234.try_into().unwrap()
 }
 
@@ -22,7 +22,7 @@ fn erc721_address() -> ContractAddress {
 
 fn deploy_entry_validator() -> ContractAddress {
     let contract = declare("entry_validator_mock").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![budokan_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
     contract_address
 }
 
@@ -34,15 +34,15 @@ fn configure_entry_validator(
 ) {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let mut config = array![erc721_addr.into()];
-    // Set caller to budokan address to pass assert_only_budokan check
-    start_cheat_caller_address(validator_address, budokan_address());
+    // Set caller to owner address to pass assert_only_owner check
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(tournament_id, entry_limit, config.span());
     stop_cheat_caller_address(validator_address);
 }
 
 fn deploy_open_entry_validator() -> ContractAddress {
     let contract = declare("open_entry_validator_mock").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![budokan_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
     contract_address
 }
 
@@ -50,7 +50,7 @@ fn configure_open_entry_validator(
     validator_address: ContractAddress, tournament_id: u64, entry_limit: u8,
 ) {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(tournament_id, entry_limit, array![].span());
     stop_cheat_caller_address(validator_address);
 }
@@ -326,7 +326,7 @@ fn test_open_validator_entries_left_and_remove_tracking() {
     assert(initial.is_some(), 'Should have limited entries');
     assert(initial.unwrap() == 2, 'Should start with 2 entries');
 
-    start_cheat_caller_address(open_validator_address, budokan_address());
+    start_cheat_caller_address(open_validator_address, owner_address());
     open_validator.add_entry(tournament_id, 0, player, array![].span());
     open_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);
@@ -334,14 +334,14 @@ fn test_open_validator_entries_left_and_remove_tracking() {
     let after_add = open_validator.entries_left(tournament_id, player, array![].span());
     assert(after_add.unwrap() == 0, 'after add');
 
-    start_cheat_caller_address(open_validator_address, budokan_address());
+    start_cheat_caller_address(open_validator_address, owner_address());
     open_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);
 
     let after_remove = open_validator.entries_left(tournament_id, player, array![].span());
     assert(after_remove.unwrap() == 1, 'after rm');
 
-    start_cheat_caller_address(open_validator_address, budokan_address());
+    start_cheat_caller_address(open_validator_address, owner_address());
     open_validator.remove_entry(tournament_id, 0, player, array![].span());
     open_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);

@@ -32,8 +32,8 @@ pub trait ISnapshotValidator<TState> {
 
 #[starknet::contract]
 pub mod SnapshotValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
@@ -111,10 +111,10 @@ pub mod SnapshotValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Snapshot is a point-in-time check, so registration_only = true (never ban after
         // registration)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
     // Implement the EntryValidator trait for the contract

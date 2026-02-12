@@ -1,11 +1,11 @@
 use starknet::ContractAddress;
 
 pub const IENTRY_VALIDATOR_ID: felt252 =
-    0x01158754d5cc62137c4de2cbd0e65cbd163990af29f0182006f26fe0cac00bb6;
+    0x73b204ef90f88bbdf6a178473d1445e76fd9a48a188c6659cb93f988b8458a;
 
 #[starknet::interface]
 pub trait IEntryValidator<TState> {
-    fn budokan_address(self: @TState) -> ContractAddress;
+    fn owner_address(self: @TState) -> ContractAddress;
     fn registration_only(self: @TState) -> bool;
     fn valid_entry(
         self: @TState,

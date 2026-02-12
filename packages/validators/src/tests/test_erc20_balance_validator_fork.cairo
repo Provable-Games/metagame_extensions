@@ -1,18 +1,18 @@
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
+use entry_validator_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::constants::{
-    budokan_address_mainnet, budokan_address_sepolia, eth_token_address, lords_token_address,
-    minigame_address_mainnet, minigame_address_sepolia, strk_token_address, test_account_mainnet,
-    test_account_sepolia,
+use entry_validator_interfaces::tournament::{
+    GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_validators::erc20_balance_validator::{
+use entry_validator_test_common::constants::{
+    eth_token_address, lords_token_address, minigame_address_mainnet, minigame_address_sepolia,
+    strk_token_address, test_account_mainnet, test_account_sepolia, tournament_address_mainnet,
+    tournament_address_sepolia,
+};
+use entry_validators::erc20_balance_validator::{
     IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
 };
 use snforge_std::{
@@ -70,8 +70,8 @@ fn create_erc20_config(
         .span()
 }
 
-// Mock budokan address for unit tests
-fn mock_budokan_address() -> ContractAddress {
+// Mock owner address for unit tests
+fn mock_owner_address() -> ContractAddress {
     0x1234.try_into().unwrap()
 }
 
@@ -82,8 +82,8 @@ fn mock_budokan_address() -> ContractAddress {
 #[test]
 fn test_erc20_validator_config_storage() {
     // Test that configuration is stored correctly
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -98,7 +98,7 @@ fn test_erc20_validator_config_storage() {
         token_addr, min_threshold, max_threshold, value_per_entry, max_entries,
     );
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config);
     stop_cheat_caller_address(validator_address);
 
@@ -116,8 +116,8 @@ fn test_erc20_validator_config_storage() {
 #[test]
 fn test_erc20_validator_config_minimal() {
     // Test configuration with only token address and min threshold
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -129,7 +129,7 @@ fn test_erc20_validator_config_minimal() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config); // entry_limit = 3
     stop_cheat_caller_address(validator_address);
 
@@ -143,8 +143,8 @@ fn test_erc20_validator_config_minimal() {
 #[test]
 fn test_erc20_validator_entries_left_fixed_limit() {
     // Test entries_left with fixed entry limit (value_per_entry = 0)
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -156,7 +156,7 @@ fn test_erc20_validator_entries_left_fixed_limit() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config); // 5 entries allowed
     stop_cheat_caller_address(validator_address);
 
@@ -166,7 +166,7 @@ fn test_erc20_validator_entries_left_fixed_limit() {
     assert(entries.unwrap() == 5, 'Should have 5 entries');
 
     // Add an entry
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -175,7 +175,7 @@ fn test_erc20_validator_entries_left_fixed_limit() {
     assert(entries_after.unwrap() == 4, 'Should have 4 entries left');
 
     // Add more entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -188,8 +188,8 @@ fn test_erc20_validator_entries_left_fixed_limit() {
 #[test]
 fn test_erc20_validator_entries_left_unlimited() {
     // Test entries_left with entry_limit = 0 and value_per_entry = 0 (unlimited entries)
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -200,7 +200,7 @@ fn test_erc20_validator_entries_left_unlimited() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config); // 0 = unlimited
     stop_cheat_caller_address(validator_address);
 
@@ -212,8 +212,8 @@ fn test_erc20_validator_entries_left_unlimited() {
 #[test]
 fn test_erc20_validator_add_and_remove_entry() {
     // Test add_entry and remove_entry
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -224,12 +224,12 @@ fn test_erc20_validator_add_and_remove_entry() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
     // Add entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -238,7 +238,7 @@ fn test_erc20_validator_add_and_remove_entry() {
     assert(entries_after_add.unwrap() == 3, 'Should have 3 entries left');
 
     // Remove an entry
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -249,8 +249,8 @@ fn test_erc20_validator_add_and_remove_entry() {
 #[test]
 fn test_erc20_validator_remove_entry_when_zero() {
     // Test that removing entry when none exist is a no-op (doesn't panic)
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -261,12 +261,12 @@ fn test_erc20_validator_remove_entry_when_zero() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
     // Try to remove entry when player has none - should be a no-op
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -278,8 +278,8 @@ fn test_erc20_validator_remove_entry_when_zero() {
 #[test]
 fn test_erc20_validator_multiple_tournaments() {
     // Test that multiple tournaments can have independent configs
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -302,7 +302,7 @@ fn test_erc20_validator_multiple_tournaments() {
     ]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_1, 3, config_1);
     validator.add_config(tournament_2, 5, config_2);
     stop_cheat_caller_address(validator_address);
@@ -320,7 +320,7 @@ fn test_erc20_validator_multiple_tournaments() {
     assert(t2_entries.unwrap() == 5, 'T2 should have 5 entries');
 
     // Add entry to tournament 1 only
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_1, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -334,8 +334,8 @@ fn test_erc20_validator_multiple_tournaments() {
 #[test]
 fn test_erc20_validator_multiple_players() {
     // Test that multiple players have independent entry tracking
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -346,12 +346,12 @@ fn test_erc20_validator_multiple_players() {
 
     let config = array![token_addr.into(), 100_u128.into(), 0_u128.into()].span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
     // Add entries for different players
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player_1, array![].span());
     validator.add_entry(tournament_id, 0, player_1, array![].span());
     validator.add_entry(tournament_id, 0, player_2, array![].span());
@@ -371,8 +371,8 @@ fn test_erc20_validator_multiple_players() {
 #[should_panic(expected: "ERC20 Entry Validator: Qualification data invalid")]
 fn test_erc20_validator_rejects_qualification_data() {
     // Test that validate_entry rejects non-empty qualification data
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -381,7 +381,7 @@ fn test_erc20_validator_rejects_qualification_data() {
 
     let config = array![token_addr.into(), 100_u128.into(), 0_u128.into()].span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
@@ -391,8 +391,8 @@ fn test_erc20_validator_rejects_qualification_data() {
 
 #[test]
 fn test_erc20_validator_should_ban_when_balance_below_min() {
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 20;
@@ -401,7 +401,7 @@ fn test_erc20_validator_should_ban_when_balance_below_min() {
 
     let config = create_erc20_config(token_addr, 100, 0, 0, 0);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
@@ -414,8 +414,8 @@ fn test_erc20_validator_should_ban_when_balance_below_min() {
 
 #[test]
 fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 21;
@@ -424,14 +424,14 @@ fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
 
     // (balance - min) / value_per_entry = (600-100)/100 = 5, but cap to max_entries=2
     let config = create_erc20_config(token_addr, 100, 0, 100, 2);
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config);
     stop_cheat_caller_address(validator_address);
 
     start_mock_call(token_addr, selector!("balance_of"), 600_u256);
 
     // Use 3 entries, exceeding capped allowance (2)
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 1, player, array![].span());
     validator.add_entry(tournament_id, 2, player, array![].span());
     validator.add_entry(tournament_id, 3, player, array![].span());
@@ -443,8 +443,8 @@ fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
 
 #[test]
 fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 22;
@@ -453,7 +453,7 @@ fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
 
     // total allowed = (500-100)/100 = 4
     let config = create_erc20_config(token_addr, 100, 0, 100, 0);
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config);
     stop_cheat_caller_address(validator_address);
 
@@ -464,14 +464,14 @@ fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
     assert(first_valid, 'valid0');
 
     // used_entries > 0 path
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
     let second_valid = validator.valid_entry(tournament_id, player, array![].span());
     assert(second_valid, 'valid1');
 
     // Exhaust quota: use 5 entries total while allowed is 4
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 2, player, array![].span());
     validator.add_entry(tournament_id, 3, player, array![].span());
     validator.add_entry(tournament_id, 4, player, array![].span());
@@ -488,14 +488,14 @@ fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
 
 #[test]
 #[fork("sepolia")]
-fn test_erc20_validator_budokan_create_tournament() {
+fn test_erc20_validator_fork_create_tournament() {
     // Test creating a tournament with ERC20 balance validator on Budokan
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
 
     // Deploy validator
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
 
     // Create extension config with STRK token requirements
     let token_address = strk_token_address();
@@ -515,10 +515,10 @@ fn test_erc20_validator_budokan_create_tournament() {
     };
 
     // Create tournament
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -527,7 +527,7 @@ fn test_erc20_validator_budokan_create_tournament() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Verify tournament created
     assert(tournament.id > 0, 'Tournament should have ID');
@@ -536,13 +536,13 @@ fn test_erc20_validator_budokan_create_tournament() {
 
 #[test]
 #[fork("mainnet")]
-fn test_erc20_validator_budokan_enter_tournament() {
+fn test_erc20_validator_fork_enter_tournament() {
     // Test entering a tournament with ERC20 balance validation
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
 
     // Use ETH token with very low threshold to ensure test account qualifies on mainnet
     let token_address = eth_token_address();
@@ -556,10 +556,10 @@ fn test_erc20_validator_budokan_enter_tournament() {
         entry_limit: 5, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -568,7 +568,7 @@ fn test_erc20_validator_budokan_enter_tournament() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration period
     let schedule = test_schedule();
@@ -579,11 +579,11 @@ fn test_erc20_validator_budokan_enter_tournament() {
     start_cheat_block_timestamp_global(registration_start);
 
     // Enter tournament (account should have ETH on mainnet)
-    start_cheat_caller_address(budokan_addr, account);
+    start_cheat_caller_address(owner_addr, account);
     let qualification_proof = Option::Some(QualificationProof::Extension(array![].span()));
-    let (token_id, entry_number) = budokan
+    let (token_id, entry_number) = platform
         .enter_tournament(tournament.id, 'test_player', account, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(token_id > 0, 'Should have token ID');
     assert(entry_number == 1, 'Should be first entry');
@@ -597,13 +597,13 @@ fn test_erc20_validator_budokan_enter_tournament() {
 
 #[test]
 #[fork("mainnet")]
-fn test_erc20_validator_budokan_multiple_entries() {
+fn test_erc20_validator_fork_multiple_entries() {
     // Test multiple entries by the same player
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
 
     let token_address = eth_token_address();
     let min_threshold: u256 = 1; // 1 wei - virtually any account should have this
@@ -617,10 +617,10 @@ fn test_erc20_validator_budokan_multiple_entries() {
         entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -629,7 +629,7 @@ fn test_erc20_validator_budokan_multiple_entries() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration
     let schedule = test_schedule();
@@ -642,25 +642,25 @@ fn test_erc20_validator_budokan_multiple_entries() {
     let qualification_proof = Option::Some(QualificationProof::Extension(array![].span()));
 
     // First entry
-    start_cheat_caller_address(budokan_addr, account);
-    let (token_id_1, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let (token_id_1, entry_1) = platform
         .enter_tournament(tournament.id, 'entry_1', account, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_1 == 1, 'First entry = 1');
 
     // Second entry
-    start_cheat_caller_address(budokan_addr, account);
-    let (token_id_2, entry_2) = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let (token_id_2, entry_2) = platform
         .enter_tournament(tournament.id, 'entry_2', account, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_2 == 2, 'Second entry = 2');
     assert(token_id_2 > token_id_1, 'Token IDs should increase');
 
     // Third entry
-    start_cheat_caller_address(budokan_addr, account);
-    let (token_id_3, entry_3) = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let (token_id_3, entry_3) = platform
         .enter_tournament(tournament.id, 'entry_3', account, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_3 == 3, 'Third entry = 3');
     assert(token_id_3 > token_id_2, 'Token IDs should increase');
 
@@ -674,10 +674,10 @@ fn test_erc20_validator_budokan_multiple_entries() {
 #[fork("sepolia")]
 fn test_erc20_validator_direct_validation() {
     // Test direct validation without Budokan integration
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -686,7 +686,7 @@ fn test_erc20_validator_direct_validation() {
 
     let config = create_erc20_config(token_address, min_threshold, 0, 0, 0);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
@@ -705,9 +705,9 @@ fn test_erc20_validator_direct_validation() {
 #[fork("sepolia")]
 fn test_erc20_validator_with_max_threshold() {
     // Test validation with max threshold (balance cap)
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -718,7 +718,7 @@ fn test_erc20_validator_with_max_threshold() {
 
     let config = create_erc20_config(token_address, min_threshold, max_threshold, 0, 0);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config);
     stop_cheat_caller_address(validator_address);
 
@@ -734,10 +734,10 @@ fn test_erc20_validator_with_max_threshold() {
 #[fork("sepolia")]
 fn test_erc20_validator_entries_based_on_balance() {
     // Test value_per_entry mode where entries are calculated from balance
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -749,7 +749,7 @@ fn test_erc20_validator_entries_based_on_balance() {
 
     let config = create_erc20_config(token_address, min_threshold, 0, value_per_entry, max_entries);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config); // entry_limit = 0, use value_per_entry
     stop_cheat_caller_address(validator_address);
 
@@ -776,10 +776,10 @@ fn test_erc20_validator_entries_based_on_balance() {
 #[fork("sepolia")]
 fn test_erc20_validator_cross_tournament_independence() {
     // Test that entry tracking is independent per tournament
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_1: u64 = 1;
@@ -790,13 +790,13 @@ fn test_erc20_validator_cross_tournament_independence() {
     let config = create_erc20_config(token_address, min_threshold, 0, 0, 0);
 
     // Configure both tournaments
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_1, 3, config);
     validator.add_config(tournament_2, 5, config);
     stop_cheat_caller_address(validator_address);
 
     // Add entries to tournament 1
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_1, 0, account, array![].span());
     validator.add_entry(tournament_1, 0, account, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -809,7 +809,7 @@ fn test_erc20_validator_cross_tournament_independence() {
     assert(t2_entries.unwrap() == 5, 'T2 should have 5 left');
 
     // Add entry to tournament 2
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_2, 0, account, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -826,11 +826,11 @@ fn test_erc20_validator_cross_tournament_independence() {
 #[fork("sepolia")]
 fn test_erc20_validator_insufficient_balance() {
     // Test that player with insufficient balance cannot enter
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
 
     let token_address = eth_token_address();
     // Set very high threshold that no account would have
@@ -844,10 +844,10 @@ fn test_erc20_validator_insufficient_balance() {
         entry_limit: 5, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -856,7 +856,7 @@ fn test_erc20_validator_insufficient_balance() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration
     let schedule = test_schedule();
@@ -867,9 +867,9 @@ fn test_erc20_validator_insufficient_balance() {
     start_cheat_block_timestamp_global(registration_start);
 
     // Try to enter - should fail due to insufficient balance
-    start_cheat_caller_address(budokan_addr, account);
+    start_cheat_caller_address(owner_addr, account);
     let qualification_proof = Option::Some(QualificationProof::Extension(array![].span()));
-    budokan.enter_tournament(tournament.id, 'test', account, qualification_proof);
+    platform.enter_tournament(tournament.id, 'test', account, qualification_proof);
     // Should not reach here
 }
 
@@ -877,9 +877,9 @@ fn test_erc20_validator_insufficient_balance() {
 #[fork("sepolia")]
 fn test_erc20_validator_different_tokens() {
     // Test configuring different tokens for different tournaments
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
 
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
@@ -892,7 +892,7 @@ fn test_erc20_validator_different_tokens() {
     let lords_addr = lords_token_address();
 
     // Configure each tournament with different token
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
 
     let eth_config = create_erc20_config(eth_addr, 1000000000000000000, 0, 0, 0); // 1 ETH
     validator.add_config(tournament_eth, 3, eth_config);
@@ -934,8 +934,8 @@ fn test_erc20_validator_different_tokens() {
 #[test]
 fn test_erc20_validator_zero_threshold() {
     // Test with zero threshold (any balance is valid)
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -946,7 +946,7 @@ fn test_erc20_validator_zero_threshold() {
     let config = array![token_addr.into(), min_threshold.low.into(), min_threshold.high.into()]
         .span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
@@ -956,8 +956,8 @@ fn test_erc20_validator_zero_threshold() {
 #[test]
 fn test_erc20_validator_large_threshold() {
     // Test with very large threshold values (u256 max range)
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
 
@@ -967,7 +967,7 @@ fn test_erc20_validator_large_threshold() {
 
     let config = create_erc20_config(token_addr, large_threshold, 0, 0, 0);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config);
     stop_cheat_caller_address(validator_address);
 
@@ -980,8 +980,8 @@ fn test_erc20_validator_large_threshold() {
 #[test]
 fn test_erc20_validator_max_entries_cap() {
     // Test that max_entries properly caps entry calculation
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
@@ -993,7 +993,7 @@ fn test_erc20_validator_max_entries_cap() {
 
     let config = create_erc20_config(token_addr, min_threshold, 0, value_per_entry, max_entries);
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 0, config);
     stop_cheat_caller_address(validator_address);
 
@@ -1004,8 +1004,8 @@ fn test_erc20_validator_max_entries_cap() {
 #[test]
 fn test_erc20_validator_exhaust_all_entries() {
     // Test exhausting all entries
-    let budokan_addr = mock_budokan_address();
-    let validator_address = deploy_erc20_balance_validator(budokan_addr);
+    let owner_addr = mock_owner_address();
+    let validator_address = deploy_erc20_balance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -1014,12 +1014,12 @@ fn test_erc20_validator_exhaust_all_entries() {
 
     let config = array![token_addr.into(), 100_u128.into(), 0_u128.into()].span();
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config); // Only 3 entries
     stop_cheat_caller_address(validator_address);
 
     // Use all 3 entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     validator.add_entry(tournament_id, 0, player, array![].span());
     validator.add_entry(tournament_id, 0, player, array![].span());
@@ -1037,7 +1037,7 @@ fn test_erc20_validator_exhaust_all_entries() {
 // This comment block shows how you would use the ERC20BalanceValidator in production:
 //
 // 1. Deploy ERC20BalanceValidator:
-//    let validator = deploy_erc20_balance_validator(budokan_address);
+//    let validator = deploy_erc20_balance_validator(owner_address);
 //
 // 2. Create extension config with token requirements:
 //    let config = create_erc20_config(
@@ -1057,7 +1057,7 @@ fn test_erc20_validator_exhaust_all_entries() {
 //        entry_limit: 3,  // Fixed limit (if value_per_entry = 0)
 //        entry_requirement_type: EntryRequirementType::extension(extension_config),
 //    };
-//    budokan.create_tournament(..., entry_requirement);
+//    tournament.create_tournament(..., entry_requirement);
 //
 // 4. Players can enter if they meet token balance requirements:
 //    - balance >= min_threshold

@@ -1,14 +1,14 @@
-use budokan_interfaces::budokan::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, GameConfig, IBudokanDispatcher,
-    IBudokanDispatcherTrait, Metadata, Period, QualificationProof, Schedule,
-};
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::constants::{
-    budokan_address_sepolia, minigame_address_sepolia, test_account_sepolia,
+use entry_validator_interfaces::tournament::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig, GameConfig, ITournamentDispatcher,
+    ITournamentDispatcherTrait, Metadata, Period, QualificationProof, Schedule,
 };
-use budokan_validators::tournament_validator::{
+use entry_validator_test_common::constants::{
+    minigame_address_sepolia, test_account_sepolia, tournament_address_sepolia,
+};
+use entry_validators::tournament_validator::{
     ITournamentValidatorDispatcher, ITournamentValidatorDispatcherTrait,
     QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
     QUALIFYING_MODE_PER_TOKEN,
@@ -23,9 +23,9 @@ use starknet::{ContractAddress, get_block_timestamp};
 // HELPER FUNCTIONS
 // ==============================================
 
-fn deploy_tournament_validator(budokan_address: ContractAddress) -> ContractAddress {
+fn deploy_tournament_validator(owner_address: ContractAddress) -> ContractAddress {
     let contract = declare("TournamentValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![budokan_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![owner_address.into()]).unwrap();
     contract_address
 }
 
@@ -67,15 +67,15 @@ fn test_tournament_validator_any_mode_full_flow() {
     // 4. Player enters the gated tournament using their qualification
     // 5. Verifying entry limits work correctly
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Step 1: Create a qualifying tournament (open entry)
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifying_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifying_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -84,7 +84,7 @@ fn test_tournament_validator_any_mode_full_flow() {
             Option::None,
             Option::None // No entry requirements
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     let qualifying_id = qualifying_tournament.id;
     assert(qualifying_id > 0, 'Qualifying tournament created');
@@ -95,16 +95,16 @@ fn test_tournament_validator_any_mode_full_flow() {
     start_cheat_block_timestamp_global(reg_start);
 
     let player1 = account;
-    start_cheat_caller_address(budokan_addr, player1);
-    let (player1_token_id, entry_num) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (player1_token_id, entry_num) = tournament
         .enter_tournament(qualifying_id, 'player1', player1, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(entry_num == 1, 'Player1 should be entry 1');
     assert(player1_token_id > 0, 'Player1 should have token');
 
     // Step 3: Deploy TournamentValidator and create gated tournament
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -121,8 +121,8 @@ fn test_tournament_validator_any_mode_full_flow() {
     let entry_requirement = EntryRequirement { entry_limit: 0, entry_requirement_type };
 
     // Create gated tournament
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -131,7 +131,7 @@ fn test_tournament_validator_any_mode_full_flow() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     let gated_id = gated_tournament.id;
     assert(gated_id > 0, 'Gated tournament created');
@@ -155,10 +155,10 @@ fn test_tournament_validator_any_mode_full_flow() {
         array![qualifying_id.into(), player1_token_id.into()].span(),
     );
 
-    start_cheat_caller_address(budokan_addr, player1);
-    let (gated_token_id, gated_entry_num) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (gated_token_id, gated_entry_num) = tournament
         .enter_tournament(gated_id, 'player1_gated', player1, Option::Some(qualification_proof));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(gated_entry_num == 1, 'Should be first entry');
     assert(gated_token_id > 0, 'Should have gated token');
@@ -171,10 +171,10 @@ fn test_tournament_validator_any_mode_full_flow() {
     assert(entries_left.is_none(), 'Should have unlimited entries');
 
     // Player can enter again with same qualification
-    start_cheat_caller_address(budokan_addr, player1);
-    let (gated_token_id_2, gated_entry_num_2) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (gated_token_id_2, gated_entry_num_2) = tournament
         .enter_tournament(gated_id, 'player1_again', player1, Option::Some(qualification_proof));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(gated_entry_num_2 == 2, 'Should be second entry');
     assert(gated_token_id_2 > gated_token_id, 'Should have new token');
@@ -189,14 +189,14 @@ fn test_tournament_validator_any_mode_full_flow() {
 fn test_tournament_validator_any_mode_with_entry_limits() {
     // Tests that entry limits work correctly in ANY mode
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create qualifying tournament
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifying_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifying_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -205,18 +205,18 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player enters qualifying tournament
     start_cheat_block_timestamp_global(qualifying_tournament.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (token_id, _) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (token_id, _) = tournament
         .enter_tournament(qualifying_tournament.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator and create gated tournament with entry_limit=2
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -229,8 +229,8 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
     let entry_requirement = EntryRequirement { entry_limit: 2, entry_requirement_type }; // Limit
     // of 2
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -239,7 +239,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to gated tournament registration
     start_cheat_block_timestamp_global(gated_tournament.schedule.registration.unwrap().start);
@@ -254,10 +254,10 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
 
     // First entry
     let qual_proof = QualificationProof::Extension(qualification_data);
-    start_cheat_caller_address(budokan_addr, player);
-    let (_, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (_, entry_1) = tournament
         .enter_tournament(gated_tournament.id, 'entry1', player, Option::Some(qual_proof));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_1 == 1, 'Should be entry 1');
 
     // Check entries left after first entry
@@ -266,10 +266,10 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
     assert(entries_left_after_1.unwrap() == 1, 'Should have 1 left');
 
     // Second entry
-    start_cheat_caller_address(budokan_addr, player);
-    let (_, entry_2) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (_, entry_2) = tournament
         .enter_tournament(gated_tournament.id, 'entry2', player, Option::Some(qual_proof));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_2 == 2, 'Should be entry 2');
 
     // Check entries left after second entry
@@ -289,14 +289,14 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
 fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     // Tests that entry limits are tracked per qualifying token (like a "punch card")
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create TWO qualifying tournaments
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier_1 = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier_1 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -305,7 +305,7 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
             Option::None,
             Option::None,
         );
-    let qualifier_2 = budokan
+    let qualifier_2 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -314,20 +314,22 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player enters BOTH qualifying tournaments
     start_cheat_block_timestamp_global(qualifier_1.schedule.registration.unwrap().start);
     let player = account;
 
-    start_cheat_caller_address(budokan_addr, player);
-    let (token_id_1, _) = budokan.enter_tournament(qualifier_1.id, 'player', player, Option::None);
-    let (token_id_2, _) = budokan.enter_tournament(qualifier_2.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (token_id_1, _) = tournament
+        .enter_tournament(qualifier_1.id, 'player', player, Option::None);
+    let (token_id_2, _) = tournament
+        .enter_tournament(qualifier_2.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with AT_LEAST_ONE mode and entry_limit=1
     // Entry tracking is per-token
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -341,8 +343,8 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     let entry_requirement = EntryRequirement { entry_limit: 1, entry_requirement_type }; // 1
     // entry per qualifier
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -351,7 +353,7 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     start_cheat_block_timestamp_global(gated_tournament.schedule.registration.unwrap().start);
 
@@ -367,10 +369,10 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
 
     // Enter using qualifier 1
     let qual_proof_1 = QualificationProof::Extension(qual_data_1);
-    start_cheat_caller_address(budokan_addr, player);
-    let (_, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (_, entry_1) = tournament
         .enter_tournament(gated_tournament.id, 'entry1', player, Option::Some(qual_proof_1));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_1 == 1, 'Should be entry 1');
 
     // Check entries left - qualifier 1 should be 0, qualifier 2 should still be 1
@@ -382,10 +384,10 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
 
     // Player can STILL enter using qualifier 2!
     let qual_proof_2 = QualificationProof::Extension(qual_data_2);
-    start_cheat_caller_address(budokan_addr, player);
-    let (_, entry_2) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (_, entry_2) = tournament
         .enter_tournament(gated_tournament.id, 'entry2', player, Option::Some(qual_proof_2));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_2 == 2, 'Should be entry 2');
 
     // Now both qualifications should have 0 entries left
@@ -402,14 +404,14 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
 fn test_tournament_validator_all_mode_participants_flow() {
     // Tests that ALL mode requires participation in ALL qualifying tournaments
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create TWO qualifying tournaments
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier_1 = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier_1 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -418,7 +420,7 @@ fn test_tournament_validator_all_mode_participants_flow() {
             Option::None,
             Option::None,
         );
-    let qualifier_2 = budokan
+    let qualifier_2 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -427,28 +429,28 @@ fn test_tournament_validator_all_mode_participants_flow() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player1 enters BOTH tournaments
     start_cheat_block_timestamp_global(qualifier_1.schedule.registration.unwrap().start);
     let player1 = account;
 
-    start_cheat_caller_address(budokan_addr, player1);
-    let (p1_token_1, _) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (p1_token_1, _) = tournament
         .enter_tournament(qualifier_1.id, 'player1', player1, Option::None);
-    let (p1_token_2, _) = budokan
+    let (p1_token_2, _) = tournament
         .enter_tournament(qualifier_2.id, 'player1', player1, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player2 enters only ONE tournament
     let player2: ContractAddress = 0x222.try_into().unwrap();
-    start_cheat_caller_address(budokan_addr, player2);
-    let (p2_token_1, _) = budokan
+    start_cheat_caller_address(owner_addr, player2);
+    let (p2_token_1, _) = tournament
         .enter_tournament(qualifier_1.id, 'player2', player2, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with ALL mode
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -461,8 +463,8 @@ fn test_tournament_validator_all_mode_participants_flow() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 0, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -471,7 +473,7 @@ fn test_tournament_validator_all_mode_participants_flow() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     start_cheat_block_timestamp_global(gated_tournament.schedule.registration.unwrap().start);
 
@@ -482,10 +484,10 @@ fn test_tournament_validator_all_mode_participants_flow() {
     assert(p1_valid, 'Player1 should be valid');
 
     let p1_qual_proof = QualificationProof::Extension(p1_qual_data);
-    start_cheat_caller_address(budokan_addr, player1);
-    let (_, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (_, entry_1) = tournament
         .enter_tournament(gated_tournament.id, 'player1', player1, Option::Some(p1_qual_proof));
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_1 == 1, 'Player1 should enter');
 
     // Player2 cannot enter (missing qualifier 2)
@@ -505,14 +507,14 @@ fn test_tournament_validator_all_mode_participants_flow() {
 fn test_tournament_validator_invalid_qualifications() {
     // Tests that invalid qualifications are properly rejected
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create qualifying tournament
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -521,18 +523,18 @@ fn test_tournament_validator_invalid_qualifications() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player1 enters
     start_cheat_block_timestamp_global(qualifier.schedule.registration.unwrap().start);
     let player1 = account;
-    start_cheat_caller_address(budokan_addr, player1);
-    let (player1_token, _) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (player1_token, _) = tournament
         .enter_tournament(qualifier.id, 'player1', player1, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -544,8 +546,8 @@ fn test_tournament_validator_invalid_qualifications() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 0, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -554,7 +556,7 @@ fn test_tournament_validator_invalid_qualifications() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Test 1: Wrong tournament ID
     let wrong_tournament_qual: Span<felt252> = array![999, player1_token.into()].span();
@@ -579,14 +581,14 @@ fn test_tournament_validator_position_requires_finalization() {
     // This test verifies that position-based validation requires the tournament to be finalized
     // to prevent race conditions where more scores could be submitted
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create qualifying tournament
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -595,24 +597,25 @@ fn test_tournament_validator_position_requires_finalization() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player enters qualifying tournament
     start_cheat_block_timestamp_global(qualifier.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (player_token, _) = budokan.enter_tournament(qualifier.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (player_token, _) = tournament
+        .enter_tournament(qualifier.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to submission period and submit score
     let submission_start = qualifier.schedule.game.end + 1;
     start_cheat_block_timestamp_global(submission_start);
-    start_cheat_caller_address(budokan_addr, player);
-    budokan.submit_score(qualifier.id, player_token, 1); // Position 1
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    tournament.submit_score(qualifier.id, player_token, 1); // Position 1
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with TOP_POSITION type
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -624,8 +627,8 @@ fn test_tournament_validator_position_requires_finalization() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 0, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -634,7 +637,7 @@ fn test_tournament_validator_position_requires_finalization() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Test 1: Validation should FAIL when tournament is still in submission period
     let qualification_submission: Span<felt252> = array![
@@ -665,14 +668,14 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     // Test that entries_left returns 0 when tournaments aren't finalized
     // even if entry limits would otherwise allow entries
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create qualifying tournament
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -681,23 +684,24 @@ fn test_tournament_validator_entries_left_requires_finalization() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player enters and submits score
     start_cheat_block_timestamp_global(qualifier.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (player_token, _) = budokan.enter_tournament(qualifier.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (player_token, _) = tournament
+        .enter_tournament(qualifier.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     let submission_start = qualifier.schedule.game.end + 1;
     start_cheat_block_timestamp_global(submission_start);
-    start_cheat_caller_address(budokan_addr, player);
-    budokan.submit_score(qualifier.id, player_token, 1);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    tournament.submit_score(qualifier.id, player_token, 1);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with TOP_POSITION type and entry_limit=3
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -709,8 +713,8 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 3, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated_tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated_tournament = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -719,7 +723,7 @@ fn test_tournament_validator_entries_left_requires_finalization() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     let qualification: Span<felt252> = array![qualifier.id.into(), player_token.into(), 1].span();
 
@@ -748,14 +752,14 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
     // Test entries_left with AT_LEAST_ONE mode when player qualifies from some but not all
     // tournaments
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create 3 qualifying tournaments
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier1 = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier1 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -764,7 +768,7 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
             Option::None,
             Option::None,
         );
-    let qualifier2 = budokan
+    let qualifier2 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -773,7 +777,7 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
             Option::None,
             Option::None,
         );
-    let qualifier3 = budokan
+    let qualifier3 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -782,18 +786,18 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player only enters qualifier1 and qualifier2 (not qualifier3)
     start_cheat_block_timestamp_global(qualifier1.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (token1, _) = budokan.enter_tournament(qualifier1.id, 'player', player, Option::None);
-    let (token2, _) = budokan.enter_tournament(qualifier2.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (token1, _) = tournament.enter_tournament(qualifier1.id, 'player', player, Option::None);
+    let (token2, _) = tournament.enter_tournament(qualifier2.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with AT_LEAST_ONE mode, entry_limit=5
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -806,8 +810,8 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 5, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -816,7 +820,7 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Test 1: Qualify via tournament 1 (valid) → should get 5 entries
     let qual1: Span<felt252> = array![qualifier1.id.into(), token1.into()].span();
@@ -841,14 +845,14 @@ fn test_entries_left_cumulative_per_tournament_mode() {
     // Test entries_left with AT_LEAST_ONE mode (per-token tracking)
     // Each qualifying token gets separate entry pools
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create 2 qualifying tournaments
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier1 = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier1 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -857,7 +861,7 @@ fn test_entries_left_cumulative_per_tournament_mode() {
             Option::None,
             Option::None,
         );
-    let qualifier2 = budokan
+    let qualifier2 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -866,19 +870,19 @@ fn test_entries_left_cumulative_per_tournament_mode() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player enters both
     start_cheat_block_timestamp_global(qualifier1.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (token1, _) = budokan.enter_tournament(qualifier1.id, 'player', player, Option::None);
-    let (token2, _) = budokan.enter_tournament(qualifier2.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (token1, _) = tournament.enter_tournament(qualifier1.id, 'player', player, Option::None);
+    let (token2, _) = tournament.enter_tournament(qualifier2.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with AT_LEAST_ONE mode, entry_limit=3
     // Entry tracking is per-token
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -891,8 +895,8 @@ fn test_entries_left_cumulative_per_tournament_mode() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 3, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -901,7 +905,7 @@ fn test_entries_left_cumulative_per_tournament_mode() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Test: Each qualifying tournament gives separate pool of 3 entries
     let qual1: Span<felt252> = array![qualifier1.id.into(), token1.into()].span();
@@ -919,14 +923,14 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
     // Test that ALL mode requires qualification from ALL tournaments
     // Partial qualification should result in 0 entries
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let tournament = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create 2 qualifying tournaments
-    start_cheat_caller_address(budokan_addr, account);
-    let qualifier1 = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let qualifier1 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -935,7 +939,7 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
             Option::None,
             Option::None,
         );
-    let qualifier2 = budokan
+    let qualifier2 = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -944,17 +948,17 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
             Option::None,
             Option::None,
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Player only enters qualifier1 (not qualifier2)
     start_cheat_block_timestamp_global(qualifier1.schedule.registration.unwrap().start);
     let player = account;
-    start_cheat_caller_address(budokan_addr, player);
-    let (token1, _) = budokan.enter_tournament(qualifier1.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (token1, _) = tournament.enter_tournament(qualifier1.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with ALL mode, entry_limit=4
-    let validator_address = deploy_tournament_validator(budokan_addr);
+    let validator_address = deploy_tournament_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -967,8 +971,8 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
     let entry_requirement_type = EntryRequirementType::extension(extension);
     let entry_requirement = EntryRequirement { entry_limit: 4, entry_requirement_type };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let gated = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let gated = tournament
         .create_tournament(
             account,
             test_metadata(),
@@ -977,7 +981,7 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Test: Partial qualification (only 1 of 2 tournaments) → should get 0 entries
     let fake_token2: u64 = 999;
@@ -986,9 +990,9 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
     assert(entries_partial.unwrap() == 0, 'Should have 0 with partial');
 
     // Now player enters qualifier2
-    start_cheat_caller_address(budokan_addr, player);
-    let (token2, _) = budokan.enter_tournament(qualifier2.id, 'player', player, Option::None);
-    stop_cheat_caller_address(budokan_addr);
+    start_cheat_caller_address(owner_addr, player);
+    let (token2, _) = tournament.enter_tournament(qualifier2.id, 'player', player, Option::None);
+    stop_cheat_caller_address(owner_addr);
 
     // Test: Full qualification (both tournaments) → should get 4 entries
     let full_qual: Span<felt252> = array![token1.into(), token2.into()].span();

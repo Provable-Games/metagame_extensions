@@ -5,21 +5,21 @@
 //! - Forging yin increases entries
 //! - Melting yin decreases entries (can trigger banning)
 
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
+use entry_validator_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig,
 };
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::constants::{
-    budokan_address_mainnet, minigame_address_mainnet, test_account_mainnet,
+use entry_validator_interfaces::tournament::{
+    GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_validators::externals::opus::AssetBalance;
-use budokan_validators::externals::wadray::Wad;
-use budokan_validators::opus_troves_validator::{
+use entry_validator_test_common::constants::{
+    minigame_address_mainnet, test_account_mainnet, tournament_address_mainnet,
+};
+use entry_validators::externals::opus::AssetBalance;
+use entry_validators::externals::wadray::Wad;
+use entry_validators::opus_troves_validator::{
     IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
 };
 use snforge_std::{
@@ -54,8 +54,8 @@ pub trait IShrine<TState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: budokan_validators::externals::wadray::Ray,
-    pub ltv: budokan_validators::externals::wadray::Ray,
+    pub threshold: entry_validators::externals::wadray::Ray,
+    pub ltv: entry_validators::externals::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }
@@ -112,12 +112,12 @@ fn test_opus_validator_debt_based() {
     // Test: Entries based on borrowed yin (debt)
     // Entries scale with how much yin has been borrowed against collateral
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
     // Step 1: Deploy validator
-    let validator_address = deploy_opus_validator(budokan_addr);
+    let validator_address = deploy_opus_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_api = IOpusTrovesValidatorDispatcher { contract_address: validator_address };
 
@@ -175,10 +175,10 @@ fn test_opus_validator_debt_based() {
     };
 
     // Step 5: Create tournament
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -187,7 +187,7 @@ fn test_opus_validator_debt_based() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(tournament.id > 0, 'Tournament created');
 
@@ -223,7 +223,7 @@ fn test_opus_validator_debt_based() {
     // If initial_debt_simple = 20, then (20-5)/2 = 7 entries (capped at max_entries if needed)
 
     // Step 9: Exercise add/remove entry hooks directly
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament.id, 1, account, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -232,7 +232,7 @@ fn test_opus_validator_debt_based() {
         .unwrap();
     assert(entries_after_add < initial_entries, 'add dec');
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.remove_entry(tournament.id, 1, account, array![].span());
     validator.remove_entry(tournament.id, 1, account, array![].span()); // no-op when zero
     stop_cheat_caller_address(validator_address);
@@ -269,12 +269,12 @@ fn test_opus_validator_debt_based() {
 fn test_opus_validator_debt_threshold_and_banning() {
     // Test: Melting yin below quota triggers banning
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
     // Step 1: Deploy validator
-    let validator_address = deploy_opus_validator(budokan_addr);
+    let validator_address = deploy_opus_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove and forge significant debt
@@ -314,10 +314,10 @@ fn test_opus_validator_debt_threshold_and_banning() {
         entry_limit: 0, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -326,7 +326,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Step 4: Warp time to registration period
     let current_time = get_block_timestamp();
@@ -366,12 +366,12 @@ fn test_opus_validator_debt_threshold_and_banning() {
 fn test_opus_validator_asset_filtering() {
     // Test: Only count debt from troves backed by specific assets (STRK)
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
     // Step 1: Deploy validator
-    let validator_address = deploy_opus_validator(budokan_addr);
+    let validator_address = deploy_opus_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove with STRK
@@ -417,10 +417,10 @@ fn test_opus_validator_asset_filtering() {
         entry_limit: 0, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -429,7 +429,7 @@ fn test_opus_validator_asset_filtering() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Step 4: Warp time to registration period
     let current_time = get_block_timestamp();
@@ -452,12 +452,12 @@ fn test_opus_validator_asset_filtering() {
 fn test_opus_validator_config_zero_threshold() {
     // Test: Config with threshold=0, value_per_entry=1 (simple units, not wei)
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
     // Step 1: Deploy validator
-    let validator_address = deploy_opus_validator(budokan_addr);
+    let validator_address = deploy_opus_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let validator_api = IOpusTrovesValidatorDispatcher { contract_address: validator_address };
 
@@ -505,10 +505,10 @@ fn test_opus_validator_config_zero_threshold() {
         entry_limit: 0, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -517,7 +517,7 @@ fn test_opus_validator_config_zero_threshold() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Step 4: Warp time to registration period
     let current_time = get_block_timestamp();

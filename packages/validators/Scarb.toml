@@ -1,5 +1,5 @@
 [package]
-name = "budokan_validators"
+name = "entry_validators"
 version.workspace = true
 edition.workspace = true
 
@@ -7,12 +7,12 @@ edition.workspace = true
 starknet.workspace = true
 openzeppelin_introspection.workspace = true
 openzeppelin_interfaces.workspace = true
-budokan_interfaces.workspace = true
-budokan_entry_validator.workspace = true
+entry_validator_interfaces.workspace = true
+entry_validator_component.workspace = true
 
 [dev-dependencies]
 snforge_std.workspace = true
-budokan_test_common.workspace = true
+entry_validator_test_common.workspace = true
 
 [tool.snforge]
 [[tool.snforge.fork]]
@@ -29,6 +29,6 @@ block_id.number = "6123632"
 sierra = true
 casm = true
 build-external-contracts = [
-    "budokan_test_common::mocks::entry_validator_mock::entry_validator_mock",
-    "budokan_test_common::mocks::open_entry_validator_mock::open_entry_validator_mock",
+    "entry_validator_test_common::mocks::entry_validator_mock::entry_validator_mock",
+    "entry_validator_test_common::mocks::open_entry_validator_mock::open_entry_validator_mock",
 ]

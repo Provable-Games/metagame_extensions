@@ -47,7 +47,7 @@
 //! → Player with 25 yin debt gets (25e18 - 5e18) / 2e18 = 10 entries
 //! ```
 
-use budokan_validators::externals::wadray::Wad;
+use entry_validators::externals::wadray::Wad;
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -65,8 +65,8 @@ pub trait IShrine<TContractState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: budokan_validators::externals::wadray::Ray,
-    pub ltv: budokan_validators::externals::wadray::Ray,
+    pub threshold: entry_validators::externals::wadray::Ray,
+    pub ltv: entry_validators::externals::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }
@@ -80,10 +80,10 @@ pub trait IOpusTrovesValidator<TState> {
 
 #[starknet::contract]
 pub mod OpusTrovesValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
-    use budokan_validators::externals::wadray::Wad;
     use core::num::traits::Zero;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validators::externals::wadray::Wad;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
@@ -147,9 +147,9 @@ pub mod OpusTrovesValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Trove collateral/debt can change, so registration_only = true (allow banning)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
     // Implement the EntryValidator trait for the contract

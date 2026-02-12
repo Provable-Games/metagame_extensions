@@ -1,6 +1,6 @@
-# budokan_validators
+# entry_validators
 
-Pre-built entry validator contracts for the Budokan tournament platform.
+Pre-built entry validator contracts for tournament platforms like [Budokan](https://github.com/Provable-Games/budokan).
 
 ## Validators
 
@@ -16,7 +16,7 @@ Pre-built entry validator contracts for the Budokan tournament platform.
 ## Testing
 
 ```bash
-snforge test -p budokan_validators                        # All tests
-snforge test -p budokan_validators test_governance        # Filter by name
-snforge test -p budokan_validators --fork-name sepolia    # Fork tests only
+snforge test -p entry_validators                        # All tests
+snforge test -p entry_validators test_governance        # Filter by name
+snforge test -p entry_validators --fork-name sepolia    # Fork tests only
 ```

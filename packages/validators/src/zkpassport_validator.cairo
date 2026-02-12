@@ -43,10 +43,10 @@ pub trait IZkPassportValidator<TState> {
 
 #[starknet::contract]
 pub mod ZkPassportValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use core::num::traits::Zero;
     use core::poseidon::poseidon_hash_span;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
@@ -99,9 +99,9 @@ pub mod ZkPassportValidator {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, budokan_address: ContractAddress, registration_only: bool,
+        ref self: ContractState, owner_address: ContractAddress, registration_only: bool,
     ) {
-        self.entry_validator.initializer(budokan_address, registration_only);
+        self.entry_validator.initializer(owner_address, registration_only);
     }
 
     impl EntryValidatorImplInternal of EntryValidator<ContractState> {

@@ -1,4 +1,4 @@
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
 use snforge_std::{
@@ -7,14 +7,14 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 
-// Mock budokan/tournament address used across tests
-fn budokan_address() -> ContractAddress {
+// Mock owner address used across tests
+fn owner_address() -> ContractAddress {
     0x1234.try_into().unwrap()
 }
 
 fn deploy_governance_validator() -> ContractAddress {
     let contract = declare("GovernanceValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![budokan_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
     contract_address
 }
 
@@ -40,8 +40,8 @@ fn configure_governance_validator(
         }, votes_threshold.low.into(),
         votes_per_entry.low.into(),
     ];
-    // Set caller to budokan address to pass assert_only_budokan check
-    start_cheat_caller_address(validator_address, budokan_address());
+    // Set caller to owner address to pass assert_only_owner check
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(tournament_id, entry_limit, config.span());
     stop_cheat_caller_address(validator_address);
 }
@@ -393,7 +393,7 @@ fn test_entries_left_with_fixed_limit() {
     assert(entries_left.unwrap() == 3, 'Should have 3 entries left');
 
     // Simulate one entry used
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -402,7 +402,7 @@ fn test_entries_left_with_fixed_limit() {
     assert(entries_left.unwrap() == 2, 'Should have 2 entries left');
 
     // Simulate another entry used
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -567,7 +567,7 @@ fn test_should_ban_when_votes_quota_exceeded() {
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Use 5 entries -> exceeds current quota of 4
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_entry(tournament_id, 1, player, array![].span());
     validator.add_entry(tournament_id, 2, player, array![].span());
     validator.add_entry(tournament_id, 3, player, array![].span());
@@ -613,7 +613,7 @@ fn test_on_entry_removed_noop_when_zero_entries() {
 
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.remove_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -635,7 +635,7 @@ fn test_on_entry_removed_decrements_entry_count() {
 
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_entry(tournament_id, 1, player, array![].span());
     validator.add_entry(tournament_id, 2, player, array![].span());
     validator.remove_entry(tournament_id, 1, player, array![].span());
@@ -670,7 +670,7 @@ fn test_valid_entry_votes_per_entry_with_used_entries() {
     assert(first_valid, 'valid0');
 
     // used_entries > 0 path in has_entries_available
-    start_cheat_caller_address(validator_address, budokan_address());
+    start_cheat_caller_address(validator_address, owner_address());
     validator.add_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 

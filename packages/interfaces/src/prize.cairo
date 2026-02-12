@@ -1,4 +1,4 @@
-use budokan_interfaces::distribution::Distribution;
+use entry_validator_interfaces::distribution::Distribution;
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde)]
