@@ -70,7 +70,7 @@ export const SNAPSHOT_VALIDATOR_ADDRESS = "0x..."; // Your deployed contract add
 
 ### Using Snapshots in Tournaments
 
-Once a snapshot is locked, you can use its ID when creating tournaments on Budokan:
+Once a snapshot is locked, you can use its ID when creating tournaments (e.g. on Budokan):
 - The snapshot ID is passed in the extension configuration
 - Players listed in the snapshot can enter tournaments
 - Entry counts determine how many times a player can enter

@@ -1,6 +1,6 @@
-# budokan_entry_validator
+# entry_validator_component
 
-SDK for building Budokan entry validators. Provides `EntryValidatorComponent` which handles SRC5 registration, Budokan-only access control, and the bridge between the `IEntryValidator` interface and your validator's custom logic.
+SDK for building entry validators. Provides `EntryValidatorComponent` which handles SRC5 registration, owner-only access control, and the bridge between the `IEntryValidator` interface and your validator's custom logic. Compatible with tournament platforms like [Budokan](https://github.com/Provable-Games/budokan).
 
 ## Usage
 
@@ -20,6 +20,6 @@ mod MyValidator {
 
 ```toml
 [dependencies]
-budokan_entry_validator = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
-budokan_interfaces = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
+entry_validator_component = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
+entry_validator_interfaces = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
 ```

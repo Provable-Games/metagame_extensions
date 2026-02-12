@@ -1,17 +1,17 @@
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
+use entry_validator_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::constants::{
-    budokan_address_mainnet, budokan_address_sepolia, minigame_address_mainnet,
-    minigame_address_sepolia, test_account_mainnet, test_account_sepolia,
+use entry_validator_interfaces::tournament::{
+    GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
-use budokan_validators::snapshot_validator::{
+use entry_validator_test_common::constants::{
+    minigame_address_mainnet, minigame_address_sepolia, test_account_mainnet, test_account_sepolia,
+    tournament_address_mainnet, tournament_address_sepolia,
+};
+use entry_validators::snapshot_validator::{
     Entry, ISnapshotValidatorDispatcher, ISnapshotValidatorDispatcherTrait, SnapshotStatus,
 };
 use snforge_std::{
@@ -28,8 +28,8 @@ use starknet::{ContractAddress, get_block_timestamp};
 //
 // To run this test:
 // 1. Deploy Budokan contract to sepolia/mainnet (or use existing deployment)
-// 2. Update budokan_address_mainnet constant below with the deployed address
-// 3. Run: snforge test test_snapshot_validator_budokan --fork-name sepolia
+// 2. Update tournament_address_mainnet constant below with the deployed address
+// 3. Run: snforge test test_snapshot_validator_fork --fork-name sepolia
 //
 // Note: You'll need to mock/setup the required dependencies:
 // - A minigame contract address
@@ -69,7 +69,7 @@ fn test_schedule() -> Schedule {
 
 #[test]
 #[fork("sepolia")]
-fn test_snapshot_validator_budokan_create_tournament() {
+fn test_snapshot_validator_fork_create_tournament() {
     // This test shows how to:
     // 1. Deploy SnapshotValidator
     // 2. Create a snapshot with ID
@@ -78,12 +78,12 @@ fn test_snapshot_validator_budokan_create_tournament() {
     // 5. Create a tournament on Budokan using the SnapshotValidator as the entry requirement
     // 6. Enter the tournament through Budokan, which calls the validator
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let minigame_addr = minigame_address_sepolia();
     let account = test_account_sepolia();
 
     // Step 1: Deploy SnapshotValidator
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create a snapshot (returns the ID)
@@ -120,7 +120,7 @@ fn test_snapshot_validator_budokan_create_tournament() {
     assert(validator.get_snapshot_entry(snapshot_id, player3) == 1, 'P3: 1 entry');
 
     // Step 5: Create tournament on Budokan with SnapshotValidator as entry requirement
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
     // Create extension config with the snapshot ID
     let extension_config = ExtensionConfig {
@@ -134,8 +134,8 @@ fn test_snapshot_validator_budokan_create_tournament() {
         entry_requirement_type,
     };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -144,7 +144,7 @@ fn test_snapshot_validator_budokan_create_tournament() {
             Option::None, // No entry fee
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Verify tournament was created with correct requirements
     assert(tournament.entry_requirement.is_some(), 'Should have entry requirement');
@@ -160,13 +160,13 @@ fn test_snapshot_validator_budokan_create_tournament() {
     snforge_std::start_cheat_block_timestamp_global(registration_start);
 
     // Player1 enters with their address in the qualification proof
-    start_cheat_caller_address(budokan_addr, player1);
+    start_cheat_caller_address(owner_addr, player1);
     let qualification_proof = Option::Some(
         QualificationProof::Extension(array![player1.into()].span()),
     );
-    let (token_id, entry_number) = budokan
+    let (token_id, entry_number) = platform
         .enter_tournament(tournament.id, 'player1', player1, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Verify entry was successful
     assert(entry_number == 1, 'Invalid entry number');
@@ -179,13 +179,13 @@ fn test_snapshot_validator_budokan_create_tournament() {
     assert(entries_left.unwrap() == 2, 'Should have 2 left'); // Started with 3, used 1
 
     // Player2 can also enter
-    start_cheat_caller_address(budokan_addr, player2);
+    start_cheat_caller_address(owner_addr, player2);
     let qualification_proof2 = Option::Some(
         QualificationProof::Extension(array![player2.into()].span()),
     );
-    let (token_id2, entry_number2) = budokan
+    let (token_id2, entry_number2) = platform
         .enter_tournament(tournament.id, 'player2', player2, qualification_proof2);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(entry_number2 == 2, 'Invalid entry number p2');
     assert(token_id2 > token_id, 'Invalid token ID p2');
@@ -200,12 +200,12 @@ fn test_snapshot_validator_budokan_create_tournament() {
 
 #[test]
 #[fork("sepolia")]
-fn test_snapshot_validator_budokan_multiple_entries() {
+fn test_snapshot_validator_fork_multiple_entries() {
     // This test demonstrates a player using multiple entries from their snapshot allocation
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create snapshot (returns the ID)
@@ -234,7 +234,7 @@ fn test_snapshot_validator_budokan_multiple_entries() {
     let tournament_id: u64 = 1;
 
     // Configure the tournament to use this snapshot
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_config(tournament_id, 0, array![snapshot_id.into()].span());
     stop_cheat_caller_address(validator_address);
 
@@ -244,7 +244,7 @@ fn test_snapshot_validator_budokan_multiple_entries() {
     assert(entries_left.unwrap() == 3, '3 entries left');
 
     // Simulate entering tournament (would normally be called by Budokan)
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -253,7 +253,7 @@ fn test_snapshot_validator_budokan_multiple_entries() {
     assert(entries_after.unwrap() == 2, '2 entries left');
 
     // Remove entry and verify restoration; second remove is a no-op
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.remove_entry(tournament_id, 0, player, array![].span());
     entry_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -267,13 +267,13 @@ fn test_snapshot_validator_budokan_multiple_entries() {
 #[test]
 #[should_panic(expected: "Budokan: Invalid entry according to extension")]
 #[fork("mainnet")]
-fn test_snapshot_validator_budokan_unauthorized_entry() {
+fn test_snapshot_validator_fork_unauthorized_entry() {
     // This test demonstrates that a player without snapshot entries cannot enter through Budokan
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create and lock a snapshot with only player1 having entries
@@ -291,7 +291,7 @@ fn test_snapshot_validator_budokan_unauthorized_entry() {
     assert(validator.get_snapshot_entry(snapshot_id, player2) == 0, '0 entries');
 
     // Create tournament on Budokan with the validator as extension
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
     let extension_config = ExtensionConfig {
         address: validator_address, config: array![snapshot_id.into()].span(),
@@ -301,8 +301,8 @@ fn test_snapshot_validator_budokan_unauthorized_entry() {
         entry_limit: 0, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -311,7 +311,7 @@ fn test_snapshot_validator_budokan_unauthorized_entry() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration period
     let schedule = test_schedule();
@@ -322,22 +322,22 @@ fn test_snapshot_validator_budokan_unauthorized_entry() {
     snforge_std::start_cheat_block_timestamp_global(registration_start);
 
     // Player2 tries to enter but should fail since they're not in the snapshot
-    start_cheat_caller_address(budokan_addr, player2);
+    start_cheat_caller_address(owner_addr, player2);
     let qualification_proof = Option::Some(
         QualificationProof::Extension(array![player2.into()].span()),
     );
 
     // This should panic with "Invalid entry according to extension"
-    budokan.enter_tournament(tournament.id, 'unauthorized_player', player2, qualification_proof);
+    platform.enter_tournament(tournament.id, 'unauthorized_player', player2, qualification_proof);
 }
 
 #[test]
-fn test_snapshot_validator_budokan_update_snapshots() {
+fn test_snapshot_validator_fork_update_snapshots() {
     // This test demonstrates creating multiple snapshots with different data
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create first snapshot: player1 has 2 entries
@@ -386,12 +386,12 @@ fn test_snapshot_validator_budokan_update_snapshots() {
 }
 
 #[test]
-fn test_snapshot_validator_budokan_cross_tournament() {
+fn test_snapshot_validator_fork_cross_tournament() {
     // This test demonstrates using different snapshots for different tournaments
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Player has different entries in different snapshots
@@ -432,10 +432,10 @@ fn test_snapshot_validator_budokan_cross_tournament() {
 fn test_snapshot_validator_locking_mechanism() {
     // This test demonstrates the snapshot locking mechanism
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
     let _other_account: ContractAddress = 0x999.try_into().unwrap();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create a snapshot
@@ -486,10 +486,10 @@ fn test_snapshot_validator_locking_mechanism() {
 fn test_snapshot_validator_ownership() {
     // This test demonstrates ownership controls on snapshots
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let owner = test_account_sepolia();
     let _other_user: ContractAddress = 0x999.try_into().unwrap();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Owner creates a snapshot
@@ -524,10 +524,10 @@ fn test_snapshot_validator_exceed_entry_limit() {
     // This test verifies that a player cannot enter a tournament more times
     // than their snapshot allocation allows
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create snapshot with player having only 2 entries
@@ -540,7 +540,7 @@ fn test_snapshot_validator_exceed_entry_limit() {
     stop_cheat_caller_address(validator_address);
 
     // Create tournament
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
     let extension_config = ExtensionConfig {
         address: validator_address, config: array![snapshot_id.into()].span(),
     };
@@ -548,8 +548,8 @@ fn test_snapshot_validator_exceed_entry_limit() {
         entry_limit: 0, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -558,7 +558,7 @@ fn test_snapshot_validator_exceed_entry_limit() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration period
     let schedule = test_schedule();
@@ -573,17 +573,17 @@ fn test_snapshot_validator_exceed_entry_limit() {
     );
 
     // First entry - should succeed
-    start_cheat_caller_address(budokan_addr, player);
-    let (token_id_1, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (token_id_1, entry_1) = platform
         .enter_tournament(tournament.id, 'player_entry_1', player, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_1 == 1, 'First entry should succeed');
 
     // Second entry - should succeed
-    start_cheat_caller_address(budokan_addr, player);
-    let (token_id_2, entry_2) = budokan
+    start_cheat_caller_address(owner_addr, player);
+    let (token_id_2, entry_2) = platform
         .enter_tournament(tournament.id, 'player_entry_2', player, qualification_proof);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
     assert(entry_2 == 2, 'Second entry should succeed');
     assert(token_id_2 > token_id_1, 'Second token ID higher');
 
@@ -594,8 +594,8 @@ fn test_snapshot_validator_exceed_entry_limit() {
     assert(entries_left.unwrap() == 0, 'Should have 0 entries left');
 
     // Third entry - should PANIC because player only had 2 entries
-    start_cheat_caller_address(budokan_addr, player);
-    budokan.enter_tournament(tournament.id, 'player_entry_3', player, qualification_proof);
+    start_cheat_caller_address(owner_addr, player);
+    platform.enter_tournament(tournament.id, 'player_entry_3', player, qualification_proof);
     // Should not reach here
 }
 
@@ -603,9 +603,9 @@ fn test_snapshot_validator_exceed_entry_limit() {
 fn test_snapshot_validator_zero_entries() {
     // Test that a player with 0 entries in snapshot cannot enter
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     let player: ContractAddress = 0x111.try_into().unwrap();
@@ -622,7 +622,7 @@ fn test_snapshot_validator_zero_entries() {
     let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
     let tournament_id: u64 = 1;
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_config(tournament_id, 0, array![snapshot_id.into()].span());
     stop_cheat_caller_address(validator_address);
 
@@ -640,9 +640,9 @@ fn test_snapshot_validator_zero_entries() {
 fn test_snapshot_upload_data_to_locked_snapshot() {
     // Test that uploading data to a locked snapshot fails
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create and lock snapshot
@@ -666,10 +666,10 @@ fn test_snapshot_upload_data_to_locked_snapshot() {
 fn test_snapshot_non_owner_upload() {
     // Test that non-owner cannot upload data to someone else's snapshot
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let owner = test_account_sepolia();
     let non_owner: ContractAddress = 0x999.try_into().unwrap();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Owner creates snapshot
@@ -689,10 +689,10 @@ fn test_snapshot_non_owner_upload() {
 fn test_snapshot_non_owner_lock() {
     // Test that non-owner cannot lock someone else's snapshot
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let owner = test_account_sepolia();
     let non_owner: ContractAddress = 0x999.try_into().unwrap();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Owner creates and uploads data to snapshot
@@ -713,9 +713,9 @@ fn test_snapshot_non_owner_lock() {
 fn test_snapshot_use_nonexistent_snapshot() {
     // Test that using a non-existent snapshot ID fails
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     let nonexistent_snapshot_id: u64 = 999;
@@ -732,9 +732,9 @@ fn test_snapshot_use_nonexistent_snapshot() {
 fn test_snapshot_double_lock() {
     // Test that locking a snapshot twice fails
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     // Create, upload, and lock snapshot
@@ -754,16 +754,16 @@ fn test_snapshot_double_lock() {
 fn test_snapshot_add_config_nonexistent_snapshot() {
     // Test that adding a tournament config with non-existent snapshot fails
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let _account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let nonexistent_snapshot_id: u64 = 999;
 
     // Try to configure tournament with non-existent snapshot - should panic
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_config(tournament_id, 0, array![nonexistent_snapshot_id.into()].span());
     // Should not reach here
 }
@@ -772,9 +772,9 @@ fn test_snapshot_add_config_nonexistent_snapshot() {
 fn test_snapshot_validator_entries_tracking_across_uses() {
     // Test that entries are properly tracked as they're used up
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     let player: ContractAddress = 0x111.try_into().unwrap();
@@ -791,7 +791,7 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     let tournament_id: u64 = 1;
 
     // Configure tournament
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_config(tournament_id, 0, array![snapshot_id.into()].span());
     stop_cheat_caller_address(validator_address);
 
@@ -800,7 +800,7 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     assert(entries_left.unwrap() == 5, 'Start with 5 entries');
 
     // Use 1 entry
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -808,7 +808,7 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     assert(entries_after_1.unwrap() == 4, '4 entries left after 1');
 
     // Use 2 more entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -817,7 +817,7 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     assert(entries_after_3.unwrap() == 2, '2 entries left after 3');
 
     // Use remaining 2 entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -835,9 +835,9 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
 fn test_snapshot_validator_independent_tournament_tracking() {
     // Test that entry tracking is independent per tournament
 
-    let budokan_addr = budokan_address_sepolia();
+    let owner_addr = tournament_address_sepolia();
     let account = test_account_sepolia();
-    let validator_address = deploy_snapshot_validator(budokan_addr);
+    let validator_address = deploy_snapshot_validator(owner_addr);
     let validator = ISnapshotValidatorDispatcher { contract_address: validator_address };
 
     let player: ContractAddress = 0x111.try_into().unwrap();
@@ -855,13 +855,13 @@ fn test_snapshot_validator_independent_tournament_tracking() {
     let tournament_2: u64 = 2;
 
     // Configure both tournaments with same snapshot
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_config(tournament_1, 0, array![snapshot_id.into()].span());
     entry_validator.add_config(tournament_2, 0, array![snapshot_id.into()].span());
     stop_cheat_caller_address(validator_address);
 
     // Use 2 entries in tournament 1
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_1, 0, player, array![].span());
     entry_validator.add_entry(tournament_1, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -875,7 +875,7 @@ fn test_snapshot_validator_independent_tournament_tracking() {
     assert(t2_entries.unwrap() == 3, 'T2: 3 entries left');
 
     // Use 1 entry in tournament 2
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     entry_validator.add_entry(tournament_2, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -891,7 +891,7 @@ fn test_snapshot_validator_independent_tournament_tracking() {
 // This comment block shows how you would use this in production:
 //
 // 1. Deploy SnapshotValidator:
-//    let validator = deploy_snapshot_validator(budokan_address_mainnet);
+//    let validator = deploy_snapshot_validator(tournament_address_mainnet);
 //
 // 2. Create a new snapshot (returns unique ID):
 //    let snapshot_id = validator.create_snapshot();
@@ -912,10 +912,10 @@ fn test_snapshot_validator_independent_tournament_tracking() {
 //        address: validator_address,
 //        config: array![snapshot_id.into()].span(), // Pass snapshot ID
 //    };
-//    budokan.create_tournament(..., extension_config);
+//    tournament.create_tournament(..., extension_config);
 //
 // 6. Players can now enter using their snapshot allocation:
-//    budokan.enter_tournament(
+//    tournament.enter_tournament(
 //        tournament_id,
 //        player_name,
 //        player_address,

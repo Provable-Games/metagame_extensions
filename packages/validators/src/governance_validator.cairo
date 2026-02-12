@@ -1,8 +1,8 @@
 #[starknet::contract]
 pub mod GovernanceValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use core::num::traits::Zero;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin_interfaces::governor::{IGovernorDispatcher, IGovernorDispatcherTrait};
     use openzeppelin_interfaces::votes::{IVotesDispatcher, IVotesDispatcherTrait};
@@ -48,9 +48,9 @@ pub mod GovernanceValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Governance requirements can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(budokan_address, false);
+        self.entry_validator.initializer(owner_address, false);
     }
 
     // Implement the EntryValidator trait for the contract

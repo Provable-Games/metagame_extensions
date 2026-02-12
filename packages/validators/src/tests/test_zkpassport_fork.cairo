@@ -8,13 +8,13 @@
 // Query: age >= 18
 // Verifier: 0x06ad2f4c866eabb03443098ecc798af1791952bc138bd32904dd215d8585c655
 
-use budokan_interfaces::entry_validator::{
+use core::poseidon::poseidon_hash_span;
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_validators::zkpassport_validator::{
+use entry_validators::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
-use core::poseidon::poseidon_hash_span;
 use snforge_std::fs::{FileTrait, read_txt};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp,
@@ -60,8 +60,8 @@ const ENTRY_LIMIT: u8 = 5;
 // Large max_proof_age so the fixture doesn't go stale
 const MAX_PROOF_AGE: felt252 = 86400; // 24 hours
 
-fn BUDOKAN_ADDRESS() -> ContractAddress {
-    'budokan'.try_into().unwrap()
+fn OWNER_ADDRESS() -> ContractAddress {
+    'owner'.try_into().unwrap()
 }
 
 fn PLAYER_ADDRESS() -> ContractAddress {
@@ -80,7 +80,7 @@ fn deploy_validator() -> (
     ContractAddress, IEntryValidatorDispatcher, IZkPassportValidatorDispatcher,
 ) {
     let contract = declare("ZkPassportValidator").unwrap().contract_class();
-    let constructor_calldata = array![BUDOKAN_ADDRESS().into(), 0]; // registration_only = false
+    let constructor_calldata = array![OWNER_ADDRESS().into(), 0]; // registration_only = false
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let entry_validator = IEntryValidatorDispatcher { contract_address };
@@ -120,7 +120,7 @@ fn real_qualification_span() -> Span<felt252> {
 fn test_fork_e2e_valid_proof() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, FORK_BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
@@ -143,7 +143,7 @@ fn test_fork_e2e_valid_proof() {
 fn test_fork_corrupted_proof_rejected() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, FORK_BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
@@ -178,7 +178,7 @@ fn test_fork_corrupted_proof_rejected() {
 fn test_fork_wrong_scope_config_rejected() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, FORK_BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     // Configure with wrong service scope
     let wrong_config = array![
@@ -202,7 +202,7 @@ fn test_fork_wrong_scope_config_rejected() {
 fn test_fork_duplicate_nullifier_blocked() {
     let (contract_address, entry_validator, zkp_validator) = deploy_validator();
     start_cheat_block_timestamp(contract_address, FORK_BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
@@ -237,7 +237,7 @@ fn test_fork_stale_proof_rejected() {
     let (contract_address, entry_validator, _) = deploy_validator();
     // Set block timestamp far in the future so proof is stale (>24h after proof timestamp)
     start_cheat_block_timestamp(contract_address, REAL_PROOF_TIMESTAMP + 90000);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
@@ -253,7 +253,7 @@ fn test_fork_stale_proof_rejected() {
 #[fork("sepolia")]
 fn test_fork_config_inspection() {
     let (contract_address, entry_validator, zkp_validator) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
@@ -289,7 +289,7 @@ fn test_fork_config_inspection() {
 fn test_fork_entry_removal_and_reentry() {
     let (contract_address, entry_validator, zkp_validator) = deploy_validator();
     start_cheat_block_timestamp(contract_address, FORK_BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 

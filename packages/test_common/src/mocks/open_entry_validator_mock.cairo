@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod open_entry_validator_mock {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
@@ -37,9 +37,9 @@ pub mod open_entry_validator_mock {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Open validator: once registered, entry is always valid (registration_only = true)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
     impl EntryValidatorImplInternal of EntryValidator<ContractState> {

@@ -19,8 +19,8 @@ pub trait IEntryValidatorMock<TState> {
 
 #[starknet::contract]
 pub mod ERC20BalanceValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
@@ -64,9 +64,9 @@ pub mod ERC20BalanceValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // ERC20 balance can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
     // Implement the EntryValidator trait for the contract

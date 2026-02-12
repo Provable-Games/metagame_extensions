@@ -4,7 +4,7 @@ export const SNAPSHOT_VALIDATOR_ADDRESS = "0x079e3a4b02a079672aae7f128347b11bd1a
 export const SNAPSHOT_VALIDATOR_ABI = [
   {
     type: "struct",
-    name: "budokan_extensions::examples::snapshot_validator::Entry",
+    name: "entry_validators::examples::snapshot_validator::Entry",
     members: [
       { name: "address", type: "core::starknet::contract_address::ContractAddress" },
       { name: "count", type: "core::integer::u8" },
@@ -24,7 +24,7 @@ export const SNAPSHOT_VALIDATOR_ABI = [
       { name: "snapshot_id", type: "core::integer::u64" },
       {
         name: "snapshot_values",
-        type: "core::array::Span::<budokan_extensions::examples::snapshot_validator::Entry>",
+        type: "core::array::Span::<entry_validators::examples::snapshot_validator::Entry>",
       },
     ],
     outputs: [],
@@ -39,7 +39,7 @@ export const SNAPSHOT_VALIDATOR_ABI = [
   },
   {
     type: "enum",
-    name: "budokan_extensions::examples::snapshot_validator::SnapshotStatus",
+    name: "entry_validators::examples::snapshot_validator::SnapshotStatus",
     variants: [
       { name: "Created", type: "()" },
       { name: "InProgress", type: "()" },
@@ -48,17 +48,17 @@ export const SNAPSHOT_VALIDATOR_ABI = [
   },
   {
     type: "struct",
-    name: "budokan_extensions::examples::snapshot_validator::SnapshotMetadata",
+    name: "entry_validators::examples::snapshot_validator::SnapshotMetadata",
     members: [
       { name: "owner", type: "core::starknet::contract_address::ContractAddress" },
-      { name: "status", type: "budokan_extensions::examples::snapshot_validator::SnapshotStatus" },
+      { name: "status", type: "entry_validators::examples::snapshot_validator::SnapshotStatus" },
     ],
   },
   {
     type: "enum",
-    name: "core::option::Option::<budokan_extensions::examples::snapshot_validator::SnapshotMetadata>",
+    name: "core::option::Option::<entry_validators::examples::snapshot_validator::SnapshotMetadata>",
     variants: [
-      { name: "Some", type: "budokan_extensions::examples::snapshot_validator::SnapshotMetadata" },
+      { name: "Some", type: "entry_validators::examples::snapshot_validator::SnapshotMetadata" },
       { name: "None", type: "()" },
     ],
   },
@@ -69,7 +69,7 @@ export const SNAPSHOT_VALIDATOR_ABI = [
     outputs: [
       {
         name: "metadata",
-        type: "core::option::Option::<budokan_extensions::examples::snapshot_validator::SnapshotMetadata>",
+        type: "core::option::Option::<entry_validators::examples::snapshot_validator::SnapshotMetadata>",
       },
     ],
     state_mutability: "view",

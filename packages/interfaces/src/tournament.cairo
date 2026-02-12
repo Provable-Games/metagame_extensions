@@ -1,8 +1,8 @@
-pub use budokan_interfaces::distribution::Distribution;
-pub use budokan_interfaces::entry_requirement::{
+pub use entry_validator_interfaces::distribution::Distribution;
+pub use entry_validator_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, NFTQualification, QualificationProof,
 };
-pub use budokan_interfaces::prize::{ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData};
+pub use entry_validator_interfaces::prize::{ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData};
 use starknet::ContractAddress;
 
 #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
@@ -81,7 +81,7 @@ pub enum RewardType {
 }
 
 #[starknet::interface]
-pub trait IBudokan<TState> {
+pub trait ITournament<TState> {
     fn total_tournaments(self: @TState) -> u64;
     fn tournament(self: @TState, tournament_id: u64) -> Tournament;
     fn tournament_entries(self: @TState, tournament_id: u64) -> u32;

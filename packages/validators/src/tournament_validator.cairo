@@ -3,8 +3,8 @@
 //! Tournament Validator
 //!
 //! This extension contract validates tournament entry based on participation/winning
-//! in qualifying tournaments. It delegates to an external contract (Budokan) to query
-//! registration and leaderboard data.
+//! in qualifying tournaments. It delegates to the owner contract (which must implement
+//! `ITournament` + `IRegistration`) to query registration and leaderboard data.
 //!
 //! Qualifying Modes:
 //! - PER_TOKEN (0): Each qualifying token grants `entry_limit` entries (like a "punch card").
@@ -47,11 +47,15 @@ pub trait ITournamentValidator<TState> {
 
 #[starknet::contract]
 pub mod TournamentValidator {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
-    use budokan_interfaces::budokan::{IBudokanDispatcher, IBudokanDispatcherTrait, Phase};
-    use budokan_interfaces::registration::{IRegistrationDispatcher, IRegistrationDispatcherTrait};
-    use budokan_validators::externals::game_components::{
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validator_interfaces::registration::{
+        IRegistrationDispatcher, IRegistrationDispatcherTrait,
+    };
+    use entry_validator_interfaces::tournament::{
+        ITournamentDispatcher, ITournamentDispatcherTrait, Phase,
+    };
+    use entry_validators::externals::game_components::{
         IMinigameDispatcher, IMinigameDispatcherTrait,
     };
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
@@ -127,10 +131,10 @@ pub mod TournamentValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Tournament qualification is validated at registration time
         // Once registered, the entry remains valid (registration_only = true)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
     // Implement the EntryValidator trait for the contract
@@ -465,13 +469,13 @@ pub mod TournamentValidator {
             qualification: Span<felt252>,
             position_index: u32,
         ) -> bool {
-            let budokan_address = self.entry_validator.get_budokan_address();
-            let budokan = IBudokanDispatcher { contract_address: budokan_address };
+            let tournament_address = self.entry_validator.get_owner_address();
+            let tournament = ITournamentDispatcher { contract_address: tournament_address };
             let registration_dispatcher = IRegistrationDispatcher {
-                contract_address: budokan_address,
+                contract_address: tournament_address,
             };
 
-            let qualifying_tournament = budokan.tournament(qualifying_tournament_id);
+            let qualifying_tournament = tournament.tournament(qualifying_tournament_id);
             let game_address = qualifying_tournament.game_config.address;
 
             // Check registration exists
@@ -495,7 +499,7 @@ pub mod TournamentValidator {
 
             if qualifier_type == QUALIFIER_TYPE_TOP_POSITION {
                 // Tournament must be finalized
-                let current_phase = budokan.current_phase(qualifying_tournament_id);
+                let current_phase = tournament.current_phase(qualifying_tournament_id);
                 if current_phase != Phase::Finalized {
                     return false;
                 }
@@ -517,7 +521,7 @@ pub mod TournamentValidator {
                     return false;
                 }
 
-                let leaderboard = budokan.get_leaderboard(qualifying_tournament_id);
+                let leaderboard = tournament.get_leaderboard(qualifying_tournament_id);
                 if position.into() > leaderboard.len() {
                     return false;
                 }

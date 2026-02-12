@@ -1,6 +1,8 @@
 #[starknet::component]
 pub mod EntryValidatorComponent {
-    use budokan_interfaces::entry_validator::{IENTRY_VALIDATOR_ID, IEntryValidator};
+    use entry_validator_interfaces::entry_validator::{
+        IENTRY_VALIDATOR_ID, IEntryValidator, LEGACY_IENTRY_VALIDATOR_ID,
+    };
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
@@ -8,7 +10,7 @@ pub mod EntryValidatorComponent {
 
     #[storage]
     pub struct Storage {
-        budokan_address: ContractAddress,
+        owner_address: ContractAddress,
         registration_only: bool,
     }
 
@@ -63,8 +65,8 @@ pub mod EntryValidatorComponent {
         +SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>,
     > of IEntryValidator<ComponentState<TContractState>> {
-        fn budokan_address(self: @ComponentState<TContractState>) -> ContractAddress {
-            self.budokan_address.read()
+        fn owner_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.owner_address.read()
         }
 
         fn registration_only(self: @ComponentState<TContractState>) -> bool {
@@ -110,7 +112,7 @@ pub mod EntryValidatorComponent {
             entry_limit: u8,
             config: Span<felt252>,
         ) {
-            self.assert_only_budokan();
+            self.assert_only_owner();
             let mut contract = self.get_contract_mut();
             EntryValidator::add_config(ref contract, tournament_id, entry_limit, config);
         }
@@ -122,7 +124,7 @@ pub mod EntryValidatorComponent {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            self.assert_only_budokan();
+            self.assert_only_owner();
             let mut contract = self.get_contract_mut();
             EntryValidator::on_entry_added(
                 ref contract, tournament_id, game_token_id, player_address, qualification,
@@ -136,7 +138,7 @@ pub mod EntryValidatorComponent {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            self.assert_only_budokan();
+            self.assert_only_owner();
             let mut contract = self.get_contract_mut();
             EntryValidator::on_entry_removed(
                 ref contract, tournament_id, game_token_id, player_address, qualification,
@@ -153,28 +155,29 @@ pub mod EntryValidatorComponent {
     > of InternalTrait<TContractState> {
         fn initializer(
             ref self: ComponentState<TContractState>,
-            budokan_address: ContractAddress,
+            owner_address: ContractAddress,
             registration_only: bool,
         ) {
-            self.budokan_address.write(budokan_address);
+            self.owner_address.write(owner_address);
             self.registration_only.write(registration_only);
 
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IENTRY_VALIDATOR_ID);
+            src5_component.register_interface(LEGACY_IENTRY_VALIDATOR_ID);
         }
 
-        fn get_budokan_address(self: @ComponentState<TContractState>) -> ContractAddress {
-            self.budokan_address.read()
+        fn get_owner_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.owner_address.read()
         }
 
         fn is_registration_only(self: @ComponentState<TContractState>) -> bool {
             self.registration_only.read()
         }
 
-        fn assert_only_budokan(self: @ComponentState<TContractState>) {
+        fn assert_only_owner(self: @ComponentState<TContractState>) {
             assert!(
-                get_caller_address() == self.budokan_address.read(),
-                "Entry Validator: Only budokan can call",
+                get_caller_address() == self.owner_address.read(),
+                "Entry Validator: Only owner can call",
             );
         }
     }

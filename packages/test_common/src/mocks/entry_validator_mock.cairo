@@ -7,9 +7,9 @@ pub trait IEntryValidatorMock<TState> {
 
 #[starknet::contract]
 pub mod entry_validator_mock {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use core::num::traits::Zero;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
@@ -45,9 +45,9 @@ pub mod entry_validator_mock {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // ERC721 ownership can change, so allow banning (registration_only = false)
-        self.entry_validator.initializer(budokan_address, false);
+        self.entry_validator.initializer(owner_address, false);
     }
 
     impl EntryValidatorImplInternal of EntryValidator<ContractState> {

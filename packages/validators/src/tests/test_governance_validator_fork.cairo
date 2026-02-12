@@ -1,15 +1,15 @@
-use budokan_interfaces::budokan::{
-    GameConfig, IBudokanDispatcher, IBudokanDispatcherTrait, Metadata, Period, Schedule,
-};
-use budokan_interfaces::entry_requirement::{
+use entry_validator_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
-use budokan_interfaces::entry_validator::{
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_test_common::constants::{
-    budokan_address_mainnet, governance_token_address, governor_address, minigame_address_mainnet,
-    test_account_mainnet,
+use entry_validator_interfaces::tournament::{
+    GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
+};
+use entry_validator_test_common::constants::{
+    governance_token_address, governor_address, minigame_address_mainnet, test_account_mainnet,
+    tournament_address_mainnet,
 };
 use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
@@ -31,8 +31,8 @@ use starknet::{ContractAddress, get_block_timestamp};
 //
 // To run this test:
 // 1. Deploy Budokan contract to mainnet/mainnet (or use existing deployment)
-// 2. Update budokan_address_mainnet constant below with the deployed address
-// 3. Run: snforge test test_governance_validator_budokan --fork-name mainnet
+// 2. Update tournament_address_mainnet constant below with the deployed address
+// 3. Run: snforge test test_governance_validator_fork --fork-name mainnet
 // ==============================================
 
 // Deploy the GovernanceValidator contract
@@ -68,19 +68,19 @@ fn test_schedule() -> Schedule {
 
 #[test]
 #[fork("mainnet")]
-fn test_governance_validator_budokan_create_tournament() {
+fn test_governance_validator_fork_create_tournament() {
     // This test shows how to:
     // 1. Deploy GovernanceValidator
     // 2. Configure governance parameters (token address, balance threshold, etc.)
     // 3. Create a tournament on Budokan using the GovernanceValidator as the entry requirement
     // 4. Enter the tournament through Budokan, which validates governance participation
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
     // Step 1: Deploy GovernanceValidator
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let _validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create extension config with governance parameters
@@ -109,10 +109,10 @@ fn test_governance_validator_budokan_create_tournament() {
     };
 
     // Step 3: Create tournament on Budokan with the validator as extension
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -121,7 +121,7 @@ fn test_governance_validator_budokan_create_tournament() {
             Option::None, // No entry fee
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Verify tournament was created with correct requirements
     assert(tournament.entry_requirement.is_some(), 'Should have entry requirement');
@@ -133,14 +133,14 @@ fn test_governance_validator_budokan_create_tournament() {
 
 #[test]
 #[fork("mainnet")]
-fn test_governance_validator_budokan_with_voting_requirement() {
+fn test_governance_validator_fork_with_voting_requirement() {
     // This test demonstrates using voting requirements for entry eligibility
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
 
     // Configure with voting requirements
     let balance_threshold: u256 = 1000;
@@ -163,10 +163,10 @@ fn test_governance_validator_budokan_with_voting_requirement() {
         entry_limit: 5, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -175,7 +175,7 @@ fn test_governance_validator_budokan_with_voting_requirement() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(tournament.id > 0, 'Tournament created');
     // In a real scenario, only players who:
@@ -191,11 +191,11 @@ fn test_governance_validator_budokan_with_voting_requirement() {
 fn test_governance_validator_entries_based_on_voting_power() {
     // This test demonstrates calculating entry allocation based on voting power
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
 
     // Configure with votes per entry calculation
     let balance_threshold: u256 = 100; // Base threshold
@@ -219,10 +219,10 @@ fn test_governance_validator_entries_based_on_voting_power() {
         entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -231,7 +231,7 @@ fn test_governance_validator_entries_based_on_voting_power() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(tournament.id > 0, 'Tournament created');
     // Players' entries = (vote_count - balance_threshold) / votes_per_entry
@@ -246,11 +246,11 @@ fn test_governance_validator_validate_entries_ban() {
     // 2. Player transfers tokens away (no longer meets requirements)
     // 3. Verify that should_ban_entry would return true
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Create tournament with low governance requirements
@@ -274,10 +274,10 @@ fn test_governance_validator_validate_entries_ban() {
         entry_limit: 3, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, account);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, account);
+    let tournament = platform
         .create_tournament(
             account,
             test_metadata(),
@@ -286,7 +286,7 @@ fn test_governance_validator_validate_entries_ban() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration period
     let schedule = test_schedule();
@@ -302,10 +302,10 @@ fn test_governance_validator_validate_entries_ban() {
         QualificationProof::Extension(array![player1.into()].span()),
     );
 
-    start_cheat_caller_address(budokan_addr, player1);
-    let (token_id_1, entry_number_1) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (token_id_1, entry_number_1) = platform
         .enter_tournament(tournament.id, 'player1', player1, qualification_proof1);
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(entry_number_1 == 1, 'First entry should be 1');
 
@@ -351,7 +351,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     // - Player2 with valid requirements can still enter NEW entries
     // - This proves should_ban_entry and validate_entry are independent checks
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let minigame_addr = minigame_address_mainnet();
     let player1 = test_account_mainnet();
     let player2: ContractAddress =
@@ -359,7 +359,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         .try_into()
         .unwrap(); // Known address with governance tokens on mainnet
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     // Create tournament with low governance requirements
@@ -383,10 +383,10 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         entry_limit: 10, entry_requirement_type: EntryRequirementType::extension(extension_config),
     };
 
-    let budokan = IBudokanDispatcher { contract_address: budokan_addr };
+    let platform = ITournamentDispatcher { contract_address: owner_addr };
 
-    start_cheat_caller_address(budokan_addr, player1);
-    let tournament = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let tournament = platform
         .create_tournament(
             player1,
             test_metadata(),
@@ -395,7 +395,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
             Option::None,
             Option::Some(entry_requirement),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     // Advance to registration period
     let schedule = test_schedule();
@@ -406,15 +406,15 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     start_cheat_block_timestamp_global(registration_start);
 
     // Player1 enters tournament
-    start_cheat_caller_address(budokan_addr, player1);
-    let (token_id_1, entry_1) = budokan
+    start_cheat_caller_address(owner_addr, player1);
+    let (token_id_1, entry_1) = platform
         .enter_tournament(
             tournament.id,
             'player1',
             player1,
             Option::Some(QualificationProof::Extension(array![].span())),
         );
-    stop_cheat_caller_address(budokan_addr);
+    stop_cheat_caller_address(owner_addr);
 
     assert(entry_1 == 1, 'Player1 first entry');
 
@@ -435,15 +435,15 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
 
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
-        start_cheat_caller_address(budokan_addr, player2);
-        let (token_id_2, _entry_2) = budokan
+        start_cheat_caller_address(owner_addr, player2);
+        let (token_id_2, _entry_2) = platform
             .enter_tournament(
                 tournament.id,
                 'player2',
                 player2,
                 Option::Some(QualificationProof::Extension(array![].span())),
             );
-        stop_cheat_caller_address(budokan_addr);
+        stop_cheat_caller_address(owner_addr);
 
         assert(token_id_2 > token_id_1, 'Player2 token ID higher');
     }
@@ -461,10 +461,10 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
 fn test_governance_validator_direct_validation() {
     // This test demonstrates direct validation without full Budokan integration
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let _account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -482,7 +482,7 @@ fn test_governance_validator_direct_validation() {
         votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
     ];
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config.span());
     stop_cheat_caller_address(validator_address);
 
@@ -502,10 +502,10 @@ fn test_governance_validator_direct_validation() {
 fn test_governance_validator_multiple_entries() {
     // This test demonstrates tracking multiple entries per player
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let _account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -519,12 +519,12 @@ fn test_governance_validator_multiple_entries() {
         0_u256.try_into().unwrap(),
     ];
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 5, config.span()); // 5 entry limit
     stop_cheat_caller_address(validator_address);
 
     // Simulate player entering multiple times
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -534,7 +534,7 @@ fn test_governance_validator_multiple_entries() {
     // In a real scenario with valid governance setup, this would show 4 entries left
 
     // Add more entries
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_id, 0, player, array![].span());
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -550,10 +550,10 @@ fn test_governance_validator_multiple_entries() {
 fn test_governance_validator_no_delegation() {
     // This test demonstrates that players without delegation cannot enter
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let _account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -564,7 +564,7 @@ fn test_governance_validator_no_delegation() {
         'proposal_123', 0, 0_u256.try_into().unwrap(), 0_u256.try_into().unwrap(),
     ];
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config.span());
     stop_cheat_caller_address(validator_address);
 
@@ -582,10 +582,10 @@ fn test_governance_validator_no_delegation() {
 fn test_governance_validator_insufficient_balance() {
     // This test demonstrates that players below balance threshold cannot enter
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let _account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
@@ -599,7 +599,7 @@ fn test_governance_validator_insufficient_balance() {
         0_u256.try_into().unwrap(),
     ];
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_id, 3, config.span());
     stop_cheat_caller_address(validator_address);
 
@@ -615,10 +615,10 @@ fn test_governance_validator_insufficient_balance() {
 fn test_governance_validator_cross_tournament_independence() {
     // This test demonstrates that entry tracking is independent per tournament
 
-    let budokan_addr = budokan_address_mainnet();
+    let owner_addr = tournament_address_mainnet();
     let _account = test_account_mainnet();
 
-    let validator_address = deploy_governance_validator(budokan_addr);
+    let validator_address = deploy_governance_validator(owner_addr);
     let validator = IEntryValidatorDispatcher { contract_address: validator_address };
 
     let tournament_1: u64 = 1;
@@ -631,13 +631,13 @@ fn test_governance_validator_cross_tournament_independence() {
         'proposal_123', 0, 0_u256.try_into().unwrap(), 0_u256.try_into().unwrap(),
     ];
 
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_config(tournament_1, 3, config.span());
     validator.add_config(tournament_2, 5, config.span());
     stop_cheat_caller_address(validator_address);
 
     // Add entries to tournament 1
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_1, 0, player, array![].span());
     validator.add_entry(tournament_1, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -651,7 +651,7 @@ fn test_governance_validator_cross_tournament_independence() {
     assert(t2_entries.is_some(), 'T2 should have entries');
 
     // Add entry to tournament 2
-    start_cheat_caller_address(validator_address, budokan_addr);
+    start_cheat_caller_address(validator_address, owner_addr);
     validator.add_entry(tournament_2, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
@@ -668,7 +668,7 @@ fn test_governance_validator_cross_tournament_independence() {
 // This comment block shows how you would use the GovernanceValidator in production:
 //
 // 1. Deploy GovernanceValidator:
-//    let validator = deploy_governance_validator(budokan_address_mainnet);
+//    let validator = deploy_governance_validator(owner_address_mainnet);
 //
 // 2. Create extension config with governance parameters:
 //    let config = array![
@@ -686,7 +686,7 @@ fn test_governance_validator_cross_tournament_independence() {
 //        address: validator_address,
 //        config: config.span(),
 //    };
-//    budokan.create_tournament(..., extension_config);
+//    tournament.create_tournament(..., extension_config);
 //
 // 4. Players can enter if they meet governance criteria:
 //    - Have minimum token balance
@@ -695,7 +695,7 @@ fn test_governance_validator_cross_tournament_independence() {
 //    - (Optional) Have sufficient voting power
 //
 // 5. Re-validate entry to ban player who no longer qualifies:
-//    budokan.ban_entry(tournament_id, game_token_id, array![].span());
+//    tournament.ban_entry(tournament_id, game_token_id, array![].span());
 //    // This re-checks the participant and invalidates them if they:
 //    // - Transferred tokens below threshold
 //    // - Undelegated their voting power

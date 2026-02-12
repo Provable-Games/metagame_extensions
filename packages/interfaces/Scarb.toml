@@ -1,5 +1,5 @@
 [package]
-name = "budokan_interfaces"
+name = "entry_validator_interfaces"
 version.workspace = true
 edition.workspace = true
 

@@ -1,10 +1,10 @@
-use budokan_interfaces::entry_validator::{
+use core::poseidon::poseidon_hash_span;
+use entry_validator_interfaces::entry_validator::{
     IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
 };
-use budokan_validators::zkpassport_validator::{
+use entry_validators::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
-use core::poseidon::poseidon_hash_span;
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp,
     start_cheat_caller_address, start_mock_call,
@@ -25,8 +25,8 @@ const NULLIFIER_HIGH: felt252 = 0x5678;
 const BLOCK_TIME: u64 = 1000000;
 const PROOF_TIME: u64 = 999900; // 100 seconds before block time
 
-fn BUDOKAN_ADDRESS() -> ContractAddress {
-    'budokan'.try_into().unwrap()
+fn OWNER_ADDRESS() -> ContractAddress {
+    'owner'.try_into().unwrap()
 }
 
 fn VERIFIER_ADDRESS() -> ContractAddress {
@@ -45,7 +45,7 @@ fn deploy_validator() -> (
     ContractAddress, IEntryValidatorDispatcher, IZkPassportValidatorDispatcher,
 ) {
     let contract = declare("ZkPassportValidator").unwrap().contract_class();
-    let constructor_calldata = array![BUDOKAN_ADDRESS().into(), 0]; // registration_only = false
+    let constructor_calldata = array![OWNER_ADDRESS().into(), 0]; // registration_only = false
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let entry_validator = IEntryValidatorDispatcher { contract_address };
@@ -92,8 +92,8 @@ fn setup_valid_scenario(
     // Cheat block timestamp
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
 
-    // Cheat caller to budokan for config
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    // Cheat caller to owner for config
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     // Add config
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
@@ -126,7 +126,7 @@ fn test_happy_path_valid_proof() {
 fn test_proof_verification_fails() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     // Mock verifier to return Err
@@ -147,7 +147,7 @@ fn test_proof_verification_fails() {
 fn test_scope_mismatch() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     let inputs = mock_public_inputs();
@@ -178,7 +178,7 @@ fn test_scope_mismatch() {
 fn test_subscope_mismatch() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     let inputs = mock_public_inputs();
@@ -208,7 +208,7 @@ fn test_subscope_mismatch() {
 fn test_param_commitment_mismatch() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     let inputs = mock_public_inputs();
@@ -238,7 +238,7 @@ fn test_param_commitment_mismatch() {
 fn test_nullifier_type_mismatch() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     let inputs = mock_public_inputs();
@@ -268,7 +268,7 @@ fn test_nullifier_type_mismatch() {
 fn test_nullifier_consistency_mismatch() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     let inputs = mock_public_inputs();
@@ -299,7 +299,7 @@ fn test_stale_proof() {
     let (contract_address, entry_validator, _) = deploy_validator();
     // Set block timestamp far in the future so proof is stale
     start_cheat_block_timestamp(contract_address, BLOCK_TIME + 7200); // 2 hours later
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     start_mock_call(
@@ -320,7 +320,7 @@ fn test_future_proof() {
     let (contract_address, entry_validator, _) = deploy_validator();
     // Set block timestamp before the proof timestamp
     start_cheat_block_timestamp(contract_address, PROOF_TIME - 100);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     start_mock_call(
@@ -368,7 +368,7 @@ fn test_duplicate_nullifier_same_tournament() {
 fn test_cross_tournament_same_nullifier() {
     let (contract_address, entry_validator, _) = deploy_validator();
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     // Configure both tournaments
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
@@ -449,7 +449,7 @@ fn test_entry_removal_releases_nullifier() {
 #[should_panic(expected: "ZkPassportValidator: config must have at least 6 elements")]
 fn test_config_wrong_length() {
     let (contract_address, entry_validator, _) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, array!['too', 'few'].span());
 }
 
@@ -459,7 +459,7 @@ fn test_config_wrong_length() {
 #[test]
 fn test_config_extended_elements() {
     let (contract_address, entry_validator, zkp_validator) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     // Config with extra elements (e.g. serialized query config)
     let extended_config = array![
@@ -493,7 +493,7 @@ fn test_config_extended_elements() {
 #[should_panic(expected: "ZkPassportValidator: verifier address cannot be zero")]
 fn test_config_zero_verifier_address() {
     let (contract_address, entry_validator, _) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator
         .add_config(
             TOURNAMENT_ID,
@@ -513,7 +513,7 @@ fn test_config_zero_verifier_address() {
 #[test]
 fn test_should_ban_always_false() {
     let (contract_address, entry_validator, _) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     let result = entry_validator
         .should_ban(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
@@ -526,7 +526,7 @@ fn test_should_ban_always_false() {
 #[test]
 fn test_entries_left_tracking() {
     let (contract_address, entry_validator, _) = deploy_validator();
-    start_cheat_caller_address(contract_address, BUDOKAN_ADDRESS());
+    start_cheat_caller_address(contract_address, OWNER_ADDRESS());
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     // Initially should have full entries left

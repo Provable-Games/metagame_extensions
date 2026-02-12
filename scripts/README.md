@@ -1,6 +1,6 @@
 # Deployment Scripts
 
-This directory contains deployment scripts for the Budokan Extensions contracts.
+This directory contains deployment scripts for the entry validator contracts.
 
 ## Available Scripts
 
