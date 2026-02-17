@@ -1,0 +1,11 @@
+[package]
+name = "entry_fee_extension_component"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+openzeppelin_introspection.workspace = true
+interfaces.workspace = true
+
+[lib]
