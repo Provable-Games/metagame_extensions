@@ -2,26 +2,31 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IEntryValidatorMock<TState> {
-    fn get_tournament_erc721_address(self: @TState, tournament_id: u64) -> ContractAddress;
+    fn get_tournament_erc721_address(self: @TState, context_id: u64) -> ContractAddress;
 }
 
 #[starknet::contract]
 pub mod entry_validator_mock {
     use core::num::traits::Zero;
-    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
-    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
-    component!(path: EntryValidatorComponent, storage: entry_validator, event: EntryValidatorEvent);
+    component!(
+        path: EntryRequirementExtensionComponent,
+        storage: entry_validator,
+        event: EntryValidatorEvent,
+    );
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl EntryValidatorImpl =
-        EntryValidatorComponent::EntryValidatorImpl<ContractState>;
-    impl EntryValidatorInternalImpl = EntryValidatorComponent::InternalImpl<ContractState>;
+    impl EntryRequirementExtensionImpl =
+        EntryRequirementExtensionComponent::EntryRequirementExtensionImpl<ContractState>;
+    impl EntryRequirementExtensionInternalImpl =
+        EntryRequirementExtensionComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
@@ -29,7 +34,7 @@ pub mod entry_validator_mock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        entry_validator: EntryValidatorComponent::Storage,
+        entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         tournament_erc721_address: Map<u64, ContractAddress>,
@@ -39,7 +44,7 @@ pub mod entry_validator_mock {
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        EntryValidatorEvent: EntryValidatorComponent::Event,
+        EntryValidatorEvent: EntryRequirementExtensionComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
     }
@@ -50,14 +55,14 @@ pub mod entry_validator_mock {
         self.entry_validator.initializer(owner_address, false);
     }
 
-    impl EntryValidatorImplInternal of EntryValidator<ContractState> {
+    impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
-            tournament_id: u64,
+            context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let erc721_address = self.tournament_erc721_address.read(tournament_id);
+            let erc721_address = self.tournament_erc721_address.read(context_id);
 
             // Check if ERC721 address is set for this tournament
             if erc721_address.is_zero() {
@@ -73,13 +78,13 @@ pub mod entry_validator_mock {
 
         fn should_ban_entry(
             self: @ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
             // Ban if player no longer owns the ERC721 token
-            let erc721_address = self.tournament_erc721_address.read(tournament_id);
+            let erc721_address = self.tournament_erc721_address.read(context_id);
             if erc721_address.is_zero() {
                 return false;
             }
@@ -91,7 +96,7 @@ pub mod entry_validator_mock {
 
         fn entries_left(
             self: @ContractState,
-            tournament_id: u64,
+            context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u8> {
@@ -100,17 +105,17 @@ pub mod entry_validator_mock {
         }
 
         fn add_config(
-            ref self: ContractState, tournament_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
         ) {
             // Extract ERC721 address from config (first element)
             let erc721_address: ContractAddress = (*config.at(0)).try_into().unwrap();
-            self.tournament_erc721_address.write(tournament_id, erc721_address);
+            self.tournament_erc721_address.write(context_id, erc721_address);
         }
 
         fn on_entry_added(
             ref self: ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) { // No specific action needed for this mock
@@ -118,8 +123,8 @@ pub mod entry_validator_mock {
 
         fn on_entry_removed(
             ref self: ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) { // No specific action needed for this mock
@@ -130,10 +135,8 @@ pub mod entry_validator_mock {
     use super::IEntryValidatorMock;
     #[abi(embed_v0)]
     impl EntryValidatorMockImpl of IEntryValidatorMock<ContractState> {
-        fn get_tournament_erc721_address(
-            self: @ContractState, tournament_id: u64,
-        ) -> ContractAddress {
-            self.tournament_erc721_address.read(tournament_id)
+        fn get_tournament_erc721_address(self: @ContractState, context_id: u64) -> ContractAddress {
+            self.tournament_erc721_address.read(context_id)
         }
     }
 }

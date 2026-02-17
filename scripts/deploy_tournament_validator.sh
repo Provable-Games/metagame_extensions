@@ -112,9 +112,9 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/entry_validators_TournamentValidator.contract_class.json" ]; then
+if [ ! -f "target/dev/entry_requirement_extensions_TournamentValidator.contract_class.json" ]; then
     print_error "TournamentValidator contract build failed or contract file not found"
-    print_error "Expected: target/dev/entry_validators_TournamentValidator.contract_class.json"
+    print_error "Expected: target/dev/entry_requirement_extensions_TournamentValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
@@ -127,7 +127,7 @@ fi
 print_info "Calculating class hash from artifact..."
 CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
     --contract-name TournamentValidator \
-    --package entry_validators 2>&1)
+    --package entry_requirement_extensions 2>&1)
 CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
 
 if [ -z "$CLASS_HASH" ]; then
@@ -146,7 +146,7 @@ print_info "Declaring TournamentValidator contract..."
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE declare \
     $URL_FLAG \
     --contract-name TournamentValidator \
-    --package entry_validators \
+    --package entry_requirement_extensions \
     2>&1) || true
 
 # Check declaration result

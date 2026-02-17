@@ -1,5 +1,5 @@
 [package]
-name = "entry_validator_test_common"
+name = "test_common"
 version.workspace = true
 edition.workspace = true
 
@@ -8,8 +8,8 @@ starknet.workspace = true
 openzeppelin_introspection.workspace = true
 openzeppelin_interfaces.workspace = true
 snforge_std.workspace = true
-entry_validator_interfaces.workspace = true
-entry_validator_component.workspace = true
+interfaces.workspace = true
+entry_requirement_extension_component.workspace = true
 
 [lib]
 

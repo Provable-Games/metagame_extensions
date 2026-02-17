@@ -12,7 +12,7 @@ The repo is structured as a Scarb workspace with four packages:
 | ---------------------------- | --------------------------- | ------------------------------------------------------------ |
 | `entry_validator_interfaces` | `packages/interfaces/`      | Pure traits and types (`IEntryValidator`, `ITournament`, etc.) |
 | `entry_validator_component`  | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators        |
-| `entry_validators`           | `packages/validators/`      | All 6 pre-built validator contracts + tests                  |
+| `entry_requirement_extensions`           | `packages/presets/`      | All 6 pre-built validator contracts + tests                  |
 | `entry_validator_test_common`| `packages/test_common/`     | Shared mocks and test constants                              |
 
 ## Build & Test Commands
@@ -20,8 +20,8 @@ The repo is structured as a Scarb workspace with four packages:
 ```bash
 scarb build                                    # Compile all packages
 snforge test --workspace                       # Run all tests
-snforge test -p entry_validators               # Run validator tests only
-snforge test -p entry_validators <filter>      # Run a specific test by name filter
+snforge test -p entry_requirement_extensions               # Run validator tests only
+snforge test -p entry_requirement_extensions <filter>      # Run a specific test by name filter
 snforge test --workspace --coverage            # Run tests with code coverage (used in CI)
 scarb fmt --workspace                          # Format all Cairo files
 scarb fmt --check --workspace                  # Check formatting without modifying (used in CI)
@@ -30,8 +30,8 @@ scarb fmt --check --workspace                  # Check formatting without modify
 Fork testing (against live Starknet state):
 
 ```bash
-snforge test -p entry_validators --fork-name sepolia    # Test against Sepolia
-snforge test -p entry_validators --fork-name mainnet    # Test against Mainnet
+snforge test -p entry_requirement_extensions --fork-name sepolia    # Test against Sepolia
+snforge test -p entry_requirement_extensions --fork-name mainnet    # Test against Mainnet
 ```
 
 ## Toolchain Versions
@@ -49,7 +49,7 @@ entry_validator_interfaces ─── depends on: starknet only
     |
 entry_validator_component ─── depends on: entry_validator_interfaces, openzeppelin_introspection
     |
-entry_validators ─── depends on: entry_validator_interfaces, entry_validator_component,
+entry_requirement_extensions ─── depends on: entry_validator_interfaces, entry_validator_component,
     |                              openzeppelin_introspection, openzeppelin_interfaces
     |
 entry_validator_test_common ─── depends on: entry_validator_interfaces, entry_validator_component,
@@ -94,7 +94,7 @@ pub mod MyValidator {
 }
 ```
 
-### Validators (in `packages/validators/src/`)
+### Validators (in `packages/presets/src/`)
 
 | Validator                 | Config Parameters                                                                          | Banning | Key Concept                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------ |
@@ -114,7 +114,7 @@ pub mod MyValidator {
 
 ### Test Organization
 
-- **Unit tests**: `packages/validators/src/tests/test_entry_validator.cairo` — mock-based basic validation
+- **Unit tests**: `packages/presets/src/tests/test_entry_validator.cairo` — mock-based basic validation
 - **Fork tests** (`*_fork`): Run against live Sepolia/Mainnet contracts (e.g. Budokan)
 - **Integration tests** (`*_integration`): Multi-contract workflows with locally deployed contracts
 - **Mocks** (`packages/test_common/src/mocks/`): `entry_validator_mock`, `open_entry_validator_mock`
@@ -127,7 +127,7 @@ pub mod MyValidator {
 - **openzeppelin_interfaces** (2.1.0): ERC20, ERC721, Governor, Votes interfaces
 - **snforge_std** (0.56.0): Starknet Foundry test framework (dev-dependency)
 
-External protocol type stubs are vendored in `packages/validators/src/externals/`:
+External protocol type stubs are vendored in `packages/presets/src/externals/`:
 
 - `wadray.cairo` — Fixed-point WAD/RAY math (from Opus)
 - `opus.cairo` — Opus Protocol types (AssetBalance)
@@ -139,7 +139,7 @@ The `test-contracts` workflow runs `scarb fmt --check --workspace` then `snforge
 
 ## Adding a New Validator
 
-1. Create `packages/validators/src/my_validator.cairo` following the contract structure pattern above
-2. Add the module to `packages/validators/src/lib.cairo`
-3. Create tests in `packages/validators/src/tests/` and register in `lib.cairo` under `#[cfg(test)] pub mod tests`
+1. Create `packages/presets/src/my_validator.cairo` following the contract structure pattern above
+2. Add the module to `packages/presets/src/lib.cairo`
+3. Create tests in `packages/presets/src/tests/` and register in `lib.cairo` under `#[cfg(test)] pub mod tests`
 4. Add a deployment script in `scripts/`

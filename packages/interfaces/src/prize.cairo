@@ -1,4 +1,4 @@
-use entry_validator_interfaces::distribution::Distribution;
+use interfaces::distribution::Distribution;
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde)]

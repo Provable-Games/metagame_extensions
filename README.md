@@ -12,7 +12,7 @@ Modular entry validators for tournament platforms on Starknet. Compatible with [
 | ------- | ----------- |
 | [`entry_validator_interfaces`](packages/interfaces/) | Pure traits and types for entry validators |
 | [`entry_validator_component`](packages/entry_validator/) | `EntryValidatorComponent` SDK for building validators |
-| [`entry_validators`](packages/validators/) | Pre-built validator contracts |
+| [`entry_requirement_extensions`](packages/presets/) | Pre-built validator contracts |
 | [`entry_validator_test_common`](packages/test_common/) | Shared test mocks and constants |
 
 ## Validators
@@ -45,8 +45,8 @@ scarb build                             # Build all packages
 
 ```bash
 snforge test --workspace                # Run all tests
-snforge test -p entry_validators        # Run validator tests only
-snforge test -p entry_validators <name> # Run a specific test by filter
+snforge test -p entry_requirement_extensions        # Run validator tests only
+snforge test -p entry_requirement_extensions <name> # Run a specific test by filter
 snforge test --workspace --coverage     # Run with code coverage
 ```
 

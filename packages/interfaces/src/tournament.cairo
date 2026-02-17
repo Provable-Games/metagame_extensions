@@ -1,8 +1,8 @@
-pub use entry_validator_interfaces::distribution::Distribution;
-pub use entry_validator_interfaces::entry_requirement::{
+pub use interfaces::distribution::Distribution;
+pub use interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, NFTQualification, QualificationProof,
 };
-pub use entry_validator_interfaces::prize::{ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData};
+pub use interfaces::prize::{ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData};
 use starknet::ContractAddress;
 
 #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
