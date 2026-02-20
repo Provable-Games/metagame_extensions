@@ -13,7 +13,7 @@ pub const LEGACY_IENTRY_VALIDATOR_ID_V1: felt252 =
     0x01158754d5cc62137c4de2cbd0e65cbd163990af29f0182006f26fe0cac00bb6;
 
 #[starknet::interface]
-pub trait IEntryValidator<TState> {
+pub trait IEntryRequirementExtension<TState> {
     /// Get the owner contract address (e.g., budokan, quest manager)
     fn owner_address(self: @TState) -> ContractAddress;
 

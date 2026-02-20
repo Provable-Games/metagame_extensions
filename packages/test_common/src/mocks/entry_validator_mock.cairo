@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-pub trait IEntryValidatorMock<TState> {
+pub trait IEntryRequirementExtensionMock<TState> {
     fn get_tournament_erc721_address(self: @TState, context_id: u64) -> ContractAddress;
 }
 
@@ -132,9 +132,9 @@ pub mod entry_validator_mock {
     }
 
     // Public interface implementation
-    use super::IEntryValidatorMock;
+    use super::IEntryRequirementExtensionMock;
     #[abi(embed_v0)]
-    impl EntryValidatorMockImpl of IEntryValidatorMock<ContractState> {
+    impl EntryValidatorMockImpl of IEntryRequirementExtensionMock<ContractState> {
         fn get_tournament_erc721_address(self: @ContractState, context_id: u64) -> ContractAddress {
             self.tournament_erc721_address.read(context_id)
         }

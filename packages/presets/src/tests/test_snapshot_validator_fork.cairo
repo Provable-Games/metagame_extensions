@@ -5,7 +5,7 @@ use interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
@@ -173,7 +173,9 @@ fn test_snapshot_validator_fork_create_tournament() {
     assert(token_id > 0, 'Invalid token ID');
 
     // Verify the entry was tracked in the validator
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let entries_left = entry_validator.entries_left(tournament.id, player1, array![].span());
     assert(entries_left.is_some(), 'Should have entries left');
     assert(entries_left.unwrap() == 2, 'Should have 2 left'); // Started with 3, used 1
@@ -192,7 +194,9 @@ fn test_snapshot_validator_fork_create_tournament() {
 
     // Verify that a player not in snapshot cannot enter
     let unauthorized: ContractAddress = 0x999.try_into().unwrap();
-    let entry_validator_check = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator_check = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let valid_unauth = entry_validator_check
         .valid_entry(tournament.id, unauthorized, array![unauthorized.into()].span());
     assert(!valid_unauth, 'Unauthorized should be invalid');
@@ -230,7 +234,9 @@ fn test_snapshot_validator_fork_multiple_entries() {
     // 5. Verify player cannot enter a fourth time
 
     // For now, test the validator directly
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let tournament_id: u64 = 1;
 
     // Configure the tournament to use this snapshot
@@ -588,7 +594,9 @@ fn test_snapshot_validator_exceed_entry_limit() {
     assert(token_id_2 > token_id_1, 'Second token ID higher');
 
     // Verify no entries left
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let entries_left = entry_validator.entries_left(tournament.id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries info');
     assert(entries_left.unwrap() == 0, 'Should have 0 entries left');
@@ -619,7 +627,9 @@ fn test_snapshot_validator_zero_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Configure tournament
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let tournament_id: u64 = 1;
 
     start_cheat_caller_address(validator_address, owner_addr);
@@ -757,7 +767,9 @@ fn test_snapshot_add_config_nonexistent_snapshot() {
     let owner_addr = tournament_address_sepolia();
     let _account = test_account_sepolia();
     let validator_address = deploy_snapshot_validator(owner_addr);
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let nonexistent_snapshot_id: u64 = 999;
@@ -787,7 +799,9 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     validator.lock_snapshot(snapshot_id);
     stop_cheat_caller_address(validator_address);
 
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let tournament_id: u64 = 1;
 
     // Configure tournament
@@ -850,7 +864,9 @@ fn test_snapshot_validator_independent_tournament_tracking() {
     validator.lock_snapshot(snapshot_id);
     stop_cheat_caller_address(validator_address);
 
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let tournament_1: u64 = 1;
     let tournament_2: u64 = 2;
 

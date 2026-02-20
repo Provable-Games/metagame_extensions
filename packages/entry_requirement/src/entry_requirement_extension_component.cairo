@@ -4,7 +4,7 @@
 #[starknet::component]
 pub mod EntryRequirementExtensionComponent {
     use interfaces::entry_requirement_extension::{
-        IENTRY_REQUIREMENT_EXTENSION_ID, IEntryValidator, LEGACY_IENTRY_VALIDATOR_ID_V1,
+        IENTRY_REQUIREMENT_EXTENSION_ID, IEntryRequirementExtension, LEGACY_IENTRY_VALIDATOR_ID_V1,
         LEGACY_IENTRY_VALIDATOR_ID_V2,
     };
     use openzeppelin_introspection::src5::SRC5Component;
@@ -82,7 +82,7 @@ pub mod EntryRequirementExtensionComponent {
         +EntryRequirementExtension<TContractState>,
         +SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>,
-    > of IEntryValidator<ComponentState<TContractState>> {
+    > of IEntryRequirementExtension<ComponentState<TContractState>> {
         fn owner_address(self: @ComponentState<TContractState>) -> ContractAddress {
             self.owner_address.read()
         }

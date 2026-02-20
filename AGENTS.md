@@ -10,7 +10,7 @@ The repo is structured as a Scarb workspace with four packages:
 
 | Package                      | Path                        | Purpose                                                      |
 | ---------------------------- | --------------------------- | ------------------------------------------------------------ |
-| `entry_validator_interfaces` | `packages/interfaces/`      | Pure traits and types (`IEntryValidator`, `ITournament`, etc.) |
+| `entry_validator_interfaces` | `packages/interfaces/`      | Pure traits and types (`IEntryRequirementExtension`, `ITournament`, etc.) |
 | `entry_validator_component`  | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators        |
 | `entry_requirement_extensions`           | `packages/presets/`      | All 6 pre-built validator contracts + tests                  |
 | `entry_validator_test_common`| `packages/test_common/`     | Shared mocks and test constants                              |

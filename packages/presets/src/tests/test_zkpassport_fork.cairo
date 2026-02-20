@@ -13,7 +13,7 @@ use entry_requirement_extensions::entry_requirement::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use snforge_std::fs::{FileTrait, read_txt};
 use snforge_std::{
@@ -77,13 +77,13 @@ fn verifier_address() -> ContractAddress {
 }
 
 fn deploy_validator() -> (
-    ContractAddress, IEntryValidatorDispatcher, IZkPassportValidatorDispatcher,
+    ContractAddress, IEntryRequirementExtensionDispatcher, IZkPassportValidatorDispatcher,
 ) {
     let contract = declare("ZkPassportValidator").unwrap().contract_class();
     let constructor_calldata = array![OWNER_ADDRESS().into(), 0]; // registration_only = false
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
-    let entry_validator = IEntryValidatorDispatcher { contract_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher { contract_address };
     let zkpassport_validator = IZkPassportValidatorDispatcher { contract_address };
 
     (contract_address, entry_validator, zkpassport_validator)

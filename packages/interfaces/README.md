@@ -6,7 +6,7 @@ This package contains only pure traits and types with no component or contract l
 
 ## Modules
 
-- `entry_validator` - `IEntryValidator` trait and `IENTRY_VALIDATOR_ID`
+- `entry_requirement_extension` - `IEntryRequirementExtension` trait and `IENTRY_REQUIREMENT_EXTENSION_ID`
 - `entry_requirement` - `EntryRequirement`, `QualificationProof`, `ExtensionConfig`
 - `tournament` - `ITournament` dispatcher, `Tournament`, `Schedule`, `Phase`
 - `distribution` - `Distribution` enum

@@ -1,11 +1,11 @@
 use entry_requirement_extensions::entry_requirement::erc20_balance_validator::{
-    IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
+    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
 };
 use interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
@@ -84,8 +84,10 @@ fn test_erc20_validator_config_storage() {
     // Test that configuration is stored correctly
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_addr: ContractAddress = 0x111.try_into().unwrap();
@@ -118,8 +120,10 @@ fn test_erc20_validator_config_minimal() {
     // Test configuration with only token address and min threshold
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_addr: ContractAddress = 0x222.try_into().unwrap();
@@ -145,7 +149,7 @@ fn test_erc20_validator_entries_left_fixed_limit() {
     // Test entries_left with fixed entry limit (value_per_entry = 0)
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -190,7 +194,7 @@ fn test_erc20_validator_entries_left_unlimited() {
     // Test entries_left with entry_limit = 0 and value_per_entry = 0 (unlimited entries)
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -214,7 +218,7 @@ fn test_erc20_validator_add_and_remove_entry() {
     // Test add_entry and remove_entry
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -251,7 +255,7 @@ fn test_erc20_validator_remove_entry_when_zero() {
     // Test that removing entry when none exist is a no-op (doesn't panic)
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -280,8 +284,10 @@ fn test_erc20_validator_multiple_tournaments() {
     // Test that multiple tournaments can have independent configs
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_1: u64 = 1;
     let tournament_2: u64 = 2;
@@ -336,7 +342,7 @@ fn test_erc20_validator_multiple_players() {
     // Test that multiple players have independent entry tracking
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player_1: ContractAddress = 0x111.try_into().unwrap();
@@ -373,7 +379,7 @@ fn test_erc20_validator_rejects_qualification_data() {
     // Test that validate_entry rejects non-empty qualification data
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -393,7 +399,7 @@ fn test_erc20_validator_rejects_qualification_data() {
 fn test_erc20_validator_should_ban_when_balance_below_min() {
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 20;
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -416,7 +422,7 @@ fn test_erc20_validator_should_ban_when_balance_below_min() {
 fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 21;
     let player: ContractAddress = 0x777.try_into().unwrap();
@@ -445,7 +451,7 @@ fn test_erc20_validator_dynamic_quota_should_ban_when_over_cap() {
 fn test_erc20_validator_dynamic_mode_valid_entry_tracks_used_entries() {
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 22;
     let player: ContractAddress = 0x888.try_into().unwrap();
@@ -589,7 +595,9 @@ fn test_erc20_validator_fork_enter_tournament() {
     assert(entry_number == 1, 'Should be first entry');
 
     // Verify entries tracking
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let entries_left = entry_validator.entries_left(tournament.id, account, array![].span());
     assert(entries_left.is_some(), 'Should have entries info');
     assert(entries_left.unwrap() == 4, 'Should have 4 entries left');
@@ -665,7 +673,9 @@ fn test_erc20_validator_fork_multiple_entries() {
     assert(token_id_3 > token_id_2, 'Token IDs should increase');
 
     // Verify no entries left
-    let entry_validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: validator_address,
+    };
     let entries_left = entry_validator.entries_left(tournament.id, account, array![].span());
     assert(entries_left.unwrap() == 0, 'Should have 0 entries left');
 }
@@ -678,7 +688,7 @@ fn test_erc20_validator_direct_validation() {
     let account = test_account_sepolia();
 
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let token_address = eth_token_address();
@@ -708,8 +718,10 @@ fn test_erc20_validator_with_max_threshold() {
     let owner_addr = tournament_address_sepolia();
 
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_address = eth_token_address();
@@ -738,8 +750,10 @@ fn test_erc20_validator_entries_based_on_balance() {
     let account = test_account_sepolia();
 
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_address = eth_token_address();
@@ -780,7 +794,7 @@ fn test_erc20_validator_cross_tournament_independence() {
     let account = test_account_sepolia();
 
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_1: u64 = 1;
     let tournament_2: u64 = 2;
@@ -880,8 +894,10 @@ fn test_erc20_validator_different_tokens() {
     let owner_addr = tournament_address_sepolia();
 
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_eth: u64 = 1;
     let tournament_strk: u64 = 2;
@@ -936,8 +952,10 @@ fn test_erc20_validator_zero_threshold() {
     // Test with zero threshold (any balance is valid)
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_addr: ContractAddress = 0x123.try_into().unwrap();
@@ -958,8 +976,10 @@ fn test_erc20_validator_large_threshold() {
     // Test with very large threshold values (u256 max range)
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
 
     let tournament_id: u64 = 1;
     let token_addr: ContractAddress = 0x123.try_into().unwrap();
@@ -982,8 +1002,10 @@ fn test_erc20_validator_max_entries_cap() {
     // Test that max_entries properly caps entry calculation
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator_mock = IEntryValidatorMockDispatcher { contract_address: validator_address };
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator_mock = IEntryRequirementExtensionMockDispatcher {
+        contract_address: validator_address,
+    };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let token_addr: ContractAddress = 0x123.try_into().unwrap();
@@ -1006,7 +1028,7 @@ fn test_erc20_validator_exhaust_all_entries() {
     // Test exhausting all entries
     let owner_addr = mock_owner_address();
     let validator_address = deploy_erc20_balance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x123.try_into().unwrap();

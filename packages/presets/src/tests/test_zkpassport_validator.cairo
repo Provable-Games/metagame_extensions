@@ -3,7 +3,7 @@ use entry_requirement_extensions::entry_requirement::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp,
@@ -42,13 +42,13 @@ fn PLAYER_ADDRESS_2() -> ContractAddress {
 }
 
 fn deploy_validator() -> (
-    ContractAddress, IEntryValidatorDispatcher, IZkPassportValidatorDispatcher,
+    ContractAddress, IEntryRequirementExtensionDispatcher, IZkPassportValidatorDispatcher,
 ) {
     let contract = declare("ZkPassportValidator").unwrap().contract_class();
     let constructor_calldata = array![OWNER_ADDRESS().into(), 0]; // registration_only = false
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
-    let entry_validator = IEntryValidatorDispatcher { contract_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher { contract_address };
     let zkpassport_validator = IZkPassportValidatorDispatcher { contract_address };
 
     (contract_address, entry_validator, zkpassport_validator)
@@ -87,7 +87,7 @@ fn qualification_span() -> Span<felt252> {
 }
 
 fn setup_valid_scenario(
-    contract_address: ContractAddress, entry_validator: IEntryValidatorDispatcher,
+    contract_address: ContractAddress, entry_validator: IEntryRequirementExtensionDispatcher,
 ) {
     // Cheat block timestamp
     start_cheat_block_timestamp(contract_address, BLOCK_TIME);
