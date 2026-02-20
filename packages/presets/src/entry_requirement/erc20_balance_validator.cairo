@@ -9,7 +9,7 @@ pub trait IERC20<TContractState> {
 }
 
 #[starknet::interface]
-pub trait IEntryValidatorMock<TState> {
+pub trait IEntryRequirementExtensionMock<TState> {
     fn get_token_address(self: @TState, tournament_id: u64) -> ContractAddress;
     fn get_min_threshold(self: @TState, tournament_id: u64) -> u256;
     fn get_max_threshold(self: @TState, tournament_id: u64) -> u256;
@@ -411,9 +411,9 @@ pub mod ERC20BalanceValidator {
     }
 
     // Public interface implementation
-    use super::IEntryValidatorMock;
+    use super::IEntryRequirementExtensionMock;
     #[abi(embed_v0)]
-    impl EntryValidatorMockImpl of IEntryValidatorMock<ContractState> {
+    impl EntryValidatorMockImpl of IEntryRequirementExtensionMock<ContractState> {
         fn get_token_address(self: @ContractState, tournament_id: u64) -> ContractAddress {
             self.tournament_token_address.read(tournament_id)
         }

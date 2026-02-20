@@ -1,5 +1,5 @@
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address, start_mock_call,
@@ -7,7 +7,7 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 use test_common::mocks::entry_validator_mock::{
-    IEntryValidatorMockDispatcher, IEntryValidatorMockDispatcherTrait,
+    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
 };
 
 // Mock owner address used across tests
@@ -32,7 +32,7 @@ fn configure_entry_validator(
     entry_limit: u8,
     erc721_addr: ContractAddress,
 ) {
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let mut config = array![erc721_addr.into()];
     // Set caller to owner address to pass assert_only_owner check
     start_cheat_caller_address(validator_address, owner_address());
@@ -49,7 +49,7 @@ fn deploy_open_entry_validator() -> ContractAddress {
 fn configure_open_entry_validator(
     validator_address: ContractAddress, tournament_id: u64, entry_limit: u8,
 ) {
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(tournament_id, entry_limit, array![].span());
     stop_cheat_caller_address(validator_address);
@@ -61,7 +61,9 @@ fn test_valid_entry_with_token_ownership() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator = IEntryValidatorDispatcher { contract_address: entry_validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: entry_validator_address,
+    };
 
     // Create a player address
     let player: ContractAddress = 0x123.try_into().unwrap();
@@ -80,7 +82,9 @@ fn test_invalid_entry_without_token_ownership() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator = IEntryValidatorDispatcher { contract_address: entry_validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: entry_validator_address,
+    };
 
     // Create a player address without any tokens
     let player: ContractAddress = 0x456.try_into().unwrap();
@@ -99,7 +103,9 @@ fn test_valid_entry_with_multiple_tokens() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator = IEntryValidatorDispatcher { contract_address: entry_validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: entry_validator_address,
+    };
 
     // Create a player address
     let player: ContractAddress = 0x789.try_into().unwrap();
@@ -118,7 +124,9 @@ fn test_entry_status_changes_after_transfer() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator = IEntryValidatorDispatcher { contract_address: entry_validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: entry_validator_address,
+    };
 
     // Create player addresses
     let player1: ContractAddress = 0xAAA.try_into().unwrap();
@@ -154,7 +162,7 @@ fn test_entry_validator_stores_correct_erc721_address() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator_mock = IEntryValidatorMockDispatcher {
+    let entry_validator_mock = IEntryRequirementExtensionMockDispatcher {
         contract_address: entry_validator_address,
     };
 
@@ -169,7 +177,9 @@ fn test_multiple_players_with_different_ownership() {
     let tournament_id: u64 = 1;
     let entry_validator_address = deploy_entry_validator();
     configure_entry_validator(entry_validator_address, tournament_id, 0, erc721_address());
-    let entry_validator = IEntryValidatorDispatcher { contract_address: entry_validator_address };
+    let entry_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: entry_validator_address,
+    };
 
     // Create multiple player addresses
     let player1: ContractAddress = 0x111.try_into().unwrap();
@@ -202,7 +212,9 @@ fn test_multiple_players_with_different_ownership() {
 fn test_open_validator_allows_entry_without_tokens() {
     // Deploy open entry validator (no token gating)
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
 
     // Create a player address without any tokens
     let player: ContractAddress = 0x999.try_into().unwrap();
@@ -216,7 +228,9 @@ fn test_open_validator_allows_entry_without_tokens() {
 fn test_open_validator_allows_entry_with_tokens() {
     // Deploy open entry validator
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
 
     // Create a player address
     let player: ContractAddress = 0x888.try_into().unwrap();
@@ -230,7 +244,9 @@ fn test_open_validator_allows_entry_with_tokens() {
 fn test_open_validator_allows_multiple_players() {
     // Deploy open entry validator
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
 
     // Create multiple player addresses
     let player1: ContractAddress = 0xAAA.try_into().unwrap();
@@ -254,10 +270,14 @@ fn test_compare_open_vs_token_gated_validators() {
     let tournament_id: u64 = 1;
     let token_gated_address = deploy_entry_validator();
     configure_entry_validator(token_gated_address, tournament_id, 0, erc721_address());
-    let token_gated = IEntryValidatorDispatcher { contract_address: token_gated_address };
+    let token_gated = IEntryRequirementExtensionDispatcher {
+        contract_address: token_gated_address,
+    };
 
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
 
     // Create two players
     let player_with_token: ContractAddress = 0x111.try_into().unwrap();
@@ -290,7 +310,7 @@ fn test_token_gated_should_ban_after_token_loss() {
     let tournament_id: u64 = 77;
     let validator_address = deploy_entry_validator();
     configure_entry_validator(validator_address, tournament_id, 0, erc721_address());
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let player: ContractAddress = 0xABC.try_into().unwrap();
 
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
@@ -306,7 +326,9 @@ fn test_token_gated_should_ban_after_token_loss() {
 #[test]
 fn test_open_validator_should_never_ban() {
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
     let player: ContractAddress = 0xDDD.try_into().unwrap();
 
     let should_ban = open_validator.should_ban(0, 1, player, array![].span());
@@ -318,7 +340,9 @@ fn test_open_validator_entries_left_and_remove_tracking() {
     let tournament_id: u64 = 5;
     let player: ContractAddress = 0xEEE.try_into().unwrap();
     let open_validator_address = deploy_open_entry_validator();
-    let open_validator = IEntryValidatorDispatcher { contract_address: open_validator_address };
+    let open_validator = IEntryRequirementExtensionDispatcher {
+        contract_address: open_validator_address,
+    };
 
     configure_open_entry_validator(open_validator_address, tournament_id, 2);
 

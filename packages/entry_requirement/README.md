@@ -1,6 +1,6 @@
 # entry_validator_component
 
-SDK for building entry validators. Provides `EntryValidatorComponent` which handles SRC5 registration, owner-only access control, and the bridge between the `IEntryValidator` interface and your validator's custom logic. Compatible with tournament platforms like [Budokan](https://github.com/Provable-Games/budokan).
+SDK for building entry validators. Provides `EntryValidatorComponent` which handles SRC5 registration, owner-only access control, and the bridge between the `IEntryRequirementExtension` interface and your validator's custom logic. Compatible with tournament platforms like [Budokan](https://github.com/Provable-Games/budokan).
 
 ## Usage
 

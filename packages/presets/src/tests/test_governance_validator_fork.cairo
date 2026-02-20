@@ -2,7 +2,7 @@ use interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
@@ -81,7 +81,7 @@ fn test_governance_validator_fork_create_tournament() {
 
     // Step 1: Deploy GovernanceValidator
     let validator_address = deploy_governance_validator(owner_addr);
-    let _validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let _validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Step 2: Create extension config with governance parameters
     // Config format: [governor_address, governance_token_address, balance_threshold,
@@ -251,7 +251,7 @@ fn test_governance_validator_validate_entries_ban() {
     let account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Create tournament with low governance requirements
     let balance_threshold: u256 = 100; // 100 wei
@@ -360,7 +360,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         .unwrap(); // Known address with governance tokens on mainnet
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Create tournament with low governance requirements
     let balance_threshold: u256 = 100; // 100 wei
@@ -465,7 +465,7 @@ fn test_governance_validator_direct_validation() {
     let _account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
 
@@ -506,7 +506,7 @@ fn test_governance_validator_multiple_entries() {
     let _account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
     let player: ContractAddress = 0x111.try_into().unwrap();
@@ -554,7 +554,7 @@ fn test_governance_validator_no_delegation() {
     let _account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
 
@@ -586,7 +586,7 @@ fn test_governance_validator_insufficient_balance() {
     let _account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_id: u64 = 1;
 
@@ -619,7 +619,7 @@ fn test_governance_validator_cross_tournament_independence() {
     let _account = test_account_mainnet();
 
     let validator_address = deploy_governance_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let tournament_1: u64 = 1;
     let tournament_2: u64 = 2;

@@ -4,7 +4,7 @@ use entry_requirement_extensions::entry_requirement::tournament_validator::{
     QUALIFYING_MODE_PER_TOKEN,
 };
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
@@ -117,7 +117,7 @@ fn test_tournament_validator_any_mode_participants() {
 
     // Deploy tournament validator in registration_only mode
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -157,7 +157,7 @@ fn test_tournament_validator_any_mode_participants() {
 fn test_tournament_validator_any_mode_winners() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -190,7 +190,7 @@ fn test_tournament_validator_any_mode_winners() {
 fn test_tournament_validator_any_mode_multiple_qualifying_tournaments() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -238,7 +238,7 @@ fn test_tournament_validator_any_per_tournament_mode() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -295,7 +295,7 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_1.into(),
@@ -333,7 +333,7 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
 fn test_tournament_validator_all_mode_participants() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -383,7 +383,7 @@ fn test_tournament_validator_all_mode_participants() {
 fn test_tournament_validator_all_mode_winners() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -449,7 +449,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, qualifying_tournament_1.into(),
@@ -488,7 +488,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
 fn test_tournament_validator_invalid_qualifying_mode() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with invalid qualifying mode (2 is not valid, only modes 0-1 are valid)
     let extension_config = array![QUALIFIER_TYPE_PARTICIPANTS, 2, 0, 1].span();
@@ -504,7 +504,7 @@ fn test_tournament_validator_invalid_qualifying_mode() {
 fn test_tournament_validator_invalid_qualifier_type() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with invalid qualifier type (2 is not valid)
     let extension_config = array![2, QUALIFYING_MODE_PER_TOKEN, 0, 1].span();
@@ -520,7 +520,7 @@ fn test_tournament_validator_invalid_qualifier_type() {
 fn test_tournament_validator_insufficient_config() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with insufficient params (missing tournament ID)
     let extension_config = array![QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0].span();
@@ -548,7 +548,7 @@ fn test_tournament_validator_unlimited_entries() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
@@ -584,7 +584,7 @@ fn test_tournament_validator_per_entry_mode_basic() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -635,7 +635,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Configure with 3 entries per token
     let extension_config = array![
@@ -674,7 +674,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
 fn test_tournament_validator_top_positions_configuration() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -700,7 +700,7 @@ fn test_tournament_validator_top_positions_configuration() {
 fn test_tournament_validator_top_positions_zero_means_unlimited() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -726,7 +726,7 @@ fn test_tournament_validator_top_positions_zero_means_unlimited() {
 fn test_tournament_validator_top_positions_all_mode() {
     let owner = tournament_address_sepolia();
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
     };
@@ -776,7 +776,7 @@ fn test_tournament_validator_all_mode_ban_tech_marks_tokens_as_used() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, tournament_id_1.into(),
@@ -836,7 +836,7 @@ fn test_tournament_validator_all_mode_tokens_blocked_after_transfer() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, tournament_id_1.into(),
@@ -884,7 +884,7 @@ fn test_tournament_validator_per_token_mode_entry_tracking() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
@@ -936,7 +936,7 @@ fn test_tournament_validator_all_mode_multiple_qualifying_tournaments() {
 
     // Deploy validator
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, t1.into(), t2.into(), t3.into(),
@@ -978,7 +978,7 @@ fn test_tournament_validator_direct_valid_entry_call() {
     );
 
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
@@ -1006,7 +1006,7 @@ fn test_tournament_validator_on_entry_removed_per_token_mode() {
     );
 
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_PER_TOKEN, 0, qualifying_tournament_id.into(),
@@ -1046,7 +1046,7 @@ fn test_tournament_validator_on_entry_removed_all_mode() {
     );
 
     let validator_address = deploy_tournament_validator(owner);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
         QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, tournament_id_1.into(),

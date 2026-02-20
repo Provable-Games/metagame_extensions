@@ -12,7 +12,7 @@ use entry_requirement_extensions::entry_requirement::opus_troves_validator::{
 };
 use interfaces::entry_requirement::{EntryRequirement, EntryRequirementType, ExtensionConfig};
 use interfaces::entry_requirement_extension::{
-    IEntryValidatorDispatcher, IEntryValidatorDispatcherTrait,
+    IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
@@ -116,7 +116,7 @@ fn test_opus_validator_debt_based() {
 
     // Step 1: Deploy validator
     let validator_address = deploy_opus_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let validator_api = IOpusTrovesValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove with STRK and forge yin
@@ -273,7 +273,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
 
     // Step 1: Deploy validator
     let validator_address = deploy_opus_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove and forge significant debt
     let strk_token = IERC20Dispatcher { contract_address: strk_token_address() };
@@ -370,7 +370,7 @@ fn test_opus_validator_asset_filtering() {
 
     // Step 1: Deploy validator
     let validator_address = deploy_opus_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove with STRK
     let strk_token = IERC20Dispatcher { contract_address: strk_token_address() };
@@ -456,7 +456,7 @@ fn test_opus_validator_config_zero_threshold() {
 
     // Step 1: Deploy validator
     let validator_address = deploy_opus_validator(owner_addr);
-    let validator = IEntryValidatorDispatcher { contract_address: validator_address };
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let validator_api = IOpusTrovesValidatorDispatcher { contract_address: validator_address };
 
     // Step 2: Create trove with STRK and forge yin
