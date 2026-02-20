@@ -112,59 +112,47 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/budokan_extensions_OpusTrovesValidator.contract_class.json" ]; then
+if [ ! -f "target/dev/budokan_validators_OpusTrovesValidator.contract_class.json" ]; then
     print_error "OpusTrovesValidator contract build failed or contract file not found"
-    print_error "Expected: target/dev/budokan_extensions_OpusTrovesValidator.contract_class.json"
+    print_error "Expected: target/dev/budokan_validators_OpusTrovesValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
 fi
 
 # ============================
-# CALCULATE CLASS HASH FIRST
-# ============================
-
-print_info "Calculating class hash from artifact..."
-CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
-    --contract-name OpusTrovesValidator \
-    --package budokan_extensions 2>&1)
-CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
-
-if [ -z "$CLASS_HASH" ]; then
-    print_error "Could not calculate class hash from artifact"
-    echo "Class hash output: $CLASS_HASH_OUTPUT"
-    exit 1
-fi
-print_info "Class hash: $CLASS_HASH"
-
-# ============================
-# DECLARE OPUS TROVES VALIDATOR V2
+# DECLARE OPUS TROVES VALIDATOR
 # ============================
 
 print_info "Declaring OpusTrovesValidator contract..."
 
-DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE declare \
+DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name OpusTrovesValidator \
-    --package budokan_extensions \
-    2>&1) || true
-
-# Check declaration result
-if echo "$DECLARE_OUTPUT" | grep -qi "class hash:"; then
-    print_info "Contract declared successfully"
-    print_info "Waiting for declaration to be confirmed..."
-    sleep 5
-elif echo "$DECLARE_OUTPUT" | grep -qi "already declared"; then
-    print_warning "Contract already declared, proceeding with deployment..."
-else
-    if echo "$DECLARE_OUTPUT" | grep -qi "error"; then
-        print_error "Declaration failed"
-        echo "Declaration output: $DECLARE_OUTPUT"
+    --package budokan_validators \
+    2>&1) || {
+    # Check if already declared
+    if echo "$DECLARE_OUTPUT" | grep -q "already declared"; then
+        print_warning "OpusTrovesValidator already declared"
+        CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
+    else
+        print_error "Failed to declare OpusTrovesValidator"
+        echo "$DECLARE_OUTPUT"
         exit 1
     fi
-    print_info "Declaration submitted, waiting for confirmation..."
-    sleep 5
+}
+
+if [ -z "${CLASS_HASH:-}" ]; then
+    CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE 'class_hash: 0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' || echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | tail -1)
 fi
+
+if [ -z "$CLASS_HASH" ]; then
+    print_error "Could not extract class hash from declare output"
+    echo "$DECLARE_OUTPUT"
+    exit 1
+fi
+
+print_info "OpusTrovesValidator class hash: $CLASS_HASH"
 
 # ============================
 # DEPLOY OPUS TROVES VALIDATOR V2

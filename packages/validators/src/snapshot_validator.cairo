@@ -112,9 +112,8 @@ pub mod SnapshotValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
-        // Snapshot is a point-in-time check, so registration_only = true (never ban after
-        // registration)
-        self.entry_validator.initializer(budokan_address, true);
+        // Snapshot is a point-in-time check, no banning needed
+        self.entry_validator.initializer(budokan_address, false);
     }
 
     // Implement the EntryValidator trait for the contract
