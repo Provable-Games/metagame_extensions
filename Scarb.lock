@@ -36,14 +36,12 @@ version = "0.1.0"
 [[package]]
 name = "openzeppelin_interfaces"
 version = "2.1.0"
-source = "registry+https://scarbs.xyz/"
-checksum = "sha256:f69fdb36eb894a0e0732385e723c5ff56d8cb4c1d49b29446c77eefac00b02a5"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 
 [[package]]
 name = "openzeppelin_introspection"
 version = "3.0.0"
-source = "registry+https://scarbs.xyz/"
-checksum = "sha256:ee491981a69736cde220f8b7dd290b6d8620c85ee6b83c81f665f5bef78b62b1"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 dependencies = [
  "openzeppelin_interfaces",
 ]
