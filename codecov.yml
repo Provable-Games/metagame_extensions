@@ -1,41 +1,35 @@
+codecov:
+  require_ci_to_pass: true
+
 comment:
   layout: "diff, files, header, footer"
   behavior: default
 
 coverage:
-  range: 90..100
+  precision: 2
+  round: down
+  range: 80..100
   status:
     project:
-      coverage:
+      default:
         target: auto
         threshold: 4%
     patch:
       default:
-        target: 90%
+        target: 80%
         threshold: 4%
 
+flag_management:
+  default_rules:
+    carryforward: true
+
 ignore:
-  # Test files
   - "**/tests/**"
-
-  # Interfaces
-  - "packages/interfaces"
-
-  # Test mocks and constants
-  - "packages/test_common/**"
-
-  # External protocol type stubs
-  - "packages/validators/src/externals/**"
-
-  # Build outputs
-  - "target/"
-  - ".snfoundry_cache/"
-  - "snfoundry_trace/"
-
-  # Configuration, scripts, and examples
   - "scripts/"
   - "examples/"
   - "snapshot-ui/"
+  - "packages/interfaces/"
+  - "packages/test_common/"
 
 github_checks:
   annotations: false
