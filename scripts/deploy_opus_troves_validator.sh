@@ -143,7 +143,7 @@ print_info "Class hash: $CLASS_HASH"
 
 print_info "Declaring OpusTrovesValidator contract..."
 
-DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE declare \
+DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name OpusTrovesValidator \
     --package entry_requirement_extensions \
@@ -162,9 +162,19 @@ else
         echo "Declaration output: $DECLARE_OUTPUT"
         exit 1
     fi
-    print_info "Declaration submitted, waiting for confirmation..."
-    sleep 5
 fi
+
+if [ -z "${CLASS_HASH:-}" ]; then
+    CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE 'class_hash: 0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' || echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | tail -1)
+fi
+
+if [ -z "$CLASS_HASH" ]; then
+    print_error "Could not extract class hash from declare output"
+    echo "$DECLARE_OUTPUT"
+    exit 1
+fi
+
+print_info "OpusTrovesValidator class hash: $CLASS_HASH"
 
 # ============================
 # DEPLOY OPUS TROVES VALIDATOR V2

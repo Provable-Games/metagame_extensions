@@ -146,7 +146,7 @@ print_info "Class hash: $CLASS_HASH"
 
 print_info "Declaring open_entry_validator_mock contract..."
 
-DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE declare \
+DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name open_entry_validator_mock \
     --package entry_requirement_extensions \
@@ -165,9 +165,19 @@ else
         echo "Declaration output: $DECLARE_OUTPUT"
         exit 1
     fi
-    print_info "Declaration submitted, waiting for confirmation..."
-    sleep 5
 fi
+
+if [ -z "${CLASS_HASH:-}" ]; then
+    CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE 'class_hash: 0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' || echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | tail -1)
+fi
+
+if [ -z "$CLASS_HASH" ]; then
+    print_error "Could not extract class hash from declare output"
+    echo "$DECLARE_OUTPUT"
+    exit 1
+fi
+
+print_info "open_entry_validator_mock class hash: $CLASS_HASH"
 
 # ============================
 # DEPLOY OPEN ENTRY VALIDATOR

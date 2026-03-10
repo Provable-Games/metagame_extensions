@@ -34,7 +34,6 @@ print_warning() {
 }
 
 # Check deployment environment
-REGISTRATION_ONLY="${REGISTRATION_ONLY:-false}"
 STARKNET_NETWORK="${STARKNET_NETWORK:-default}"
 
 # Map network to sncast profile
@@ -59,7 +58,6 @@ missing_vars=()
 
 # Debug output for environment variables
 print_info "Environment variables loaded:"
-echo "  REGISTRATION_ONLY: $REGISTRATION_ONLY"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
 echo "  SNCAST_PROFILE: $SNCAST_PROFILE"
 echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
@@ -94,7 +92,6 @@ print_info "Deployment Configuration:"
 echo "  Network: $STARKNET_NETWORK"
 echo "  Profile: $SNCAST_PROFILE"
 echo "  RPC: ${STARKNET_RPC:-<from profile>}"
-echo "  Registration Only: $REGISTRATION_ONLY"
 echo ""
 
 # Confirm deployment
@@ -146,7 +143,7 @@ print_info "Class hash: $CLASS_HASH"
 
 print_info "Declaring SnapshotValidator contract..."
 
-DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE declare \
+DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name SnapshotValidator \
     --package entry_requirement_extensions \
@@ -165,9 +162,19 @@ else
         echo "Declaration output: $DECLARE_OUTPUT"
         exit 1
     fi
-    print_info "Declaration submitted, waiting for confirmation..."
-    sleep 5
 fi
+
+if [ -z "${CLASS_HASH:-}" ]; then
+    CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE 'class_hash: 0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' || echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | tail -1)
+fi
+
+if [ -z "$CLASS_HASH" ]; then
+    print_error "Could not extract class hash from declare output"
+    echo "$DECLARE_OUTPUT"
+    exit 1
+fi
+
+print_info "SnapshotValidator class hash: $CLASS_HASH"
 
 # ============================
 # DEPLOY SNAPSHOT VALIDATOR
@@ -175,16 +182,8 @@ fi
 
 print_info "Deploying SnapshotValidator contract..."
 
-# Constructor parameters: owner_address, registration_only
+# Constructor parameter: owner_address (registration_only is hardcoded to true in contract)
 print_info "Using OWNER_ADDRESS: $OWNER_ADDRESS"
-print_info "Using REGISTRATION_ONLY: $REGISTRATION_ONLY"
-
-# Convert REGISTRATION_ONLY to felt252 (0 or 1)
-if [ "$REGISTRATION_ONLY" = "true" ]; then
-    REGISTRATION_ONLY_FELT="1"
-else
-    REGISTRATION_ONLY_FELT="0"
-fi
 
 # Retry deployment up to 3 times
 MAX_RETRIES=3
@@ -202,7 +201,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
-        --constructor-calldata "$OWNER_ADDRESS" "$REGISTRATION_ONLY_FELT" \
+        --constructor-calldata "$OWNER_ADDRESS" \
         2>&1) || true
 
     # Extract contract address from output
@@ -239,7 +238,7 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Snapshot-based entry validator with tournament-specific snapshot management",
-    "registration_only": $REGISTRATION_ONLY
+    "registration_only": false
   }
 }
 EOF
@@ -256,7 +255,6 @@ echo
 echo "Snapshot Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
-echo "  Registration Only: $REGISTRATION_ONLY"
 echo ""
 
 echo "Next steps:"

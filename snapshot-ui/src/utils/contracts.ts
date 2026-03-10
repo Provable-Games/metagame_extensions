@@ -1,95 +1,549 @@
 // Snapshot Validator Contract ABI and Address
-export const SNAPSHOT_VALIDATOR_ADDRESS = "0x079e3a4b02a079672aae7f128347b11bd1a50cf9f94e795064d9e601326483d3";
+export const SNAPSHOT_VALIDATOR_ADDRESS =
+  "0x03e6820e9e1cfb5c22465a86f469c651355f05397e29fc94de8e832d5f3d8ede";
 
 export const SNAPSHOT_VALIDATOR_ABI = [
   {
+    type: "impl",
+    name: "SnapshotValidatorImpl",
+    interface_name:
+      "budokan_validators::snapshot_validator::ISnapshotValidator",
+  },
+  {
     type: "struct",
-    name: "entry_validators::examples::snapshot_validator::Entry",
+    name: "budokan_validators::snapshot_validator::Entry",
     members: [
-      { name: "address", type: "core::starknet::contract_address::ContractAddress" },
-      { name: "count", type: "core::integer::u8" },
-    ],
-  },
-  {
-    name: "create_snapshot",
-    type: "function",
-    inputs: [],
-    outputs: [{ name: "snapshot_id", type: "core::integer::u64" }],
-    state_mutability: "external",
-  },
-  {
-    name: "upload_snapshot_data",
-    type: "function",
-    inputs: [
-      { name: "snapshot_id", type: "core::integer::u64" },
       {
-        name: "snapshot_values",
-        type: "core::array::Span::<entry_validators::examples::snapshot_validator::Entry>",
+        name: "address",
+        type: "core::starknet::contract_address::ContractAddress",
       },
-    ],
-    outputs: [],
-    state_mutability: "external",
-  },
-  {
-    name: "lock_snapshot",
-    type: "function",
-    inputs: [{ name: "snapshot_id", type: "core::integer::u64" }],
-    outputs: [],
-    state_mutability: "external",
-  },
-  {
-    type: "enum",
-    name: "entry_validators::examples::snapshot_validator::SnapshotStatus",
-    variants: [
-      { name: "Created", type: "()" },
-      { name: "InProgress", type: "()" },
-      { name: "Locked", type: "()" },
+      {
+        name: "count",
+        type: "core::integer::u8",
+      },
     ],
   },
   {
     type: "struct",
-    name: "entry_validators::examples::snapshot_validator::SnapshotMetadata",
+    name: "core::array::Span::<budokan_validators::snapshot_validator::Entry>",
     members: [
-      { name: "owner", type: "core::starknet::contract_address::ContractAddress" },
-      { name: "status", type: "entry_validators::examples::snapshot_validator::SnapshotStatus" },
+      {
+        name: "snapshot",
+        type: "@core::array::Array::<budokan_validators::snapshot_validator::Entry>",
+      },
     ],
   },
   {
     type: "enum",
-    name: "core::option::Option::<entry_validators::examples::snapshot_validator::SnapshotMetadata>",
+    name: "budokan_validators::snapshot_validator::SnapshotStatus",
     variants: [
-      { name: "Some", type: "entry_validators::examples::snapshot_validator::SnapshotMetadata" },
-      { name: "None", type: "()" },
-    ],
-  },
-  {
-    name: "get_snapshot_metadata",
-    type: "function",
-    inputs: [{ name: "snapshot_id", type: "core::integer::u64" }],
-    outputs: [
       {
-        name: "metadata",
-        type: "core::option::Option::<entry_validators::examples::snapshot_validator::SnapshotMetadata>",
+        name: "Created",
+        type: "()",
+      },
+      {
+        name: "InProgress",
+        type: "()",
+      },
+      {
+        name: "Locked",
+        type: "()",
       },
     ],
-    state_mutability: "view",
   },
   {
-    name: "get_snapshot_entry",
-    type: "function",
-    inputs: [
-      { name: "snapshot_id", type: "core::integer::u64" },
-      { name: "player_address", type: "core::starknet::contract_address::ContractAddress" },
+    type: "struct",
+    name: "budokan_validators::snapshot_validator::SnapshotMetadata",
+    members: [
+      {
+        name: "owner",
+        type: "core::starknet::contract_address::ContractAddress",
+      },
+      {
+        name: "status",
+        type: "budokan_validators::snapshot_validator::SnapshotStatus",
+      },
     ],
-    outputs: [{ name: "count", type: "core::integer::u8" }],
-    state_mutability: "view",
   },
   {
-    name: "is_snapshot_locked",
-    type: "function",
-    inputs: [{ name: "snapshot_id", type: "core::integer::u64" }],
-    outputs: [{ name: "locked", type: "core::bool" }],
-    state_mutability: "view",
+    type: "enum",
+    name: "core::option::Option::<budokan_validators::snapshot_validator::SnapshotMetadata>",
+    variants: [
+      {
+        name: "Some",
+        type: "budokan_validators::snapshot_validator::SnapshotMetadata",
+      },
+      {
+        name: "None",
+        type: "()",
+      },
+    ],
+  },
+  {
+    type: "enum",
+    name: "core::bool",
+    variants: [
+      {
+        name: "False",
+        type: "()",
+      },
+      {
+        name: "True",
+        type: "()",
+      },
+    ],
+  },
+  {
+    type: "interface",
+    name: "budokan_validators::snapshot_validator::ISnapshotValidator",
+    items: [
+      {
+        type: "function",
+        name: "create_snapshot",
+        inputs: [],
+        outputs: [
+          {
+            type: "core::integer::u64",
+          },
+        ],
+        state_mutability: "external",
+      },
+      {
+        type: "function",
+        name: "upload_snapshot_data",
+        inputs: [
+          {
+            name: "snapshot_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "snapshot_values",
+            type: "core::array::Span::<budokan_validators::snapshot_validator::Entry>",
+          },
+        ],
+        outputs: [],
+        state_mutability: "external",
+      },
+      {
+        type: "function",
+        name: "lock_snapshot",
+        inputs: [
+          {
+            name: "snapshot_id",
+            type: "core::integer::u64",
+          },
+        ],
+        outputs: [],
+        state_mutability: "external",
+      },
+      {
+        type: "function",
+        name: "get_snapshot_metadata",
+        inputs: [
+          {
+            name: "snapshot_id",
+            type: "core::integer::u64",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::option::Option::<budokan_validators::snapshot_validator::SnapshotMetadata>",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "get_snapshot_entry",
+        inputs: [
+          {
+            name: "snapshot_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "player_address",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::integer::u8",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "is_snapshot_locked",
+        inputs: [
+          {
+            name: "snapshot_id",
+            type: "core::integer::u64",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::bool",
+          },
+        ],
+        state_mutability: "view",
+      },
+    ],
+  },
+  {
+    type: "impl",
+    name: "EntryValidatorImpl",
+    interface_name: "budokan_interfaces::entry_validator::IEntryValidator",
+  },
+  {
+    type: "struct",
+    name: "core::array::Span::<core::felt252>",
+    members: [
+      {
+        name: "snapshot",
+        type: "@core::array::Array::<core::felt252>",
+      },
+    ],
+  },
+  {
+    type: "enum",
+    name: "core::option::Option::<core::integer::u8>",
+    variants: [
+      {
+        name: "Some",
+        type: "core::integer::u8",
+      },
+      {
+        name: "None",
+        type: "()",
+      },
+    ],
+  },
+  {
+    type: "interface",
+    name: "budokan_interfaces::entry_validator::IEntryValidator",
+    items: [
+      {
+        type: "function",
+        name: "budokan_address",
+        inputs: [],
+        outputs: [
+          {
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "registration_only",
+        inputs: [],
+        outputs: [
+          {
+            type: "core::bool",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "valid_entry",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "player_address",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+          {
+            name: "qualification",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::bool",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "should_ban",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "game_token_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "current_owner",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+          {
+            name: "qualification",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::bool",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "entries_left",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "player_address",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+          {
+            name: "qualification",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::option::Option::<core::integer::u8>",
+          },
+        ],
+        state_mutability: "view",
+      },
+      {
+        type: "function",
+        name: "add_config",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "entry_limit",
+            type: "core::integer::u8",
+          },
+          {
+            name: "config",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [],
+        state_mutability: "external",
+      },
+      {
+        type: "function",
+        name: "add_entry",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "game_token_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "player_address",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+          {
+            name: "qualification",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [],
+        state_mutability: "external",
+      },
+      {
+        type: "function",
+        name: "remove_entry",
+        inputs: [
+          {
+            name: "tournament_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "game_token_id",
+            type: "core::integer::u64",
+          },
+          {
+            name: "player_address",
+            type: "core::starknet::contract_address::ContractAddress",
+          },
+          {
+            name: "qualification",
+            type: "core::array::Span::<core::felt252>",
+          },
+        ],
+        outputs: [],
+        state_mutability: "external",
+      },
+    ],
+  },
+  {
+    type: "impl",
+    name: "SRC5Impl",
+    interface_name: "openzeppelin_interfaces::introspection::ISRC5",
+  },
+  {
+    type: "interface",
+    name: "openzeppelin_interfaces::introspection::ISRC5",
+    items: [
+      {
+        type: "function",
+        name: "supports_interface",
+        inputs: [
+          {
+            name: "interface_id",
+            type: "core::felt252",
+          },
+        ],
+        outputs: [
+          {
+            type: "core::bool",
+          },
+        ],
+        state_mutability: "view",
+      },
+    ],
+  },
+  {
+    type: "constructor",
+    name: "constructor",
+    inputs: [
+      {
+        name: "budokan_address",
+        type: "core::starknet::contract_address::ContractAddress",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "budokan_entry_validator::entry_validator_component::EntryValidatorComponent::Event",
+    kind: "enum",
+    variants: [],
+  },
+  {
+    type: "event",
+    name: "openzeppelin_introspection::src5::SRC5Component::Event",
+    kind: "enum",
+    variants: [],
+  },
+  {
+    type: "event",
+    name: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotCreated",
+    kind: "struct",
+    members: [
+      {
+        name: "snapshot_id",
+        type: "core::integer::u64",
+        kind: "key",
+      },
+      {
+        name: "owner",
+        type: "core::starknet::contract_address::ContractAddress",
+        kind: "key",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotEntryAdded",
+    kind: "struct",
+    members: [
+      {
+        name: "snapshot_id",
+        type: "core::integer::u64",
+        kind: "key",
+      },
+      {
+        name: "address",
+        type: "core::starknet::contract_address::ContractAddress",
+        kind: "data",
+      },
+      {
+        name: "count",
+        type: "core::integer::u8",
+        kind: "data",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotDataUploaded",
+    kind: "struct",
+    members: [
+      {
+        name: "snapshot_id",
+        type: "core::integer::u64",
+        kind: "key",
+      },
+      {
+        name: "entries_added",
+        type: "core::integer::u32",
+        kind: "data",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotLocked",
+    kind: "struct",
+    members: [
+      {
+        name: "snapshot_id",
+        type: "core::integer::u64",
+        kind: "key",
+      },
+    ],
+  },
+  {
+    type: "event",
+    name: "budokan_validators::snapshot_validator::SnapshotValidator::Event",
+    kind: "enum",
+    variants: [
+      {
+        name: "EntryValidatorEvent",
+        type: "budokan_entry_validator::entry_validator_component::EntryValidatorComponent::Event",
+        kind: "flat",
+      },
+      {
+        name: "SRC5Event",
+        type: "openzeppelin_introspection::src5::SRC5Component::Event",
+        kind: "flat",
+      },
+      {
+        name: "SnapshotCreated",
+        type: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotCreated",
+        kind: "nested",
+      },
+      {
+        name: "SnapshotEntryAdded",
+        type: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotEntryAdded",
+        kind: "nested",
+      },
+      {
+        name: "SnapshotDataUploaded",
+        type: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotDataUploaded",
+        kind: "nested",
+      },
+      {
+        name: "SnapshotLocked",
+        type: "budokan_validators::snapshot_validator::SnapshotValidator::SnapshotLocked",
+        kind: "nested",
+      },
+    ],
   },
 ] as const;
 
