@@ -1,4 +1,4 @@
-use interfaces::distribution::Distribution;
+use metagame_extension_interfaces::distribution::Distribution;
 use starknet::ContractAddress;
 
 #[derive(Drop, Serde)]

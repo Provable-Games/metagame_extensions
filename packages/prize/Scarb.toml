@@ -6,6 +6,6 @@ edition.workspace = true
 [dependencies]
 starknet.workspace = true
 openzeppelin_introspection.workspace = true
-interfaces.workspace = true
+metagame_extension_interfaces.workspace = true
 
 [lib]

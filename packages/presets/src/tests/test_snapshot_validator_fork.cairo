@@ -1,13 +1,13 @@
 use entry_requirement_extensions::entry_requirement::snapshot_validator::{
     Entry, ISnapshotValidatorDispatcher, ISnapshotValidatorDispatcherTrait, SnapshotStatus,
 };
-use interfaces::entry_requirement::{
+use metagame_extension_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
-use interfaces::entry_requirement_extension::{
+use metagame_extension_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
-use interfaces::tournament::{
+use metagame_extension_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
 use snforge_std::{

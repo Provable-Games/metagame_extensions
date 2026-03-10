@@ -8,7 +8,7 @@ starknet.workspace = true
 openzeppelin_introspection.workspace = true
 openzeppelin_interfaces.workspace = true
 snforge_std.workspace = true
-interfaces.workspace = true
+metagame_extension_interfaces.workspace = true
 entry_requirement_extension_component.workspace = true
 
 [lib]

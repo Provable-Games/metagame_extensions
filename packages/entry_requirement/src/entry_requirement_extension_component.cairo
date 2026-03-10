@@ -3,7 +3,7 @@
 
 #[starknet::component]
 pub mod EntryRequirementExtensionComponent {
-    use interfaces::entry_requirement_extension::{
+    use metagame_extension_interfaces::entry_requirement_extension::{
         IENTRY_REQUIREMENT_EXTENSION_ID, IEntryRequirementExtension, LEGACY_IENTRY_VALIDATOR_ID_V1,
         LEGACY_IENTRY_VALIDATOR_ID_V2,
     };

@@ -10,11 +10,11 @@ use entry_requirement_extensions::entry_requirement::externals::wadray::Wad;
 use entry_requirement_extensions::entry_requirement::opus_troves_validator::{
     IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
 };
-use interfaces::entry_requirement::{EntryRequirement, EntryRequirementType, ExtensionConfig};
-use interfaces::entry_requirement_extension::{
+use metagame_extension_interfaces::entry_requirement::{EntryRequirement, EntryRequirementType, ExtensionConfig};
+use metagame_extension_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
-use interfaces::tournament::{
+use metagame_extension_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
 use snforge_std::{
