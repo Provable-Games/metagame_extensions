@@ -2,7 +2,9 @@ pub use metagame_extensions_interfaces::distribution::Distribution;
 pub use metagame_extensions_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, NFTQualification, QualificationProof,
 };
-pub use metagame_extensions_interfaces::prize::{ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData};
+pub use metagame_extensions_interfaces::prize::{
+    ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData,
+};
 use starknet::ContractAddress;
 
 #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]

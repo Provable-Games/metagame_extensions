@@ -10,7 +10,9 @@ use entry_requirement_extensions::entry_requirement::externals::wadray::Wad;
 use entry_requirement_extensions::entry_requirement::opus_troves_validator::{
     IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
 };
-use metagame_extensions_interfaces::entry_requirement::{EntryRequirement, EntryRequirementType, ExtensionConfig};
+use metagame_extensions_interfaces::entry_requirement::{
+    EntryRequirement, EntryRequirementType, ExtensionConfig,
+};
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
