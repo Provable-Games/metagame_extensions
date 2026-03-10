@@ -2,53 +2,56 @@
 version = 1
 
 [[package]]
-name = "budokan_entry_validator"
+name = "entry_fee_extension_component"
 version = "0.1.0"
 dependencies = [
- "budokan_interfaces",
+ "interfaces",
  "openzeppelin_introspection",
 ]
 
 [[package]]
-name = "budokan_interfaces"
-version = "0.1.0"
-
-[[package]]
-name = "budokan_test_common"
+name = "entry_requirement_extension_component"
 version = "0.1.0"
 dependencies = [
- "budokan_entry_validator",
- "budokan_interfaces",
+ "interfaces",
+ "openzeppelin_introspection",
+]
+
+[[package]]
+name = "entry_requirement_extensions"
+version = "0.1.0"
+dependencies = [
+ "entry_requirement_extension_component",
+ "interfaces",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
  "snforge_std",
+ "test_common",
 ]
 
 [[package]]
-name = "budokan_validators"
+name = "interfaces"
 version = "0.1.0"
-dependencies = [
- "budokan_entry_validator",
- "budokan_interfaces",
- "budokan_test_common",
- "openzeppelin_interfaces",
- "openzeppelin_introspection",
- "snforge_std",
-]
 
 [[package]]
 name = "openzeppelin_interfaces"
 version = "2.1.0"
-source = "registry+https://scarbs.xyz/"
-checksum = "sha256:f69fdb36eb894a0e0732385e723c5ff56d8cb4c1d49b29446c77eefac00b02a5"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 
 [[package]]
 name = "openzeppelin_introspection"
 version = "3.0.0"
-source = "registry+https://scarbs.xyz/"
-checksum = "sha256:ee491981a69736cde220f8b7dd290b6d8620c85ee6b83c81f665f5bef78b62b1"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 dependencies = [
  "openzeppelin_interfaces",
+]
+
+[[package]]
+name = "prize_extension_component"
+version = "0.1.0"
+dependencies = [
+ "interfaces",
+ "openzeppelin_introspection",
 ]
 
 [[package]]
@@ -64,4 +67,15 @@ source = "registry+https://scarbs.xyz/"
 checksum = "sha256:87dfe06ffd5cf1d5a075b7a5c8dff442b66d0eeaf27921140cf446213eb29a68"
 dependencies = [
  "snforge_scarb_plugin",
+]
+
+[[package]]
+name = "test_common"
+version = "0.1.0"
+dependencies = [
+ "entry_requirement_extension_component",
+ "interfaces",
+ "openzeppelin_interfaces",
+ "openzeppelin_introspection",
+ "snforge_std",
 ]

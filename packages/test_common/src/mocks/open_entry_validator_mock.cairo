@@ -1,18 +1,23 @@
 #[starknet::contract]
 pub mod open_entry_validator_mock {
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent;
-    use budokan_entry_validator::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
-    component!(path: EntryValidatorComponent, storage: entry_validator, event: EntryValidatorEvent);
+    component!(
+        path: EntryRequirementExtensionComponent,
+        storage: entry_validator,
+        event: EntryValidatorEvent,
+    );
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
     #[abi(embed_v0)]
-    impl EntryValidatorImpl =
-        EntryValidatorComponent::EntryValidatorImpl<ContractState>;
-    impl EntryValidatorInternalImpl = EntryValidatorComponent::InternalImpl<ContractState>;
+    impl EntryRequirementExtensionImpl =
+        EntryRequirementExtensionComponent::EntryRequirementExtensionImpl<ContractState>;
+    impl EntryRequirementExtensionInternalImpl =
+        EntryRequirementExtensionComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
@@ -20,7 +25,7 @@ pub mod open_entry_validator_mock {
     #[storage]
     struct Storage {
         #[substorage(v0)]
-        entry_validator: EntryValidatorComponent::Storage,
+        entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         tournament_entry_limit: Map<u64, u8>,
@@ -31,21 +36,21 @@ pub mod open_entry_validator_mock {
     #[derive(Drop, starknet::Event)]
     enum Event {
         #[flat]
-        EntryValidatorEvent: EntryValidatorComponent::Event,
+        EntryValidatorEvent: EntryRequirementExtensionComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Open validator: once registered, entry is always valid (registration_only = true)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
     }
 
-    impl EntryValidatorImplInternal of EntryValidator<ContractState> {
+    impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
-            tournament_id: u64,
+            context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
@@ -55,8 +60,8 @@ pub mod open_entry_validator_mock {
 
         fn should_ban_entry(
             self: @ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
@@ -66,46 +71,46 @@ pub mod open_entry_validator_mock {
 
         fn entries_left(
             self: @ContractState,
-            tournament_id: u64,
+            context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u8> {
-            let entry_limit = self.tournament_entry_limit.read(tournament_id);
+            let entry_limit = self.tournament_entry_limit.read(context_id);
             if entry_limit == 0 {
                 return Option::None; // Unlimited entries
             }
-            let key = (tournament_id, player_address);
+            let key = (context_id, player_address);
             let current_entries = self.tournament_entries.read(key);
             let remaining_entries = entry_limit - current_entries;
             return Option::Some(remaining_entries);
         }
 
         fn add_config(
-            ref self: ContractState, tournament_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
         ) {
-            self.tournament_entry_limit.write(tournament_id, entry_limit);
+            self.tournament_entry_limit.write(context_id, entry_limit);
         }
 
         fn on_entry_added(
             ref self: ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (tournament_id, player_address);
+            let key = (context_id, player_address);
             let current_entries = self.tournament_entries.read(key);
             self.tournament_entries.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
-            tournament_id: u64,
-            game_token_id: u64,
+            context_id: u64,
+            game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (tournament_id, player_address);
+            let key = (context_id, player_address);
             let current_entries = self.tournament_entries.read(key);
             if current_entries > 0 {
                 self.tournament_entries.write(key, current_entries - 1);

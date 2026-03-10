@@ -4,24 +4,24 @@ You are a senior software engineer specializing in the Cairo programming languag
 
 ## Project Overview
 
-**budokan-extensions** is a Cairo smart contract library providing modular **entry validators** for the [Budokan](https://github.com/Provable-Games/budokan) tournament platform on Starknet. Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
+**budokan-extensions** is a Cairo smart contract library providing modular **entry validators** for tournament platforms on Starknet, such as [Budokan](https://github.com/Provable-Games/budokan). Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
 
 The repo is structured as a Scarb workspace with four packages:
 
-| Package                   | Path                        | Purpose                                                     |
-| ------------------------- | --------------------------- | ----------------------------------------------------------- |
-| `budokan_interfaces`      | `packages/interfaces/`      | Pure traits and types (`IEntryValidator`, `IBudokan`, etc.) |
-| `budokan_entry_validator` | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators       |
-| `budokan_validators`      | `packages/validators/`      | All 6 pre-built validator contracts + tests                 |
-| `budokan_test_common`     | `packages/test_common/`     | Shared mocks and test constants                             |
+| Package                      | Path                        | Purpose                                                      |
+| ---------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `entry_validator_interfaces` | `packages/interfaces/`      | Pure traits and types (`IEntryRequirementExtension`, `ITournament`, etc.) |
+| `entry_validator_component`  | `packages/entry_validator/` | `EntryValidatorComponent` SDK for building validators        |
+| `entry_requirement_extensions`           | `packages/presets/`      | All 6 pre-built validator contracts + tests                  |
+| `entry_validator_test_common`| `packages/test_common/`     | Shared mocks and test constants                              |
 
 ## Build & Test Commands
 
 ```bash
 scarb build                                    # Compile all packages
 snforge test --workspace                       # Run all tests
-snforge test -p budokan_validators             # Run validator tests only
-snforge test -p budokan_validators <filter>    # Run a specific test by name filter
+snforge test -p entry_requirement_extensions               # Run validator tests only
+snforge test -p entry_requirement_extensions <filter>      # Run a specific test by name filter
 snforge test --workspace --coverage            # Run tests with code coverage (used in CI)
 scarb fmt --workspace                          # Format all Cairo files
 scarb fmt --check --workspace                  # Check formatting without modifying (used in CI)
@@ -30,8 +30,8 @@ scarb fmt --check --workspace                  # Check formatting without modify
 Fork testing (against live Starknet state):
 
 ```bash
-snforge test -p budokan_validators --fork-name sepolia    # Test against Sepolia
-snforge test -p budokan_validators --fork-name mainnet    # Test against Mainnet
+snforge test -p entry_requirement_extensions --fork-name sepolia    # Test against Sepolia
+snforge test -p entry_requirement_extensions --fork-name mainnet    # Test against Mainnet
 ```
 
 ## Toolchain Versions
@@ -45,22 +45,22 @@ Pinned in `.tool-versions` — currently Scarb 2.15.1, Starknet Foundry 0.56.0, 
 ```
 starknet (external)
     |
-budokan_interfaces ─── depends on: starknet only
+entry_validator_interfaces ─── depends on: starknet only
     |
-budokan_entry_validator ─── depends on: budokan_interfaces, openzeppelin_introspection
+entry_validator_component ─── depends on: entry_validator_interfaces, openzeppelin_introspection
     |
-budokan_validators ─── depends on: budokan_interfaces, budokan_entry_validator,
-    |                               openzeppelin_introspection, openzeppelin_interfaces
+entry_requirement_extensions ─── depends on: entry_validator_interfaces, entry_validator_component,
+    |                              openzeppelin_introspection, openzeppelin_interfaces
     |
-budokan_test_common ─── depends on: budokan_interfaces, budokan_entry_validator,
-                                     openzeppelin_introspection, openzeppelin_interfaces, snforge_std
+entry_validator_test_common ─── depends on: entry_validator_interfaces, entry_validator_component,
+                                             openzeppelin_introspection, openzeppelin_interfaces, snforge_std
 ```
 
 ### EntryValidator Trait
 
-All validators implement the `EntryValidator` trait from `budokan_entry_validator`. The core lifecycle:
+All validators implement the `EntryValidator` trait from `entry_validator_component`. The core lifecycle:
 
-1. **`add_config(tournament_id, entry_limit, config)`** — Called by Budokan when a tournament registers this validator. Asserts caller is Budokan. Deserializes `config: Span<felt252>` into validator-specific settings stored in per-tournament Maps.
+1. **`add_config(tournament_id, entry_limit, config)`** — Called by the owner (e.g. Budokan) when a tournament registers this validator. Asserts caller is the owner. Deserializes `config: Span<felt252>` into validator-specific settings stored in per-tournament Maps.
 2. **`validate_entry(tournament_id, player_address, qualification)`** — Returns bool. Checks if player meets entry criteria.
 3. **`entries_left(tournament_id, player_address, qualification)`** — Returns `Option<u8>` (None = unlimited).
 4. **`on_entry_added(tournament_id, game_token_id, player_address, qualification)`** — Called after entry confirmed; tracks state (e.g., increment entry count).
@@ -87,14 +87,14 @@ pub mod MyValidator {
         tournament_entries_per_address: Map<(u64, ContractAddress), u8>,
     }
 
-    // 3. Constructor: calls self.entry_validator.initializer(budokan_address, registration_only)
+    // 3. Constructor: calls self.entry_validator.initializer(owner_address, registration_only)
     //    registration_only=true means banning is supported
 
     // 4. impl EntryValidator<ContractState> — the 6 trait methods above
 }
 ```
 
-### Validators (in `packages/validators/src/`)
+### Validators (in `packages/presets/src/`)
 
 | Validator                 | Config Parameters                                                                          | Banning | Key Concept                                                        |
 | ------------------------- | ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------ |
@@ -114,11 +114,11 @@ pub mod MyValidator {
 
 ### Test Organization
 
-- **Unit tests**: `packages/validators/src/tests/test_entry_validator.cairo` — mock-based basic validation
-- **Fork tests** (`*_budokan_fork`): Run against live Sepolia/Mainnet Budokan contracts
+- **Unit tests**: `packages/presets/src/tests/test_entry_validator.cairo` — mock-based basic validation
+- **Fork tests** (`*_fork`): Run against live Sepolia/Mainnet contracts (e.g. Budokan)
 - **Integration tests** (`*_integration`): Multi-contract workflows with locally deployed contracts
 - **Mocks** (`packages/test_common/src/mocks/`): `entry_validator_mock`, `open_entry_validator_mock`
-- **Constants** (`packages/test_common/src/constants.cairo`): Mainnet/Sepolia addresses for Budokan, tokens, governance
+- **Constants** (`packages/test_common/src/constants.cairo`): Mainnet/Sepolia addresses for tournament platforms, tokens, governance
 - **Examples** (`examples/`): Uncompiled reference/WIP validators (not part of any package)
 
 ### Dependencies
@@ -127,7 +127,7 @@ pub mod MyValidator {
 - **openzeppelin_interfaces** (2.1.0): ERC20, ERC721, Governor, Votes interfaces
 - **snforge_std** (0.56.0): Starknet Foundry test framework (dev-dependency)
 
-External protocol type stubs are vendored in `packages/validators/src/externals/`:
+External protocol type stubs are vendored in `packages/presets/src/externals/`:
 
 - `wadray.cairo` — Fixed-point WAD/RAY math (from Opus)
 - `opus.cairo` — Opus Protocol types (AssetBalance)
@@ -139,7 +139,7 @@ The `test-contracts` workflow runs `scarb fmt --check --workspace` then `snforge
 
 ## Adding a New Validator
 
-1. Create `packages/validators/src/my_validator.cairo` following the contract structure pattern above
-2. Add the module to `packages/validators/src/lib.cairo`
-3. Create tests in `packages/validators/src/tests/` and register in `lib.cairo` under `#[cfg(test)] pub mod tests`
+1. Create `packages/presets/src/my_validator.cairo` following the contract structure pattern above
+2. Add the module to `packages/presets/src/lib.cairo`
+3. Create tests in `packages/presets/src/tests/` and register in `lib.cairo` under `#[cfg(test)] pub mod tests`
 4. Add a deployment script in `scripts/`

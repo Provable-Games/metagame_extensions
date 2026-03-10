@@ -4,8 +4,8 @@ use starknet::ContractAddress;
 // MAINNET CONTRACT ADDRESSES
 // ==============================================
 
-// Budokan contract address on mainnet
-pub fn budokan_address_mainnet() -> ContractAddress {
+// Tournament platform (Budokan) contract address on mainnet
+pub fn tournament_address_mainnet() -> ContractAddress {
     0x079b2d43a88db9d5111797edf45dda7d2a51e3aa5b6ed3e5c6a5410e88f50433.try_into().unwrap()
 }
 
@@ -23,8 +23,8 @@ pub fn test_account_mainnet() -> ContractAddress {
 // SEPOLIA CONTRACT ADDRESSES
 // ==============================================
 
-// Budokan contract address on sepolia
-pub fn budokan_address_sepolia() -> ContractAddress {
+// Tournament platform (Budokan) contract address on sepolia
+pub fn tournament_address_sepolia() -> ContractAddress {
     0x027649a648ce25712cf90a3b32b9f15f86edb21293227d0b3cc689987c77a02b.try_into().unwrap()
 }
 

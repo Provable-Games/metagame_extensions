@@ -1,8 +1,10 @@
 [workspace]
 members = [
     "packages/interfaces",
-    "packages/entry_validator",
-    "packages/validators",
+    "packages/entry_requirement",
+    "packages/entry_fee",
+    "packages/prize",
+    "packages/presets",
     "packages/test_common",
 ]
 
@@ -12,13 +14,15 @@ edition = "2024_07"
 
 [workspace.dependencies]
 starknet = "2.15.1"
-openzeppelin_introspection = "3.0.0"
-openzeppelin_interfaces = "2.1.0"
+openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
+openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
 snforge_std = "0.56.0"
-budokan_interfaces = { path = "packages/interfaces" }
-budokan_entry_validator = { path = "packages/entry_validator" }
-budokan_validators = { path = "packages/validators" }
-budokan_test_common = { path = "packages/test_common" }
+interfaces = { path = "packages/interfaces" }
+entry_requirement_extension_component = { path = "packages/entry_requirement" }
+entry_fee_extension_component = { path = "packages/entry_fee" }
+prize_extension_component = { path = "packages/prize" }
+entry_requirement_extensions = { path = "packages/presets" }
+test_common = { path = "packages/test_common" }
 
 [workspace.tool.fmt]
 sort-module-level-items = true

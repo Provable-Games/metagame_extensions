@@ -28,10 +28,10 @@ pub const QUALIFYING_MODE_ALL_PARTICIPATED_CUMULATIVE_TOP: felt252 = 3;
 
 #[starknet::contract]
 mod TournamentValidatorV2 {
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent;
-    use budokan_entry_requirement::entry_validator::EntryValidatorComponent::EntryValidator;
-    use budokan_interfaces::budokan::{IBudokanDispatcher, IBudokanDispatcherTrait};
-    use budokan_interfaces::registration::{IRegistrationDispatcher, IRegistrationDispatcherTrait};
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent;
+    use entry_validator_component::entry_validator_component::EntryValidatorComponent::EntryValidator;
+    use entry_validator_interfaces::tournament::{ITournamentDispatcher, ITournamentDispatcherTrait};
+    use entry_validator_interfaces::registration::{IRegistrationDispatcher, IRegistrationDispatcherTrait};
     use game_components_minigame::interface::{IMinigameDispatcher, IMinigameDispatcherTrait};
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;
@@ -113,10 +113,10 @@ mod TournamentValidatorV2 {
     // ========================================
 
     #[constructor]
-    fn constructor(ref self: ContractState, budokan_address: ContractAddress) {
+    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
         // Tournament qualification is validated at registration time
         // Once registered, the entry remains valid (registration_only = true)
-        self.entry_validator.initializer(budokan_address, true);
+        self.entry_validator.initializer(owner_address, true);
         self.owner.write(get_caller_address());
     }
 
@@ -570,11 +570,11 @@ mod TournamentValidatorV2 {
         fn owns_token(
             self: @ContractState, tournament_id: u64, token_id: u64, player: ContractAddress,
         ) -> bool {
-            let budokan_address = self.entry_validator.get_budokan_address();
-            let budokan = IBudokanDispatcher { contract_address: budokan_address };
+            let owner_address = self.entry_validator.get_owner_address();
+            let tournament = ITournamentDispatcher { contract_address: owner_address };
 
             // Get tournament details
-            let tournament = budokan.tournament(tournament_id);
+            let tournament = tournament.tournament(tournament_id);
             let game_address = tournament.game_config.address;
 
             // Get the game token address from the game contract

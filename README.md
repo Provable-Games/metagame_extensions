@@ -4,16 +4,16 @@
 
 # Budokan Extensions
 
-Modular entry validators for the [Budokan](https://github.com/Provable-Games/budokan) tournament platform on Starknet. Each validator defines qualification criteria that determine who can enter a tournament and how many entries they receive.
+Modular entry validators for tournament platforms on Starknet. Compatible with [Budokan](https://github.com/Provable-Games/budokan) and any platform implementing the same interfaces. Each validator defines qualification criteria that determine who can enter a tournament and how many entries they receive.
 
 ## Packages
 
 | Package | Description |
 | ------- | ----------- |
-| [`budokan_interfaces`](packages/interfaces/) | Pure traits and types for entry validators |
-| [`budokan_entry_validator`](packages/entry_validator/) | `EntryValidatorComponent` SDK for building validators |
-| [`budokan_validators`](packages/validators/) | Pre-built validator contracts |
-| [`budokan_test_common`](packages/test_common/) | Shared test mocks and constants |
+| [`entry_validator_interfaces`](packages/interfaces/) | Pure traits and types for entry validators |
+| [`entry_validator_component`](packages/entry_validator/) | `EntryValidatorComponent` SDK for building validators |
+| [`entry_requirement_extensions`](packages/presets/) | Pre-built validator contracts |
+| [`entry_validator_test_common`](packages/test_common/) | Shared test mocks and constants |
 
 ## Validators
 
@@ -45,8 +45,8 @@ scarb build                             # Build all packages
 
 ```bash
 snforge test --workspace                # Run all tests
-snforge test -p budokan_validators      # Run validator tests only
-snforge test -p budokan_validators <name> # Run a specific test by filter
+snforge test -p entry_requirement_extensions        # Run validator tests only
+snforge test -p entry_requirement_extensions <name> # Run a specific test by filter
 snforge test --workspace --coverage     # Run with code coverage
 ```
 
@@ -70,7 +70,7 @@ Deployment scripts are in `scripts/`. Each validator has its own deploy script.
 ```bash
 # 1. Configure environment
 cp .env.example .env
-# Edit .env with STARKNET_NETWORK, BUDOKAN_ADDRESS, etc.
+# Edit .env with STARKNET_NETWORK, OWNER_ADDRESS, etc.
 
 # 2. Deploy a validator
 ./scripts/deploy_snapshot_validator.sh

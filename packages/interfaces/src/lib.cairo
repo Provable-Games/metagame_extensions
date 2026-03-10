@@ -1,6 +1,9 @@
-pub mod budokan;
 pub mod distribution;
+pub mod entry_fee_extension;
 pub mod entry_requirement;
-pub mod entry_validator;
+pub mod entry_requirement_extension;
+pub mod extension;
 pub mod prize;
+pub mod prize_extension;
 pub mod registration;
+pub mod tournament;

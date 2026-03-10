@@ -52,7 +52,7 @@ esac
 # Check if required environment variables are set
 print_info "Checking environment variables..."
 
-required_vars=("BUDOKAN_ADDRESS")
+required_vars=("OWNER_ADDRESS")
 
 missing_vars=()
 
@@ -61,7 +61,7 @@ print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
 echo "  SNCAST_PROFILE: $SNCAST_PROFILE"
 echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
-echo "  BUDOKAN_ADDRESS: ${BUDOKAN_ADDRESS:-<not set>}"
+echo "  OWNER_ADDRESS: ${OWNER_ADDRESS:-<not set>}"
 
 # Build URL flag if STARKNET_RPC is provided
 URL_FLAG=""
@@ -112,13 +112,30 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/budokan_validators_ERC20BalanceValidator.contract_class.json" ]; then
+if [ ! -f "target/dev/entry_requirement_extensions_ERC20BalanceValidator.contract_class.json" ]; then
     print_error "ERC20BalanceValidator contract build failed or contract file not found"
-    print_error "Expected: target/dev/budokan_validators_ERC20BalanceValidator.contract_class.json"
+    print_error "Expected: target/dev/entry_requirement_extensions_ERC20BalanceValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
 fi
+
+# ============================
+# CALCULATE CLASS HASH FIRST
+# ============================
+
+print_info "Calculating class hash from artifact..."
+CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
+    --contract-name ERC20BalanceValidator \
+    --package entry_requirement_extensions 2>&1)
+CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
+
+if [ -z "$CLASS_HASH" ]; then
+    print_error "Could not calculate class hash from artifact"
+    echo "Class hash output: $CLASS_HASH_OUTPUT"
+    exit 1
+fi
+print_info "Class hash: $CLASS_HASH"
 
 # ============================
 # DECLARE ERC20 BALANCE VALIDATOR
@@ -129,18 +146,25 @@ print_info "Declaring ERC20BalanceValidator contract..."
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name ERC20BalanceValidator \
-    --package budokan_validators \
-    2>&1) || {
-    # Check if already declared
-    if echo "$DECLARE_OUTPUT" | grep -q "already declared"; then
-        print_warning "ERC20BalanceValidator already declared"
-        CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
-    else
-        print_error "Failed to declare ERC20BalanceValidator"
-        echo "$DECLARE_OUTPUT"
+    --package entry_requirement_extensions \
+    2>&1) || true
+
+# Check declaration result
+if echo "$DECLARE_OUTPUT" | grep -qi "class hash:"; then
+    print_info "Contract declared successfully"
+    # Wait for transaction to be confirmed
+    print_info "Waiting for declaration to be confirmed..."
+    sleep 5
+elif echo "$DECLARE_OUTPUT" | grep -qi "already declared"; then
+    print_warning "Contract already declared, proceeding with deployment..."
+else
+    # Check if it's an actual error or just needs waiting
+    if echo "$DECLARE_OUTPUT" | grep -qi "error"; then
+        print_error "Declaration failed"
+        echo "Declaration output: $DECLARE_OUTPUT"
         exit 1
     fi
-}
+fi
 
 if [ -z "${CLASS_HASH:-}" ]; then
     CLASS_HASH=$(echo "$DECLARE_OUTPUT" | grep -oE 'class_hash: 0x[0-9a-fA-F]+' | grep -oE '0x[0-9a-fA-F]+' || echo "$DECLARE_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | tail -1)
@@ -160,9 +184,9 @@ print_info "ERC20BalanceValidator class hash: $CLASS_HASH"
 
 print_info "Deploying ERC20BalanceValidator contract..."
 
-# Constructor parameter: tournament_address (BUDOKAN_ADDRESS)
+# Constructor parameter: owner_address (OWNER_ADDRESS)
 # Note: registration_only is hardcoded to true in the contract
-print_info "Using BUDOKAN_ADDRESS: $BUDOKAN_ADDRESS"
+print_info "Using OWNER_ADDRESS: $OWNER_ADDRESS"
 
 # Retry deployment up to 3 times
 MAX_RETRIES=3
@@ -180,7 +204,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
-        --constructor-calldata "$BUDOKAN_ADDRESS" \
+        --constructor-calldata "$OWNER_ADDRESS" \
         2>&1) || true
 
     # Extract contract address from output
