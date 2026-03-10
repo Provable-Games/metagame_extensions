@@ -1,5 +1,5 @@
 [package]
-name = "metagame_extension_interfaces"
+name = "metagame_extensions_interfaces"
 version.workspace = true
 edition.workspace = true
 

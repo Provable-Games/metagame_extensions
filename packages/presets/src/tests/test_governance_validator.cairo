@@ -1,4 +1,4 @@
-use metagame_extension_interfaces::entry_requirement_extension::{
+use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use snforge_std::{

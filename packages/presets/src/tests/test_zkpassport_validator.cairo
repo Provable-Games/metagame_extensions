@@ -2,7 +2,7 @@ use core::poseidon::poseidon_hash_span;
 use entry_requirement_extensions::entry_requirement::zkpassport_validator::{
     IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
-use metagame_extension_interfaces::entry_requirement_extension::{
+use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use snforge_std::{

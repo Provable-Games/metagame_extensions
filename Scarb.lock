@@ -5,7 +5,7 @@ version = 1
 name = "entry_fee_extension_component"
 version = "0.1.1"
 dependencies = [
- "metagame_extension_interfaces",
+ "metagame_extensions_interfaces",
  "openzeppelin_introspection",
 ]
 
@@ -13,7 +13,7 @@ dependencies = [
 name = "entry_requirement_extension_component"
 version = "0.1.1"
 dependencies = [
- "metagame_extension_interfaces",
+ "metagame_extensions_interfaces",
  "openzeppelin_introspection",
 ]
 
@@ -22,7 +22,7 @@ name = "entry_requirement_extensions"
 version = "0.1.1"
 dependencies = [
  "entry_requirement_extension_component",
- "metagame_extension_interfaces",
+ "metagame_extensions_interfaces",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
  "snforge_std",
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "metagame_extension_interfaces"
+name = "metagame_extensions_interfaces"
 version = "0.1.1"
 
 [[package]]
@@ -50,7 +50,7 @@ dependencies = [
 name = "prize_extension_component"
 version = "0.1.1"
 dependencies = [
- "metagame_extension_interfaces",
+ "metagame_extensions_interfaces",
  "openzeppelin_introspection",
 ]
 
@@ -74,7 +74,7 @@ name = "test_common"
 version = "0.1.1"
 dependencies = [
  "entry_requirement_extension_component",
- "metagame_extension_interfaces",
+ "metagame_extensions_interfaces",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
  "snforge_std",

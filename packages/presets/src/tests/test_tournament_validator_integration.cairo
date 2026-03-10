@@ -3,10 +3,10 @@ use entry_requirement_extensions::entry_requirement::tournament_validator::{
     QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
     QUALIFYING_MODE_PER_TOKEN,
 };
-use metagame_extension_interfaces::entry_requirement_extension::{
+use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
-use metagame_extension_interfaces::tournament::{
+use metagame_extensions_interfaces::tournament::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, GameConfig, ITournamentDispatcher,
     ITournamentDispatcherTrait, Metadata, Period, QualificationProof, Schedule,
 };

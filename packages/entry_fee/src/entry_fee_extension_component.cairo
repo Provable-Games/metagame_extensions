@@ -4,7 +4,7 @@
 
 #[starknet::component]
 pub mod EntryFeeExtensionComponent {
-    use metagame_extension_interfaces::entry_fee_extension::{IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension};
+    use metagame_extensions_interfaces::entry_fee_extension::{IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension};
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
     use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};

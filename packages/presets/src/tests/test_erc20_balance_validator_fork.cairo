@@ -1,13 +1,13 @@
 use entry_requirement_extensions::entry_requirement::erc20_balance_validator::{
     IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
 };
-use metagame_extension_interfaces::entry_requirement::{
+use metagame_extensions_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
-use metagame_extension_interfaces::entry_requirement_extension::{
+use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
-use metagame_extension_interfaces::tournament::{
+use metagame_extensions_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
 use snforge_std::{
