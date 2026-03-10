@@ -9,11 +9,11 @@
 // Verifier: 0x06ad2f4c866eabb03443098ecc798af1791952bc138bd32904dd215d8585c655
 
 use core::poseidon::poseidon_hash_span;
-use entry_requirement_extensions::entry_requirement::zkpassport_validator::{
-    IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
-};
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
+};
+use metagame_extensions_presets::entry_requirement::zkpassport_validator::{
+    IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
 use snforge_std::fs::{FileTrait, read_txt};
 use snforge_std::{

@@ -1,9 +1,9 @@
 use core::poseidon::poseidon_hash_span;
-use entry_requirement_extensions::entry_requirement::zkpassport_validator::{
-    IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
-};
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
+};
+use metagame_extensions_presets::entry_requirement::zkpassport_validator::{
+    IZkPassportValidatorDispatcher, IZkPassportValidatorDispatcherTrait,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp,

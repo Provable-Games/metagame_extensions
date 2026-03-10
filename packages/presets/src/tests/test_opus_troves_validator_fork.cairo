@@ -5,11 +5,6 @@
 //! - Forging yin increases entries
 //! - Melting yin decreases entries (can trigger banning)
 
-use entry_requirement_extensions::entry_requirement::externals::opus::AssetBalance;
-use entry_requirement_extensions::entry_requirement::externals::wadray::Wad;
-use entry_requirement_extensions::entry_requirement::opus_troves_validator::{
-    IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
-};
 use metagame_extensions_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig,
 };
@@ -19,14 +14,19 @@ use metagame_extensions_interfaces::entry_requirement_extension::{
 use metagame_extensions_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
+use metagame_extensions_presets::entry_requirement::externals::opus::AssetBalance;
+use metagame_extensions_presets::entry_requirement::externals::wadray::Wad;
+use metagame_extensions_presets::entry_requirement::opus_troves_validator::{
+    IOpusTrovesValidatorDispatcher, IOpusTrovesValidatorDispatcherTrait,
+};
+use metagame_extensions_test_common::constants::{
+    minigame_address_mainnet, test_account_mainnet, tournament_address_mainnet,
+};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
     start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
-use test_common::constants::{
-    minigame_address_mainnet, test_account_mainnet, tournament_address_mainnet,
-};
 
 #[starknet::interface]
 pub trait IERC20<TState> {
@@ -54,8 +54,8 @@ pub trait IShrine<TState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: entry_requirement_extensions::entry_requirement::externals::wadray::Ray,
-    pub ltv: entry_requirement_extensions::entry_requirement::externals::wadray::Ray,
+    pub threshold: metagame_extensions_presets::entry_requirement::externals::wadray::Ray,
+    pub ltv: metagame_extensions_presets::entry_requirement::externals::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }

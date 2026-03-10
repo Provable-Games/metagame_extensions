@@ -133,7 +133,7 @@ jobs:
           fi
 
   test:
-    name: test (entry_requirement_extensions)
+    name: test (metagame_extensions_presets)
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -190,12 +190,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target/
-          key: ${{ runner.os }}-target-entry_requirement_extensions-${{ env.SCARB_VERSION }}-${{ hashFiles('packages/**/*.cairo', '**/Scarb.toml', '**/Scarb.lock') }}
+          key: ${{ runner.os }}-target-metagame_extensions_presets-${{ env.SCARB_VERSION }}-${{ hashFiles('packages/**/*.cairo', '**/Scarb.toml', '**/Scarb.lock') }}
           restore-keys: |
-            ${{ runner.os }}-target-entry_requirement_extensions-${{ env.SCARB_VERSION }}-
+            ${{ runner.os }}-target-metagame_extensions_presets-${{ env.SCARB_VERSION }}-
 
       - name: Run tests with coverage
-        run: snforge test -p entry_requirement_extensions --coverage 2>&1 | tee /tmp/test.log
+        run: snforge test -p metagame_extensions_presets --coverage 2>&1 | tee /tmp/test.log
 
       - name: Check for compiler warnings
         if: always() && steps.cache-tools.outcome != 'failure'
@@ -210,7 +210,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage.lcov
-          flags: entry_requirement_extensions
+          flags: metagame_extensions_presets
           token: ${{ secrets.CODECOV_TOKEN }}
 
   main-ci:

@@ -1,6 +1,3 @@
-use entry_requirement_extensions::entry_requirement::erc20_balance_validator::{
-    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
-};
 use metagame_extensions_interfaces::entry_requirement::{
     EntryRequirement, EntryRequirementType, ExtensionConfig, QualificationProof,
 };
@@ -10,16 +7,19 @@ use metagame_extensions_interfaces::entry_requirement_extension::{
 use metagame_extensions_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
+use metagame_extensions_presets::entry_requirement::erc20_balance_validator::{
+    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
+};
+use metagame_extensions_test_common::constants::{
+    eth_token_address, lords_token_address, minigame_address_mainnet, minigame_address_sepolia,
+    strk_token_address, test_account_mainnet, test_account_sepolia, tournament_address_mainnet,
+    tournament_address_sepolia,
+};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
     start_cheat_caller_address, start_mock_call, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
-use test_common::constants::{
-    eth_token_address, lords_token_address, minigame_address_mainnet, minigame_address_sepolia,
-    strk_token_address, test_account_mainnet, test_account_sepolia, tournament_address_mainnet,
-    tournament_address_sepolia,
-};
 
 // ==============================================
 // HELPER FUNCTIONS

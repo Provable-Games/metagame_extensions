@@ -8,8 +8,8 @@ pub trait IEntryRequirementExtensionMock<TState> {
 #[starknet::contract]
 pub mod entry_validator_mock {
     use core::num::traits::Zero;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;

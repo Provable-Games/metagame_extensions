@@ -1,8 +1,8 @@
 #[starknet::contract]
 pub mod GovernanceValidator {
     use core::num::traits::Zero;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin_interfaces::governor::{IGovernorDispatcher, IGovernorDispatcherTrait};
     use openzeppelin_interfaces::votes::{IVotesDispatcher, IVotesDispatcherTrait};

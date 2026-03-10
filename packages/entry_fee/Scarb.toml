@@ -1,5 +1,5 @@
 [package]
-name = "entry_fee_extension_component"
+name = "metagame_extensions_entry_fee"
 version.workspace = true
 edition.workspace = true
 

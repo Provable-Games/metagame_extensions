@@ -32,8 +32,8 @@ pub trait ISnapshotValidator<TState> {
 
 #[starknet::contract]
 pub mod SnapshotValidator {
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::storage::{
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,

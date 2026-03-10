@@ -1,5 +1,5 @@
 [package]
-name = "entry_requirement_extensions"
+name = "metagame_extensions_presets"
 version.workspace = true
 edition.workspace = true
 
@@ -8,11 +8,11 @@ starknet.workspace = true
 openzeppelin_introspection.workspace = true
 openzeppelin_interfaces.workspace = true
 metagame_extensions_interfaces.workspace = true
-entry_requirement_extension_component.workspace = true
+metagame_extensions_entry_requirement.workspace = true
 
 [dev-dependencies]
 snforge_std.workspace = true
-test_common.workspace = true
+metagame_extensions_test_common.workspace = true
 
 [tool.snforge]
 [[tool.snforge.fork]]
@@ -29,6 +29,6 @@ block_id.number = "6123632"
 sierra = true
 casm = true
 build-external-contracts = [
-    "test_common::mocks::entry_validator_mock::entry_validator_mock",
-    "test_common::mocks::open_entry_validator_mock::open_entry_validator_mock",
+    "metagame_extensions_test_common::mocks::entry_validator_mock::entry_validator_mock",
+    "metagame_extensions_test_common::mocks::open_entry_validator_mock::open_entry_validator_mock",
 ]

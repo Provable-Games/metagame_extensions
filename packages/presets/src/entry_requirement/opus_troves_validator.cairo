@@ -47,7 +47,7 @@
 //! → Player with 25 yin debt gets (25e18 - 5e18) / 2e18 = 10 entries
 //! ```
 
-use entry_requirement_extensions::entry_requirement::externals::wadray::Wad;
+use metagame_extensions_presets::entry_requirement::externals::wadray::Wad;
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -65,8 +65,8 @@ pub trait IShrine<TContractState> {
 
 #[derive(Drop, Serde, Copy)]
 pub struct Health {
-    pub threshold: entry_requirement_extensions::entry_requirement::externals::wadray::Ray,
-    pub ltv: entry_requirement_extensions::entry_requirement::externals::wadray::Ray,
+    pub threshold: metagame_extensions_presets::entry_requirement::externals::wadray::Ray,
+    pub ltv: metagame_extensions_presets::entry_requirement::externals::wadray::Ray,
     pub value: Wad,
     pub debt: Wad,
 }
@@ -81,9 +81,9 @@ pub trait IOpusTrovesValidator<TState> {
 #[starknet::contract]
 pub mod OpusTrovesValidator {
     use core::num::traits::Zero;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
-    use entry_requirement_extensions::entry_requirement::externals::wadray::Wad;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
+    use metagame_extensions_presets::entry_requirement::externals::wadray::Wad;
     use openzeppelin_introspection::src5::SRC5Component;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};

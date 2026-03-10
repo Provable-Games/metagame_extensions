@@ -1,22 +1,22 @@
-use entry_requirement_extensions::entry_requirement::tournament_validator::{
-    ITournamentValidatorDispatcher, ITournamentValidatorDispatcherTrait,
-    QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
-    QUALIFYING_MODE_PER_TOKEN,
-};
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
 use metagame_extensions_interfaces::tournament::{
     GameConfig, ITournamentDispatcher, ITournamentDispatcherTrait, Metadata, Period, Schedule,
 };
+use metagame_extensions_presets::entry_requirement::tournament_validator::{
+    ITournamentValidatorDispatcher, ITournamentValidatorDispatcherTrait,
+    QUALIFIER_TYPE_PARTICIPANTS, QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_ALL,
+    QUALIFYING_MODE_PER_TOKEN,
+};
+use metagame_extensions_test_common::constants::{
+    minigame_address_sepolia, test_account_sepolia, tournament_address_sepolia,
+};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_block_timestamp_global,
     start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::{ContractAddress, get_block_timestamp};
-use test_common::constants::{
-    minigame_address_sepolia, test_account_sepolia, tournament_address_sepolia,
-};
 
 // ==============================================
 // HELPER FUNCTIONS

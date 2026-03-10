@@ -1,14 +1,14 @@
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
+use metagame_extensions_test_common::mocks::entry_validator_mock::{
+    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
+};
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address, start_mock_call,
     stop_cheat_caller_address, stop_mock_call,
 };
 use starknet::ContractAddress;
-use test_common::mocks::entry_validator_mock::{
-    IEntryRequirementExtensionMockDispatcher, IEntryRequirementExtensionMockDispatcherTrait,
-};
 
 // Mock owner address used across tests
 fn owner_address() -> ContractAddress {

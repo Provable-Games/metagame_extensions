@@ -47,16 +47,16 @@ pub trait ITournamentValidator<TState> {
 
 #[starknet::contract]
 pub mod TournamentValidator {
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent;
-    use entry_requirement_extension_component::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
-    use entry_requirement_extensions::entry_requirement::externals::game_components::{
-        IMinigameDispatcher, IMinigameDispatcherTrait,
-    };
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
+    use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use metagame_extensions_interfaces::registration::{
         IRegistrationDispatcher, IRegistrationDispatcherTrait,
     };
     use metagame_extensions_interfaces::tournament::{
         ITournamentDispatcher, ITournamentDispatcherTrait, Phase,
+    };
+    use metagame_extensions_presets::entry_requirement::externals::game_components::{
+        IMinigameDispatcher, IMinigameDispatcherTrait,
     };
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
     use openzeppelin_introspection::src5::SRC5Component;

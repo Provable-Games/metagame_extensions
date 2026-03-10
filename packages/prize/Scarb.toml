@@ -1,5 +1,5 @@
 [package]
-name = "prize_extension_component"
+name = "metagame_extensions_prize"
 version.workspace = true
 edition.workspace = true
 
