@@ -47,6 +47,7 @@ pub trait ITournamentValidator<TState> {
 
 #[starknet::contract]
 pub mod TournamentValidator {
+    use core::num::traits::Zero;
     use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
     use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
     use metagame_extensions_interfaces::registration::{
@@ -476,6 +477,9 @@ pub mod TournamentValidator {
             position_index: u32,
         ) -> bool {
             let tournament_address = self.entry_validator.get_context_owner(tournament_id);
+            if tournament_address.is_zero() {
+                return false;
+            }
             let tournament = ITournamentDispatcher { contract_address: tournament_address };
             let registration_dispatcher = IRegistrationDispatcher {
                 contract_address: tournament_address,

@@ -4,6 +4,7 @@
 
 #[starknet::component]
 pub mod EntryFeeExtensionComponent {
+    use core::num::traits::Zero;
     use metagame_extensions_interfaces::entry_fee_extension::{
         IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension, LEGACY_IENTRY_FEE_EXTENSION_ID,
     };
@@ -89,8 +90,7 @@ pub mod EntryFeeExtensionComponent {
         fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {
             let caller = get_caller_address();
             let current_owner = self.context_owner.read(context_id);
-            let zero: ContractAddress = 0.try_into().unwrap();
-            if current_owner == zero {
+            if current_owner.is_zero() {
                 self.context_owner.write(context_id, caller);
             } else {
                 assert!(
@@ -102,8 +102,7 @@ pub mod EntryFeeExtensionComponent {
         fn assert_context_owner(self: @ComponentState<TContractState>, context_id: u64) {
             let caller = get_caller_address();
             let current_owner = self.context_owner.read(context_id);
-            let zero: ContractAddress = 0.try_into().unwrap();
-            assert!(current_owner != zero, "Entry Fee Extension: Context has no owner");
+            assert!(!current_owner.is_zero(), "Entry Fee Extension: Context has no owner");
             assert!(caller == current_owner, "Entry Fee Extension: Only context owner can call");
         }
     }

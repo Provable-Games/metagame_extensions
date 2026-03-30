@@ -4,6 +4,7 @@
 
 #[starknet::component]
 pub mod PrizeExtensionComponent {
+    use core::num::traits::Zero;
     use metagame_extensions_interfaces::prize_extension::{
         IPRIZE_EXTENSION_ID, IPrizeExtension, LEGACY_IPRIZE_EXTENSION_ID,
     };
@@ -83,8 +84,7 @@ pub mod PrizeExtensionComponent {
         fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {
             let caller = get_caller_address();
             let current_owner = self.context_owner.read(context_id);
-            let zero: ContractAddress = 0.try_into().unwrap();
-            if current_owner == zero {
+            if current_owner.is_zero() {
                 self.context_owner.write(context_id, caller);
             } else {
                 assert!(caller == current_owner, "Prize Extension: Only context owner can call");
@@ -94,8 +94,7 @@ pub mod PrizeExtensionComponent {
         fn assert_context_owner(self: @ComponentState<TContractState>, context_id: u64) {
             let caller = get_caller_address();
             let current_owner = self.context_owner.read(context_id);
-            let zero: ContractAddress = 0.try_into().unwrap();
-            assert!(current_owner != zero, "Prize Extension: Context has no owner");
+            assert!(!current_owner.is_zero(), "Prize Extension: Context has no owner");
             assert!(caller == current_owner, "Prize Extension: Only context owner can call");
         }
     }
