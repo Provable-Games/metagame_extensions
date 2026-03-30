@@ -1,6 +1,6 @@
 import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
 import { Button } from "./ui/button";
-import { Wallet, ChevronDown, LogOut, Check } from "lucide-react";
+import { Wallet, ChevronDown, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

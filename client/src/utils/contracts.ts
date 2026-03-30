@@ -1,6 +1,5 @@
-// Snapshot Validator Contract ABI and Address
-export const SNAPSHOT_VALIDATOR_ADDRESS =
-  "0x03e6820e9e1cfb5c22465a86f469c651355f05397e29fc94de8e832d5f3d8ede";
+// Snapshot Validator Contract ABI
+// Address is now provided per-network via useChainConfig().chainConfig.snapshotValidatorAddress
 
 export const SNAPSHOT_VALIDATOR_ABI = [
   {
@@ -421,12 +420,7 @@ export const SNAPSHOT_VALIDATOR_ABI = [
   {
     type: "constructor",
     name: "constructor",
-    inputs: [
-      {
-        name: "budokan_address",
-        type: "core::starknet::contract_address::ContractAddress",
-      },
-    ],
+    inputs: [],
   },
   {
     type: "event",

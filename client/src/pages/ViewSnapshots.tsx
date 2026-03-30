@@ -26,10 +26,10 @@ import {
 } from "lucide-react";
 import {
   SNAPSHOT_VALIDATOR_ABI,
-  SNAPSHOT_VALIDATOR_ADDRESS,
   type SnapshotMetadata,
   type Entry,
 } from "@/utils/contracts";
+import { useChainConfig } from "@/contexts/NetworkContext";
 import { CallData } from "starknet";
 import { EntryManager } from "@/components/EntryManager";
 import { normalizeAddress, addressesEqual } from "@/utils/address";
@@ -37,6 +37,8 @@ import { normalizeAddress, addressesEqual } from "@/utils/address";
 export function ViewSnapshots() {
   const { id } = useParams();
   const { account, address } = useAccount();
+  const { chainConfig } = useChainConfig();
+  const snapshotValidatorAddress = chainConfig.snapshotValidatorAddress;
   const [searchId, setSearchId] = useState(id || "");
   const [searchAddress, setSearchAddress] = useState("");
   const [entryCount, setEntryCount] = useState<number | null>(null);
@@ -46,32 +48,31 @@ export function ViewSnapshots() {
   const [showAddEntries, setShowAddEntries] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const { contract } = useContract({
-    address: SNAPSHOT_VALIDATOR_ADDRESS,
+  const { contract: _contract } = useContract({
+    address: snapshotValidatorAddress,
     abi: SNAPSHOT_VALIDATOR_ABI,
   });
 
   const { send: sendTransaction, isPending } = useSendTransaction({});
 
   // Read snapshot metadata
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: metadataRaw, isLoading: isLoadingMetadata } = useReadContract({
-    address: SNAPSHOT_VALIDATOR_ADDRESS,
+    address: snapshotValidatorAddress,
     abi: SNAPSHOT_VALIDATOR_ABI,
     functionName: "get_snapshot_metadata",
-    args: searchId ? [searchId] : undefined,
+    args: searchId ? [BigInt(searchId)] : undefined,
     watch: true,
-  });
+  } as any);
 
-  console.log("Raw metadata:", metadataRaw);
 
   // Parse metadata from raw response
   const metadata: SnapshotMetadata | null = React.useMemo(() => {
     if (!metadataRaw) return null;
 
-    console.log("Processing metadata:", metadataRaw);
-
     // Handle wrapped response
-    let data = metadataRaw;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let data: any = metadataRaw;
 
     // If wrapped in a metadata property
     if (typeof data === "object" && "metadata" in data) {
@@ -88,10 +89,8 @@ export function ViewSnapshots() {
         const someData = data.Some;
 
         // Extract status value from CairoCustomEnum
-        let status = someData.status;
-        console.log("Raw status data:", status);
-        console.log("Status type:", typeof status);
-        console.log("Status keys:", status && typeof status === "object" ? Object.keys(status) : "not an object");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let status: any = someData.status;
 
         // Handle different possible status structures
         if (status && typeof status === "object") {
@@ -125,34 +124,24 @@ export function ViewSnapshots() {
         // If status is a string, it might already be the variant name
         else if (typeof status === "string") {
           // Status is already a string, use it as-is
-          console.log("Status is already a string:", status);
         }
         // If status is a number, map it to the enum variant
         else if (typeof status === "number") {
-          const statusMap = {
+          const statusMap: Record<number, string> = {
             0: "Created",
             1: "InProgress",
             2: "Locked"
           };
           status = statusMap[status] || status;
-          console.log("Status was a number, mapped to:", status);
         }
 
-        console.log("Parsed status:", status);
-
         // Convert and normalize owner address
-        let owner = normalizeAddress(someData.owner);
+        const owner = normalizeAddress(someData.owner);
 
-        console.log("Parsed owner address:", owner);
-        console.log("Current wallet address:", normalizeAddress(address));
-
-        const parsedMetadata = {
-          owner: owner,
-          status: status
+        return {
+          owner,
+          status,
         } as SnapshotMetadata;
-
-        console.log("Final parsed metadata:", parsedMetadata);
-        return parsedMetadata;
       }
 
       // Direct metadata object (fallback)
@@ -165,12 +154,13 @@ export function ViewSnapshots() {
   }, [metadataRaw]);
 
   // Read snapshot entry for a specific address
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: entryData } = useReadContract({
-    address: SNAPSHOT_VALIDATOR_ADDRESS,
+    address: snapshotValidatorAddress,
     abi: SNAPSHOT_VALIDATOR_ABI,
     functionName: "get_snapshot_entry",
-    args: searchId && searchAddress ? [searchId, searchAddress] : undefined,
-  });
+    args: searchId && searchAddress ? [BigInt(searchId), searchAddress] : undefined,
+  } as any);
 
   useEffect(() => {
     if (entryData !== undefined) {
@@ -184,7 +174,7 @@ export function ViewSnapshots() {
     setIsLocking(true);
     try {
       const calls = {
-        contractAddress: SNAPSHOT_VALIDATOR_ADDRESS,
+        contractAddress: snapshotValidatorAddress,
         entrypoint: "lock_snapshot",
         calldata: [searchId]
       };
@@ -216,7 +206,7 @@ export function ViewSnapshots() {
       });
 
       const calls = {
-        contractAddress: SNAPSHOT_VALIDATOR_ADDRESS,
+        contractAddress: snapshotValidatorAddress,
         entrypoint: "upload_snapshot_data",
         calldata: calldata
       };
@@ -299,7 +289,7 @@ export function ViewSnapshots() {
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value)}
               />
-              <Button disabled={!SNAPSHOT_VALIDATOR_ADDRESS}>
+              <Button disabled={!snapshotValidatorAddress}>
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
