@@ -27,7 +27,7 @@ use starknet::{ContractAddress, get_block_timestamp};
 
 fn deploy_erc20_balance_validator(tournament_address: ContractAddress) -> ContractAddress {
     let contract = declare("ERC20BalanceValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![tournament_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 

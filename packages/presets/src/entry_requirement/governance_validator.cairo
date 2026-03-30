@@ -53,9 +53,9 @@ pub mod GovernanceValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
+    fn constructor(ref self: ContractState) {
         // Governance requirements can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(owner_address, false);
+        self.entry_validator.initializer(false);
     }
 
     // Implement the EntryValidator trait for the contract

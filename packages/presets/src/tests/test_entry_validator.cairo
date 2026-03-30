@@ -22,7 +22,7 @@ fn erc721_address() -> ContractAddress {
 
 fn deploy_entry_validator() -> ContractAddress {
     let contract = declare("entry_validator_mock").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
@@ -42,7 +42,7 @@ fn configure_entry_validator(
 
 fn deploy_open_entry_validator() -> ContractAddress {
     let contract = declare("open_entry_validator_mock").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
@@ -372,4 +372,67 @@ fn test_open_validator_entries_left_and_remove_tracking() {
 
     let final_left = open_validator.entries_left(tournament_id, player, array![].span());
     assert(final_left.unwrap() == 2, 'rm noop');
+}
+
+#[test]
+fn test_multi_tenant_isolation() {
+    let validator_address = deploy_open_entry_validator();
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    let owner_a: ContractAddress = 0xA.try_into().unwrap();
+    let owner_b: ContractAddress = 0xB.try_into().unwrap();
+    let context_a: u64 = 100;
+    let context_b: u64 = 200;
+    let player: ContractAddress = 0xC.try_into().unwrap();
+
+    // Owner A configures context A
+    start_cheat_caller_address(validator_address, owner_a);
+    validator.add_config(context_a, 3, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    // Owner B configures context B
+    start_cheat_caller_address(validator_address, owner_b);
+    validator.add_config(context_b, 5, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    // Verify context owners
+    assert!(validator.context_owner(context_a) == owner_a, "Owner A should own context A");
+    assert!(validator.context_owner(context_b) == owner_b, "Owner B should own context B");
+
+    // Owner A can add entry on their own context
+    start_cheat_caller_address(validator_address, owner_a);
+    validator.add_entry(context_a, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    // Owner B can add entry on their own context
+    start_cheat_caller_address(validator_address, owner_b);
+    validator.add_entry(context_b, 1, player, array![].span());
+    stop_cheat_caller_address(validator_address);
+}
+
+#[test]
+#[should_panic(expected: "Entry Requirement Extension: Only context owner can call")]
+fn test_multi_tenant_cross_context_rejected() {
+    let validator_address = deploy_open_entry_validator();
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    let owner_a: ContractAddress = 0xA.try_into().unwrap();
+    let owner_b: ContractAddress = 0xB.try_into().unwrap();
+    let context_a: u64 = 100;
+    let context_b: u64 = 200;
+    let player: ContractAddress = 0xC.try_into().unwrap();
+
+    // Owner A configures context A
+    start_cheat_caller_address(validator_address, owner_a);
+    validator.add_config(context_a, 3, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    // Owner B configures context B
+    start_cheat_caller_address(validator_address, owner_b);
+    validator.add_config(context_b, 5, array![].span());
+    stop_cheat_caller_address(validator_address);
+
+    // Owner A tries to add entry on context B - should panic
+    start_cheat_caller_address(validator_address, owner_a);
+    validator.add_entry(context_b, 1, player, array![].span());
 }

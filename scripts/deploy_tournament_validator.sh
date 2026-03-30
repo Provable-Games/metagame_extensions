@@ -52,7 +52,7 @@ esac
 # Check if required environment variables are set
 print_info "Checking environment variables..."
 
-required_vars=("OWNER_ADDRESS")
+required_vars=()
 
 missing_vars=()
 
@@ -61,8 +61,6 @@ print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
 echo "  SNCAST_PROFILE: $SNCAST_PROFILE"
 echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
-echo "  OWNER_ADDRESS: ${OWNER_ADDRESS:-<not set>}"
-
 # Build URL flag if STARKNET_RPC is provided
 URL_FLAG=""
 if [ -n "${STARKNET_RPC:-}" ]; then
@@ -112,9 +110,9 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/entry_requirement_extensions_TournamentValidator.contract_class.json" ]; then
+if [ ! -f "target/dev/metagame_extensions_presets_TournamentValidator.contract_class.json" ]; then
     print_error "TournamentValidator contract build failed or contract file not found"
-    print_error "Expected: target/dev/entry_requirement_extensions_TournamentValidator.contract_class.json"
+    print_error "Expected: target/dev/metagame_extensions_presets_TournamentValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
@@ -127,7 +125,7 @@ fi
 print_info "Calculating class hash from artifact..."
 CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
     --contract-name TournamentValidator \
-    --package entry_requirement_extensions 2>&1)
+    --package metagame_extensions_presets 2>&1)
 CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
 
 if [ -z "$CLASS_HASH" ]; then
@@ -146,7 +144,7 @@ print_info "Declaring TournamentValidator contract..."
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
     --contract-name TournamentValidator \
-    --package entry_requirement_extensions \
+    --package metagame_extensions_presets \
     2>&1) || true
 
 # Check declaration result
@@ -182,10 +180,6 @@ print_info "TournamentValidator class hash: $CLASS_HASH"
 
 print_info "Deploying TournamentValidator contract..."
 
-# Constructor parameters: owner_address
-print_info "Using OWNER_ADDRESS: $OWNER_ADDRESS"
-print_info "Note: TournamentValidator always uses registration_only=true (hard-coded)"
-
 # Retry deployment up to 3 times
 MAX_RETRIES=3
 RETRY_COUNT=0
@@ -202,7 +196,6 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
-        --constructor-calldata "$OWNER_ADDRESS" \
         2>&1) || true
 
     # Extract contract address from output

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Open Entry Validator Deployment Script
-# Deploys the open_entry_validator_mock contract to Starknet
+# ZkPassport Validator Deployment Script
+# Deploys the ZkPassportValidator contract to Starknet
 
 set -euo pipefail
 
@@ -35,6 +35,7 @@ print_warning() {
 
 # Check deployment environment
 STARKNET_NETWORK="${STARKNET_NETWORK:-default}"
+REGISTRATION_ONLY="${REGISTRATION_ONLY:-false}"
 
 # Map network to sncast profile
 case "$STARKNET_NETWORK" in
@@ -49,38 +50,17 @@ case "$STARKNET_NETWORK" in
         ;;
 esac
 
-# Check if required environment variables are set
-print_info "Checking environment variables..."
-
-required_vars=()
-
-missing_vars=()
-
 # Debug output for environment variables
 print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
 echo "  SNCAST_PROFILE: $SNCAST_PROFILE"
 echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
+echo "  REGISTRATION_ONLY: $REGISTRATION_ONLY"
 
 # Build URL flag if STARKNET_RPC is provided
 URL_FLAG=""
 if [ -n "${STARKNET_RPC:-}" ]; then
     URL_FLAG="--url $STARKNET_RPC"
-fi
-
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var:-}" ]; then
-        missing_vars+=("$var")
-    fi
-done
-
-if [ ${#missing_vars[@]} -ne 0 ]; then
-    print_error "The following required environment variables are not set:"
-    for var in "${missing_vars[@]}"; do
-        echo "  - $var"
-    done
-    echo "Please set these variables before running the script."
-    exit 1
 fi
 
 # ============================
@@ -91,6 +71,7 @@ print_info "Deployment Configuration:"
 echo "  Network: $STARKNET_NETWORK"
 echo "  Profile: $SNCAST_PROFILE"
 echo "  RPC: ${STARKNET_RPC:-<from profile>}"
+echo "  Registration Only: $REGISTRATION_ONLY"
 echo ""
 
 # Confirm deployment
@@ -111,9 +92,9 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json" ]; then
-    print_error "open_entry_validator_mock contract build failed or contract file not found"
-    print_error "Expected: target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json"
+if [ ! -f "target/dev/metagame_extensions_presets_ZkPassportValidator.contract_class.json" ]; then
+    print_error "ZkPassportValidator contract build failed or contract file not found"
+    print_error "Expected: target/dev/metagame_extensions_presets_ZkPassportValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
@@ -125,8 +106,8 @@ fi
 
 print_info "Calculating class hash from artifact..."
 CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common 2>&1)
+    --contract-name ZkPassportValidator \
+    --package metagame_extensions_presets 2>&1)
 CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
 
 if [ -z "$CLASS_HASH" ]; then
@@ -137,15 +118,15 @@ fi
 print_info "Class hash: $CLASS_HASH"
 
 # ============================
-# DECLARE OPEN ENTRY VALIDATOR
+# DECLARE ZKPASSPORT VALIDATOR
 # ============================
 
-print_info "Declaring open_entry_validator_mock contract..."
+print_info "Declaring ZkPassportValidator contract..."
 
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common \
+    --contract-name ZkPassportValidator \
+    --package metagame_extensions_presets \
     2>&1) || true
 
 # Check declaration result
@@ -173,13 +154,23 @@ if [ -z "$CLASS_HASH" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock class hash: $CLASS_HASH"
+print_info "ZkPassportValidator class hash: $CLASS_HASH"
 
 # ============================
-# DEPLOY OPEN ENTRY VALIDATOR
+# DEPLOY ZKPASSPORT VALIDATOR
 # ============================
 
-print_info "Deploying open_entry_validator_mock contract..."
+print_info "Deploying ZkPassportValidator contract..."
+
+# Constructor parameter: registration_only (bool)
+# Convert REGISTRATION_ONLY to felt252 (0 or 1)
+if [ "$REGISTRATION_ONLY" = "true" ]; then
+    REGISTRATION_ONLY_FELT="1"
+else
+    REGISTRATION_ONLY_FELT="0"
+fi
+
+print_info "Using REGISTRATION_ONLY: $REGISTRATION_ONLY (felt: $REGISTRATION_ONLY_FELT)"
 
 # Retry deployment up to 3 times
 MAX_RETRIES=3
@@ -197,6 +188,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
+        --constructor-calldata "$REGISTRATION_ONLY_FELT" \
         2>&1) || true
 
     # Extract contract address from output
@@ -215,13 +207,13 @@ if [ -z "$CONTRACT_ADDRESS" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock contract deployed at address: $CONTRACT_ADDRESS"
+print_info "ZkPassportValidator contract deployed at address: $CONTRACT_ADDRESS"
 
 # ============================
 # SAVE DEPLOYMENT INFO
 # ============================
 
-DEPLOYMENT_FILE="deployments/open_entry_validator_$(date +%Y%m%d_%H%M%S).json"
+DEPLOYMENT_FILE="deployments/zkpassport_validator_$(date +%Y%m%d_%H%M%S).json"
 mkdir -p deployments
 
 cat > "$DEPLOYMENT_FILE" << EOF
@@ -229,11 +221,11 @@ cat > "$DEPLOYMENT_FILE" << EOF
   "network": "$STARKNET_NETWORK",
   "profile": "$SNCAST_PROFILE",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "open_entry_validator": {
+  "zkpassport_validator": {
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
-    "description": "Open entry validator that allows all players to enter without token requirements",
-    "registration_only": false
+    "description": "ZK passport-based entry validator using Garaga Honk verifier for sybil prevention",
+    "registration_only": $REGISTRATION_ONLY
   }
 }
 EOF
@@ -247,24 +239,24 @@ print_info "Deployment info saved to: $DEPLOYMENT_FILE"
 echo
 print_info "=== DEPLOYMENT SUCCESSFUL ==="
 echo
-echo "Open Entry Validator Contract:"
+echo "ZkPassport Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
+echo "  Registration Only: $REGISTRATION_ONLY"
 echo ""
 
 echo "Next steps:"
 echo "1. Verify the contract on Starkscan/Voyager"
-echo "2. Test the valid_entry function to ensure anyone can enter"
-echo "3. Integrate with your game contracts"
+echo "2. Configure tournaments with add_config() specifying:"
+echo "   - Verifier address (Garaga Honk verifier)"
+echo "   - Service scope"
+echo "   - Subscope"
+echo "   - Parameter commitment"
+echo "   - Max proof age"
+echo "   - Nullifier type"
+echo "3. Players submit ZK proofs to enter tournaments"
 echo ""
 
 echo "To interact with the contract:"
-echo "  export ENTRY_VALIDATOR=$CONTRACT_ADDRESS"
-echo ""
-
-echo "Example: Test entry validation:"
-echo "  sncast --profile $SNCAST_PROFILE --url \$STARKNET_RPC call \\"
-echo "    --contract-address \$ENTRY_VALIDATOR \\"
-echo "    --function valid_entry \\"
-echo "    --calldata <player_address> 0"
+echo "  export ZKPASSPORT_VALIDATOR=$CONTRACT_ADDRESS"
 echo ""

@@ -50,9 +50,9 @@ pub mod entry_validator_mock {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
+    fn constructor(ref self: ContractState) {
         // ERC721 ownership can change, so allow banning (registration_only = false)
-        self.entry_validator.initializer(owner_address, false);
+        self.entry_validator.initializer(false);
     }
 
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {

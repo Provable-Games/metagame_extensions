@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Open Entry Validator Deployment Script
-# Deploys the open_entry_validator_mock contract to Starknet
+# Governance Validator Deployment Script
+# Deploys the GovernanceValidator contract to Starknet
 
 set -euo pipefail
 
@@ -49,13 +49,6 @@ case "$STARKNET_NETWORK" in
         ;;
 esac
 
-# Check if required environment variables are set
-print_info "Checking environment variables..."
-
-required_vars=()
-
-missing_vars=()
-
 # Debug output for environment variables
 print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
@@ -66,21 +59,6 @@ echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
 URL_FLAG=""
 if [ -n "${STARKNET_RPC:-}" ]; then
     URL_FLAG="--url $STARKNET_RPC"
-fi
-
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var:-}" ]; then
-        missing_vars+=("$var")
-    fi
-done
-
-if [ ${#missing_vars[@]} -ne 0 ]; then
-    print_error "The following required environment variables are not set:"
-    for var in "${missing_vars[@]}"; do
-        echo "  - $var"
-    done
-    echo "Please set these variables before running the script."
-    exit 1
 fi
 
 # ============================
@@ -111,9 +89,9 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json" ]; then
-    print_error "open_entry_validator_mock contract build failed or contract file not found"
-    print_error "Expected: target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json"
+if [ ! -f "target/dev/metagame_extensions_presets_GovernanceValidator.contract_class.json" ]; then
+    print_error "GovernanceValidator contract build failed or contract file not found"
+    print_error "Expected: target/dev/metagame_extensions_presets_GovernanceValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
@@ -125,8 +103,8 @@ fi
 
 print_info "Calculating class hash from artifact..."
 CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common 2>&1)
+    --contract-name GovernanceValidator \
+    --package metagame_extensions_presets 2>&1)
 CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
 
 if [ -z "$CLASS_HASH" ]; then
@@ -137,15 +115,15 @@ fi
 print_info "Class hash: $CLASS_HASH"
 
 # ============================
-# DECLARE OPEN ENTRY VALIDATOR
+# DECLARE GOVERNANCE VALIDATOR
 # ============================
 
-print_info "Declaring open_entry_validator_mock contract..."
+print_info "Declaring GovernanceValidator contract..."
 
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common \
+    --contract-name GovernanceValidator \
+    --package metagame_extensions_presets \
     2>&1) || true
 
 # Check declaration result
@@ -173,14 +151,15 @@ if [ -z "$CLASS_HASH" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock class hash: $CLASS_HASH"
+print_info "GovernanceValidator class hash: $CLASS_HASH"
 
 # ============================
-# DEPLOY OPEN ENTRY VALIDATOR
+# DEPLOY GOVERNANCE VALIDATOR
 # ============================
 
-print_info "Deploying open_entry_validator_mock contract..."
+print_info "Deploying GovernanceValidator contract..."
 
+# No constructor parameters (multi-tenant: owners set per-context via add_config)
 # Retry deployment up to 3 times
 MAX_RETRIES=3
 RETRY_COUNT=0
@@ -215,13 +194,13 @@ if [ -z "$CONTRACT_ADDRESS" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock contract deployed at address: $CONTRACT_ADDRESS"
+print_info "GovernanceValidator contract deployed at address: $CONTRACT_ADDRESS"
 
 # ============================
 # SAVE DEPLOYMENT INFO
 # ============================
 
-DEPLOYMENT_FILE="deployments/open_entry_validator_$(date +%Y%m%d_%H%M%S).json"
+DEPLOYMENT_FILE="deployments/governance_validator_$(date +%Y%m%d_%H%M%S).json"
 mkdir -p deployments
 
 cat > "$DEPLOYMENT_FILE" << EOF
@@ -229,11 +208,10 @@ cat > "$DEPLOYMENT_FILE" << EOF
   "network": "$STARKNET_NETWORK",
   "profile": "$SNCAST_PROFILE",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "open_entry_validator": {
+  "governance_validator": {
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
-    "description": "Open entry validator that allows all players to enter without token requirements",
-    "registration_only": false
+    "description": "Governance-based entry validator using voting power and participation"
   }
 }
 EOF
@@ -247,24 +225,24 @@ print_info "Deployment info saved to: $DEPLOYMENT_FILE"
 echo
 print_info "=== DEPLOYMENT SUCCESSFUL ==="
 echo
-echo "Open Entry Validator Contract:"
+echo "Governance Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
 echo ""
 
 echo "Next steps:"
 echo "1. Verify the contract on Starkscan/Voyager"
-echo "2. Test the valid_entry function to ensure anyone can enter"
-echo "3. Integrate with your game contracts"
+echo "2. Configure tournaments with add_config() specifying:"
+echo "   - Governor contract address"
+echo "   - Token contract address"
+echo "   - Balance threshold"
+echo "   - Proposal ID (optional)"
+echo "   - Check voted flag"
+echo "   - Votes threshold"
+echo "   - Votes per entry"
+echo "3. Players can enter if they meet governance requirements"
 echo ""
 
 echo "To interact with the contract:"
-echo "  export ENTRY_VALIDATOR=$CONTRACT_ADDRESS"
-echo ""
-
-echo "Example: Test entry validation:"
-echo "  sncast --profile $SNCAST_PROFILE --url \$STARKNET_RPC call \\"
-echo "    --contract-address \$ENTRY_VALIDATOR \\"
-echo "    --function valid_entry \\"
-echo "    --calldata <player_address> 0"
+echo "  export GOVERNANCE_VALIDATOR=$CONTRACT_ADDRESS"
 echo ""

@@ -1,12 +1,14 @@
 use starknet::ContractAddress;
 
 pub const IENTRY_REQUIREMENT_EXTENSION_ID: felt252 =
-    0x03932b83d6f280c123c10e3eec69c9f5776a2a1de7b7d401120c49a9936954fa;
+    0x0246df26c275bb93d66fdc2d8ce9eeec84a7fcf7e82fe115797f30a95cd03a79;
 
-/// Legacy interface IDs for backward compatibility with deployed Budokan contracts.
-/// LEGACY_IENTRY_VALIDATOR_ID_V2: from when the trait used `tournament_id` / `game_token_id: u64`.
-/// LEGACY_IENTRY_VALIDATOR_ID_V1: from when the trait used `budokan_address` instead of
-/// `owner_address`.
+/// Legacy interface IDs for backward compatibility with deployed contracts.
+/// V3: from when the trait used single `owner_address()` instead of `context_owner(context_id)`.
+/// V2: from when the trait used `tournament_id` / `game_token_id: u64`.
+/// V1: from when the trait used `budokan_address` instead of `owner_address`.
+pub const LEGACY_IENTRY_REQUIREMENT_EXTENSION_ID_V3: felt252 =
+    0x03932b83d6f280c123c10e3eec69c9f5776a2a1de7b7d401120c49a9936954fa;
 pub const LEGACY_IENTRY_VALIDATOR_ID_V2: felt252 =
     0x73b204ef90f88bbdf6a178473d1445e76fd9a48a188c6659cb93f988b8458a;
 pub const LEGACY_IENTRY_VALIDATOR_ID_V1: felt252 =
@@ -14,8 +16,8 @@ pub const LEGACY_IENTRY_VALIDATOR_ID_V1: felt252 =
 
 #[starknet::interface]
 pub trait IEntryRequirementExtension<TState> {
-    /// Get the owner contract address (e.g., budokan, quest manager)
-    fn owner_address(self: @TState) -> ContractAddress;
+    /// Get the owner contract address for a specific context
+    fn context_owner(self: @TState, context_id: u64) -> ContractAddress;
 
     /// Returns true if this validator only validates during registration period
     fn registration_only(self: @TState) -> bool;

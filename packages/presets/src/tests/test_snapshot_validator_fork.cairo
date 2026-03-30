@@ -39,7 +39,7 @@ use starknet::{ContractAddress, get_block_timestamp};
 // Deploy the SnapshotValidator contract
 fn deploy_snapshot_validator(tournament_address: ContractAddress) -> ContractAddress {
     let contract = declare("SnapshotValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![tournament_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 

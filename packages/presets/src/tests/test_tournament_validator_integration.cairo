@@ -23,9 +23,9 @@ use starknet::{ContractAddress, get_block_timestamp};
 // HELPER FUNCTIONS
 // ==============================================
 
-fn deploy_tournament_validator(owner_address: ContractAddress) -> ContractAddress {
+fn deploy_tournament_validator() -> ContractAddress {
     let contract = declare("TournamentValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![owner_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
@@ -104,7 +104,7 @@ fn test_tournament_validator_any_mode_full_flow() {
     assert(player1_token_id > 0, 'Player1 should have token');
 
     // Step 3: Deploy TournamentValidator and create gated tournament
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -216,7 +216,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator and create gated tournament with entry_limit=2
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -329,7 +329,7 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
 
     // Deploy validator with AT_LEAST_ONE mode and entry_limit=1
     // Entry tracking is per-token
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -450,7 +450,7 @@ fn test_tournament_validator_all_mode_participants_flow() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with ALL mode
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -534,7 +534,7 @@ fn test_tournament_validator_invalid_qualifications() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -615,7 +615,7 @@ fn test_tournament_validator_position_requires_finalization() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with TOP_POSITION type
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -701,7 +701,7 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with TOP_POSITION type and entry_limit=3
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -797,7 +797,7 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with AT_LEAST_ONE mode, entry_limit=5
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -882,7 +882,7 @@ fn test_entries_left_cumulative_per_tournament_mode() {
 
     // Deploy validator with AT_LEAST_ONE mode, entry_limit=3
     // Entry tracking is per-token
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![
@@ -958,7 +958,7 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
     stop_cheat_caller_address(owner_addr);
 
     // Deploy validator with ALL mode, entry_limit=4
-    let validator_address = deploy_tournament_validator(owner_addr);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config: Span<felt252> = array![

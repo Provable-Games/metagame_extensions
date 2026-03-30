@@ -17,5 +17,5 @@ This package contains only pure traits and types with no component or contract l
 
 ```toml
 [dependencies]
-entry_validator_interfaces = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
+entry_validator_interfaces = { git = "https://github.com/Provable-Games/metagame-extensions", tag = "..." }
 ```

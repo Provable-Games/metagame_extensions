@@ -38,7 +38,7 @@ use starknet::{ContractAddress, get_block_timestamp};
 // Deploy the GovernanceValidator contract
 fn deploy_governance_validator(tournament_address: ContractAddress) -> ContractAddress {
     let contract = declare("GovernanceValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![tournament_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
