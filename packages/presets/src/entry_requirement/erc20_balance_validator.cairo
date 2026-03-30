@@ -69,9 +69,9 @@ pub mod ERC20BalanceValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
+    fn constructor(ref self: ContractState) {
         // ERC20 balance can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(owner_address, true);
+        self.entry_validator.initializer(true);
     }
 
     // Implement the EntryValidator trait for the contract

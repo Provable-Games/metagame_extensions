@@ -22,9 +22,9 @@ use starknet::{ContractAddress, get_block_timestamp};
 // HELPER FUNCTIONS
 // ==============================================
 
-fn deploy_tournament_validator(owner_address: ContractAddress) -> ContractAddress {
+fn deploy_tournament_validator() -> ContractAddress {
     let contract = declare("TournamentValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![owner_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
@@ -116,7 +116,7 @@ fn test_tournament_validator_any_mode_participants() {
     let owner = tournament_address_sepolia();
 
     // Deploy tournament validator in registration_only mode
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -156,7 +156,7 @@ fn test_tournament_validator_any_mode_participants() {
 #[fork("sepolia")]
 fn test_tournament_validator_any_mode_winners() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -189,7 +189,7 @@ fn test_tournament_validator_any_mode_winners() {
 #[fork("sepolia")]
 fn test_tournament_validator_any_mode_multiple_qualifying_tournaments() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -237,7 +237,7 @@ fn test_tournament_validator_any_per_tournament_mode() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -294,7 +294,7 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -332,7 +332,7 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
 #[fork("sepolia")]
 fn test_tournament_validator_all_mode_participants() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -382,7 +382,7 @@ fn test_tournament_validator_all_mode_participants() {
 #[fork("sepolia")]
 fn test_tournament_validator_all_mode_winners() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -448,7 +448,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -487,7 +487,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
 #[fork("sepolia")]
 fn test_tournament_validator_invalid_qualifying_mode() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with invalid qualifying mode (2 is not valid, only modes 0-1 are valid)
@@ -503,7 +503,7 @@ fn test_tournament_validator_invalid_qualifying_mode() {
 #[fork("sepolia")]
 fn test_tournament_validator_invalid_qualifier_type() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with invalid qualifier type (2 is not valid)
@@ -519,7 +519,7 @@ fn test_tournament_validator_invalid_qualifier_type() {
 #[should_panic]
 fn test_tournament_validator_insufficient_config() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Try to configure with insufficient params (missing tournament ID)
@@ -547,7 +547,7 @@ fn test_tournament_validator_unlimited_entries() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -583,7 +583,7 @@ fn test_tournament_validator_per_entry_mode_basic() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -634,7 +634,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Configure with 3 entries per token
@@ -673,7 +673,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
 #[fork("sepolia")]
 fn test_tournament_validator_top_positions_configuration() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -699,7 +699,7 @@ fn test_tournament_validator_top_positions_configuration() {
 #[fork("sepolia")]
 fn test_tournament_validator_top_positions_zero_means_unlimited() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -725,7 +725,7 @@ fn test_tournament_validator_top_positions_zero_means_unlimited() {
 #[fork("sepolia")]
 fn test_tournament_validator_top_positions_all_mode() {
     let owner = tournament_address_sepolia();
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {
         contract_address: validator_address,
@@ -775,7 +775,7 @@ fn test_tournament_validator_all_mode_ban_tech_marks_tokens_as_used() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -835,7 +835,7 @@ fn test_tournament_validator_all_mode_tokens_blocked_after_transfer() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -883,7 +883,7 @@ fn test_tournament_validator_per_token_mode_entry_tracking() {
     );
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -935,7 +935,7 @@ fn test_tournament_validator_all_mode_multiple_qualifying_tournaments() {
     let (t3, tok3) = create_qualifying_tournament_with_player(owner, minigame, player);
 
     // Deploy validator
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -977,7 +977,7 @@ fn test_tournament_validator_direct_valid_entry_call() {
         owner, minigame, player,
     );
 
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -1005,7 +1005,7 @@ fn test_tournament_validator_on_entry_removed_per_token_mode() {
         owner, minigame, player,
     );
 
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![
@@ -1045,7 +1045,7 @@ fn test_tournament_validator_on_entry_removed_all_mode() {
         owner, minigame, player,
     );
 
-    let validator_address = deploy_tournament_validator(owner);
+    let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let extension_config = array![

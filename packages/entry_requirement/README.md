@@ -20,6 +20,6 @@ mod MyValidator {
 
 ```toml
 [dependencies]
-entry_validator_component = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
-entry_validator_interfaces = { git = "https://github.com/Provable-Games/budokan-extensions", tag = "..." }
+entry_validator_component = { git = "https://github.com/Provable-Games/metagame-extensions", tag = "..." }
+entry_validator_interfaces = { git = "https://github.com/Provable-Games/metagame-extensions", tag = "..." }
 ```

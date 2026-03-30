@@ -80,7 +80,7 @@ fn strk_token_address() -> ContractAddress {
 // Deploy the OpusTrovesValidator contract
 fn deploy_opus_validator(tournament_address: ContractAddress) -> ContractAddress {
     let contract = declare("OpusTrovesValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![tournament_address.into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 

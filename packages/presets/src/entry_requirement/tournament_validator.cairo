@@ -136,10 +136,10 @@ pub mod TournamentValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
+    fn constructor(ref self: ContractState) {
         // Tournament qualification is validated at registration time
         // Once registered, the entry remains valid (registration_only = true)
-        self.entry_validator.initializer(owner_address, true);
+        self.entry_validator.initializer(true);
     }
 
     // Implement the EntryValidator trait for the contract
@@ -475,7 +475,7 @@ pub mod TournamentValidator {
             qualification: Span<felt252>,
             position_index: u32,
         ) -> bool {
-            let tournament_address = self.entry_validator.get_owner_address();
+            let tournament_address = self.entry_validator.get_context_owner(tournament_id);
             let tournament = ITournamentDispatcher { contract_address: tournament_address };
             let registration_dispatcher = IRegistrationDispatcher {
                 contract_address: tournament_address,

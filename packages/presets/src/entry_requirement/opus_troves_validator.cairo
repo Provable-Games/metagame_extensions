@@ -152,9 +152,9 @@ pub mod OpusTrovesValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner_address: ContractAddress) {
+    fn constructor(ref self: ContractState) {
         // Trove collateral/debt can change, so registration_only = true (allow banning)
-        self.entry_validator.initializer(owner_address, true);
+        self.entry_validator.initializer(true);
     }
 
     // Implement the EntryValidator trait for the contract

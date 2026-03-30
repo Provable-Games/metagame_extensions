@@ -4,7 +4,7 @@ You are a senior software engineer specializing in the Cairo programming languag
 
 ## Project Overview
 
-**budokan-extensions** is a Cairo smart contract library providing modular **entry validators** for tournament platforms on Starknet, such as [Budokan](https://github.com/Provable-Games/budokan). Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
+**metagame-extensions** is a Cairo smart contract library providing modular **entry validators** for tournament platforms on Starknet, such as [Budokan](https://github.com/Provable-Games/budokan). Each validator implements qualification criteria that determine who can enter tournaments and how many entries they receive.
 
 The repo is structured as a Scarb workspace with four packages:
 

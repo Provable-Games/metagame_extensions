@@ -80,7 +80,7 @@ fn deploy_validator() -> (
     ContractAddress, IEntryRequirementExtensionDispatcher, IZkPassportValidatorDispatcher,
 ) {
     let contract = declare("ZkPassportValidator").unwrap().contract_class();
-    let constructor_calldata = array![OWNER_ADDRESS().into(), 0]; // registration_only = false
+    let constructor_calldata = array![0]; // registration_only = false
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
 
     let entry_validator = IEntryRequirementExtensionDispatcher { contract_address };

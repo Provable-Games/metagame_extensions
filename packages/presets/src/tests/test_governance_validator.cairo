@@ -14,7 +14,7 @@ fn owner_address() -> ContractAddress {
 
 fn deploy_governance_validator() -> ContractAddress {
     let contract = declare("GovernanceValidator").unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@array![owner_address().into()]).unwrap();
+    let (contract_address, _) = contract.deploy(@array![]).unwrap();
     contract_address
 }
 
