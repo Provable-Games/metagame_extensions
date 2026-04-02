@@ -27,7 +27,7 @@ ignore:
   - "**/tests/**"
   - "scripts/"
   - "examples/"
-  - "snapshot-ui/"
+  - "client/"
   - "packages/interfaces/"
   - "packages/test_common/"
 

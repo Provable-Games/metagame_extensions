@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Plus, Trash2, FileUp } from "lucide-react";
-import { SNAPSHOT_VALIDATOR_ABI, SNAPSHOT_VALIDATOR_ADDRESS, type Entry } from "@/utils/contracts";
+import { SNAPSHOT_VALIDATOR_ABI, type Entry } from "@/utils/contracts";
+import { useChainConfig } from "@/contexts/NetworkContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CallData } from "starknet";
 
 export function CreateSnapshot() {
   const { account, address } = useAccount();
+  const { chainConfig } = useChainConfig();
+  const snapshotValidatorAddress = chainConfig.snapshotValidatorAddress;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const existingSnapshotId = searchParams.get('snapshot');
@@ -30,7 +33,7 @@ export function CreateSnapshot() {
   }, [existingSnapshotId]);
 
   const { contract } = useContract({
-    address: SNAPSHOT_VALIDATOR_ADDRESS,
+    address: snapshotValidatorAddress,
     abi: SNAPSHOT_VALIDATOR_ABI,
   });
 
@@ -42,12 +45,12 @@ export function CreateSnapshot() {
     setIsCreating(true);
     try {
       const calls = {
-        contractAddress: SNAPSHOT_VALIDATOR_ADDRESS,
+        contractAddress: snapshotValidatorAddress,
         entrypoint: "create_snapshot",
         calldata: []
       };
 
-      const result = await sendTransaction([calls]);
+      await sendTransaction([calls]);
 
       // In a real app, you would parse the transaction result to get the snapshot ID
       // For now, we'll use a timestamp as a mock ID
@@ -104,7 +107,7 @@ export function CreateSnapshot() {
       });
 
       const calls = {
-        contractAddress: SNAPSHOT_VALIDATOR_ADDRESS,
+        contractAddress: snapshotValidatorAddress,
         entrypoint: "upload_snapshot_data",
         calldata: calldata
       };
@@ -157,12 +160,12 @@ export function CreateSnapshot() {
           <CardContent>
             <Button
               onClick={handleCreateSnapshot}
-              disabled={isCreating || !SNAPSHOT_VALIDATOR_ADDRESS}
+              disabled={isCreating || !snapshotValidatorAddress}
               className="w-full"
             >
               {isCreating ? "Creating..." : "Create Snapshot"}
             </Button>
-            {!SNAPSHOT_VALIDATOR_ADDRESS && (
+            {!snapshotValidatorAddress && (
               <p className="text-sm text-destructive mt-2">
                 Contract address not configured. Please deploy the snapshot validator first.
               </p>

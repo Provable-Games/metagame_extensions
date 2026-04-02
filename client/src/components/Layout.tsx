@@ -1,5 +1,6 @@
 import { Outlet, Link } from "react-router-dom";
 import { WalletConnect } from "./WalletConnect";
+import { NetworkSwitcher } from "./NetworkSwitcher";
 import { Camera } from "lucide-react";
 
 export function Layout() {
@@ -28,7 +29,10 @@ export function Layout() {
                 </Link>
               </div>
             </div>
-            <WalletConnect />
+            <div className="flex items-center gap-2">
+              <NetworkSwitcher />
+              <WalletConnect />
+            </div>
           </nav>
         </div>
       </header>
