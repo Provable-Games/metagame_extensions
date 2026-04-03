@@ -8,14 +8,20 @@ const app = new Hono();
 
 /**
  * POST /trees
- * Create a new merkle tree from entries.
- * Body: { entries: [{ address: string, count: number }] }
+ * Store a merkle tree with entries and precomputed proofs.
+ * The id must match the on-chain tree ID from create_tree().
+ * Body: { id: number, entries: [{ address: string, count: number }] }
  * Returns: { id, root, entryCount }
  */
 app.post("/", async (c) => {
   const body = await c.req.json<{
+    id: number;
     entries: Array<{ address: string; count: number }>;
   }>();
+
+  if (!body.id || typeof body.id !== "number") {
+    return c.json({ error: "id is required and must match the on-chain tree ID" }, 400);
+  }
 
   if (!body.entries || !Array.isArray(body.entries) || body.entries.length === 0) {
     return c.json({ error: "entries must be a non-empty array" }, 400);
@@ -30,11 +36,18 @@ app.post("/", async (c) => {
     }
   }
 
+  // Check if tree already exists
+  const [existing] = await db.select().from(trees).where(eq(trees.id, body.id)).limit(1);
+  if (existing) {
+    return c.json({ error: `Tree ${body.id} already exists` }, 409);
+  }
+
   const result = buildTreeWithProofs(body.entries);
 
   const [tree] = await db
     .insert(trees)
     .values({
+      id: body.id,
       root: result.root,
       entryCount: result.entries.length,
     })

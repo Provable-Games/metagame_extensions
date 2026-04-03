@@ -1,8 +1,11 @@
 import pg from "pg";
 
 const MIGRATION_SQL = `
+  DROP TABLE IF EXISTS tree_entries;
+  DROP TABLE IF EXISTS trees;
+
   CREATE TABLE IF NOT EXISTS trees (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     root TEXT NOT NULL,
     entry_count INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL

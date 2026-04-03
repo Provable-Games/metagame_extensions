@@ -1,15 +1,15 @@
 import {
   pgTable,
-  serial,
   text,
   integer,
   timestamp,
   jsonb,
   uniqueIndex,
+  serial,
 } from "drizzle-orm/pg-core";
 
 export const trees = pgTable("trees", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   root: text("root").notNull(),
   entryCount: integer("entry_count").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

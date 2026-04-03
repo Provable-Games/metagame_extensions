@@ -11,19 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Upload,
-  Plus,
-  Trash2,
-  GitBranch,
-  Copy,
-  Check,
-} from "lucide-react";
-import {
-  buildMerkleTree,
-  type MerkleTreeData,
-  type MerkleEntry,
-} from "@/utils/merkleTree";
+import { Upload, Plus, Trash2, GitBranch, Copy, Check } from "lucide-react";
+import { buildMerkleTree, type MerkleEntry } from "@/utils/merkleTree";
 import { useChainConfig } from "@/contexts/NetworkContext";
 import { MERKLE_API_URL } from "@/networks";
 
@@ -33,14 +22,20 @@ export function CreateMerkleTree() {
   const { chainConfig } = useChainConfig();
   const validatorAddress = chainConfig.merkleValidatorAddress;
   const [entries, setEntries] = useState<MerkleEntry[]>([]);
-  const [treeData, setTreeData] = useState<MerkleTreeData | null>(null);
   const [newAddress, setNewAddress] = useState("");
   const [newCount, setNewCount] = useState("");
   const [csvContent, setCsvContent] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [treeId, setTreeId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [status, setStatus] = useState("");
+
+  // Result state
+  const [result, setResult] = useState<{
+    treeId: string;
+    root: string;
+    entryCount: number;
+  } | null>(null);
 
   const handleAddEntry = () => {
     if (newAddress && newCount) {
@@ -53,13 +48,13 @@ export function CreateMerkleTree() {
       setNewAddress("");
       setNewCount("");
       setError("");
-      setTreeData(null);
+      setResult(null);
     }
   };
 
   const handleRemoveEntry = (index: number) => {
     setEntries(entries.filter((_, i) => i !== index));
-    setTreeData(null);
+    setResult(null);
   };
 
   const handleParseCsv = () => {
@@ -84,82 +79,88 @@ export function CreateMerkleTree() {
     setEntries(parsedEntries);
     setCsvContent("");
     setError("");
-    setTreeData(null);
+    setResult(null);
   };
 
-  const [apiTreeId, setApiTreeId] = useState<number | null>(null);
+  const handleCreate = async () => {
+    if (entries.length === 0 || !account || !validatorAddress) return;
+    setIsCreating(true);
+    setError("");
+    setResult(null);
 
-  const handleBuild = async () => {
-    if (entries.length === 0) return;
     try {
-      // Build tree client-side
+      // Step 1: Build tree client-side
+      setStatus("Building merkle tree...");
       const tree = buildMerkleTree(entries);
-      setTreeData(tree);
-      setError("");
 
-      // Store entries + proofs in the API
-      const res = await fetch(`${MERKLE_API_URL}/trees`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setApiTreeId(data.id);
-      } else {
-        const errText = await res.text();
-        setError(`Tree built locally but failed to store in API: ${errText}`);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to build merkle tree");
-    }
-  };
-
-  const handleCopyRoot = async () => {
-    if (!treeData) return;
-    await navigator.clipboard.writeText(treeData.root);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleRegisterOnChain = async () => {
-    if (!account || !treeData || !validatorAddress) return;
-    setIsRegistering(true);
-    try {
-      const result = await account.execute({
+      // Step 2: Register on-chain
+      setStatus("Registering on-chain...");
+      const txResult = await account.execute({
         contractAddress: validatorAddress,
         entrypoint: "create_tree",
-        calldata: [treeData.root],
+        calldata: [tree.root],
       });
-      const receipt = await provider.waitForTransaction(result.transaction_hash);
+
+      setStatus("Waiting for transaction confirmation...");
+      const receipt = await provider.waitForTransaction(
+        txResult.transaction_hash,
+      );
+
+      // Parse tree ID from event
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const events = (receipt as any).events || [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const treeEvent = events.find((e: any) =>
-        e.from_address?.toLowerCase() === validatorAddress.toLowerCase()
+        e.from_address?.toLowerCase() === validatorAddress.toLowerCase(),
       );
-      if (treeEvent?.keys?.[1]) {
-        setTreeId(BigInt(treeEvent.keys[1]).toString());
+
+      if (!treeEvent?.keys?.[1]) {
+        setError("Transaction succeeded but could not parse tree ID from events");
+        return;
       }
+
+      const treeId = Number(BigInt(treeEvent.keys[1]));
+
+      // Step 3: Store in API with the on-chain tree ID
+      setStatus("Storing proofs in API...");
+      const res = await fetch(`${MERKLE_API_URL}/trees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: treeId, entries }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        setError(
+          `On-chain tree #${treeId} created, but failed to store proofs in API: ${errText}`,
+        );
+        setResult({ treeId: String(treeId), root: tree.root, entryCount: entries.length });
+        return;
+      }
+
+      setResult({ treeId: String(treeId), root: tree.root, entryCount: entries.length });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to register tree on-chain");
+      setError(e instanceof Error ? e.message : "Failed to create merkle tree");
     } finally {
-      setIsRegistering(false);
+      setIsCreating(false);
+      setStatus("");
     }
   };
 
-  // Compute tree depth from leaf count
-  const treeDepth = treeData
-    ? Math.ceil(Math.log2(treeData.entries.length))
-    : 0;
+  const handleCopyRoot = async () => {
+    if (!result) return;
+    await navigator.clipboard.writeText(result.root);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Create Merkle Tree</h1>
         <p className="text-muted-foreground mt-2">
-          Build a merkle tree from addresses and entry counts. This is done
-          entirely client-side — no wallet connection required.
+          Add entries, register the merkle root on-chain, and store proofs for
+          lookup
         </p>
       </div>
 
@@ -212,9 +213,7 @@ export function CreateMerkleTree() {
                 <textarea
                   id="csv"
                   className="w-full h-32 px-3 py-2 text-sm rounded-md border border-input bg-background"
-                  placeholder={
-                    "address,count\n0x123...,5\n0x456...,3"
-                  }
+                  placeholder={"address,count\n0x123...,5\n0x456...,3"}
                   value={csvContent}
                   onChange={(e) => setCsvContent(e.target.value)}
                 />
@@ -262,45 +261,62 @@ export function CreateMerkleTree() {
         </CardContent>
       </Card>
 
-      {entries.length > 0 && !treeData && (
+      {entries.length > 0 && !result && (
         <Card>
           <CardHeader>
-            <CardTitle>Build Tree</CardTitle>
+            <CardTitle>Create Tree</CardTitle>
             <CardDescription>
-              Compute the merkle tree from the entries above
+              Build the merkle tree, register it on-chain, and store proofs
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={handleBuild} className="w-full">
+          <CardContent className="space-y-4">
+            {!account && (
+              <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
+                Connect your wallet to create a merkle tree.
+              </div>
+            )}
+            {!validatorAddress && (
+              <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
+                Merkle validator is not deployed on this network.
+              </div>
+            )}
+            <Button
+              onClick={handleCreate}
+              disabled={isCreating || !account || !validatorAddress}
+              className="w-full"
+            >
               <GitBranch className="h-4 w-4 mr-2" />
-              Build Merkle Tree
+              {isCreating ? status || "Creating..." : "Create Merkle Tree"}
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {treeData && (
+      {result && (
         <Card>
           <CardHeader>
-            <CardTitle>Merkle Tree Result</CardTitle>
+            <CardTitle>Tree Created</CardTitle>
             <CardDescription>
-              Tree built successfully. Use this root when configuring a context
-              with the Merkle Validator.
+              Merkle tree registered on-chain and proofs stored in the API
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Tree ID</p>
+                <p className="text-lg font-semibold">#{result.treeId}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Entries</p>
+                <p className="text-lg font-semibold">{result.entryCount}</p>
+              </div>
               <div className="col-span-2">
                 <p className="text-sm text-muted-foreground">Merkle Root</p>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-mono break-all flex-1">
-                    {treeData.root}
+                    {result.root}
                   </p>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleCopyRoot}
-                  >
+                  <Button size="icon" variant="ghost" onClick={handleCopyRoot}>
                     {copied ? (
                       <Check className="h-4 w-4 text-green-500" />
                     ) : (
@@ -309,46 +325,17 @@ export function CreateMerkleTree() {
                   </Button>
                 </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Entries</p>
-                <p className="text-sm font-semibold">
-                  {treeData.entries.length}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tree Depth</p>
-                <p className="text-sm font-semibold">{treeDepth}</p>
-              </div>
             </div>
 
-            {validatorAddress && account && (
-              <Button
-                onClick={handleRegisterOnChain}
-                disabled={isRegistering || !!treeId}
-                className="w-full"
-              >
-                {isRegistering
-                  ? "Registering..."
-                  : treeId
-                    ? `Tree #${treeId}`
-                    : "Register On-Chain"}
-              </Button>
-            )}
-
-            {treeId && (
-              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md p-3">
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  Registered as <span className="font-semibold">Tree #{treeId}</span>. Use this ID when configuring contexts with the Merkle Validator.
-                </p>
-              </div>
-            )}
-
-            {apiTreeId && (
-              <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
-                Proofs stored in API (tree #{apiTreeId}). Proofs can be fetched at:{" "}
-                <code className="text-xs">{MERKLE_API_URL}/trees/{apiTreeId}/proof/ADDRESS</code>
-              </div>
-            )}
+            <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md p-3 space-y-1">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Use <span className="font-semibold">Tree #{result.treeId}</span>{" "}
+                when configuring contexts with the Merkle Validator.
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300">
+                Proofs: {MERKLE_API_URL}/trees/{result.treeId}/proof/ADDRESS
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
