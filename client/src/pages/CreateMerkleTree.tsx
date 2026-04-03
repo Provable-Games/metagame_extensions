@@ -21,6 +21,8 @@ export function CreateMerkleTree() {
   const { provider } = useProvider();
   const { chainConfig } = useChainConfig();
   const validatorAddress = chainConfig.merkleValidatorAddress;
+  const [treeName, setTreeName] = useState("");
+  const [treeDescription, setTreeDescription] = useState("");
   const [entries, setEntries] = useState<MerkleEntry[]>([]);
   const [newAddress, setNewAddress] = useState("");
   const [newCount, setNewCount] = useState("");
@@ -133,7 +135,7 @@ export function CreateMerkleTree() {
       const res = await fetch(`${MERKLE_API_URL}/trees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: treeId, entries }),
+        body: JSON.stringify({ id: treeId, name: treeName, description: treeDescription, entries }),
       });
 
       if (!res.ok) {
@@ -277,6 +279,24 @@ export function CreateMerkleTree() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="treeName">Name</Label>
+              <Input
+                id="treeName"
+                placeholder="e.g., OG Players"
+                value={treeName}
+                onChange={(e) => setTreeName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="treeDescription">Description</Label>
+              <Input
+                id="treeDescription"
+                placeholder="e.g., Early adopters from Season 1"
+                value={treeDescription}
+                onChange={(e) => setTreeDescription(e.target.value)}
+              />
+            </div>
             {!account && (
               <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
                 Connect your wallet to create a merkle tree.
@@ -317,6 +337,12 @@ export function CreateMerkleTree() {
                 <p className="text-sm text-muted-foreground">Entries</p>
                 <p className="text-lg font-semibold">{result.entryCount}</p>
               </div>
+              {treeName && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Name</p>
+                  <p className="text-sm font-medium">{treeName}</p>
+                </div>
+              )}
               <div className="col-span-2">
                 <p className="text-sm text-muted-foreground">Merkle Root</p>
                 <div className="flex items-center gap-2">
