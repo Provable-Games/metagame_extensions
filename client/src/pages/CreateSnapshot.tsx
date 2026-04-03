@@ -56,10 +56,15 @@ export function CreateSnapshot() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const events = (receipt as any).events || [];
       // The SnapshotCreated event has snapshot_id as the first key
+      const validatorBigInt = BigInt(snapshotValidatorAddress);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const snapshotEvent = events.find((e: any) =>
-        e.from_address?.toLowerCase() === snapshotValidatorAddress.toLowerCase()
-      );
+      const snapshotEvent = events.find((e: any) => {
+        try {
+          return BigInt(e.from_address) === validatorBigInt;
+        } catch {
+          return false;
+        }
+      });
 
       if (snapshotEvent?.keys?.[1]) {
         // keys[0] is the event selector, keys[1] is snapshot_id

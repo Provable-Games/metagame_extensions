@@ -109,12 +109,19 @@ export function CreateMerkleTree() {
       // Parse tree ID from event
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const events = (receipt as any).events || [];
+      // Compare addresses as BigInt to handle padding differences
+      const validatorBigInt = BigInt(validatorAddress);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const treeEvent = events.find((e: any) =>
-        e.from_address?.toLowerCase() === validatorAddress.toLowerCase(),
-      );
+      const treeEvent = events.find((e: any) => {
+        try {
+          return BigInt(e.from_address) === validatorBigInt;
+        } catch {
+          return false;
+        }
+      });
 
       if (!treeEvent?.keys?.[1]) {
+        console.error("Events received:", JSON.stringify(events, null, 2));
         setError("Transaction succeeded but could not parse tree ID from events");
         return;
       }
