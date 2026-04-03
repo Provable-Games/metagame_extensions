@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { healthCheck, shutdown } from "./db/client.js";
+import { initialize, healthCheck, shutdown } from "./db/client.js";
 import trees from "./routes/trees.js";
 
 const app = new Hono();
@@ -20,9 +20,16 @@ app.route("/trees", trees);
 
 const port = parseInt(process.env.PORT ?? "3002");
 
-console.log(`Merkle API starting on port ${port}`);
+async function start() {
+  await initialize();
+  console.log(`Merkle API starting on port ${port}`);
+  serve({ fetch: app.fetch, port });
+}
 
-serve({ fetch: app.fetch, port });
+start().catch((err) => {
+  console.error("Failed to start:", err);
+  process.exit(1);
+});
 
 process.on("SIGTERM", async () => {
   console.log("Shutting down...");
