@@ -6,46 +6,64 @@ export interface MerkleEntry {
   count: number;
 }
 
-export interface MerkleResult {
-  root: string;
-  entries: Array<{ address: string; count: number; proof: string[] }>;
-}
-
 /**
  * Compute the leaf value matching the Cairo contract:
  *   PedersenTrait::new(0).update(address).update(count).finalize()
  */
-function computeLeafValue(address: string, count: number): string {
+export function computeLeafValue(address: string, count: number): string {
   const intermediate = hash.computePedersenHash("0x0", address);
   return hash.computePedersenHash(intermediate, "0x" + count.toString(16));
 }
 
 /**
- * Build a merkle tree and compute all proofs.
+ * Build a merkle tree from entries. Returns the root and a serializable dump.
  */
-export function buildTreeWithProofs(entries: MerkleEntry[]): MerkleResult {
+export function buildTree(entries: MerkleEntry[]) {
   const leaves = entries.map((e) => [computeLeafValue(e.address, e.count)]);
 
   const tree = StandardMerkleTree.of(leaves, ["felt252"], {
     sortLeaves: true,
   });
 
-  const results: MerkleResult["entries"] = [];
+  return { root: tree.root, dump: tree.dump() };
+}
+
+/**
+ * Get proof for an address from a tree dump. Computed on-demand.
+ */
+export function getProofFromDump(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  treeDump: any,
+  address: string,
+  count: number,
+): string[] | null {
+  const tree = StandardMerkleTree.load(treeDump);
+  const leafValue = computeLeafValue(address, count);
 
   for (const [index, leaf] of tree.entries()) {
-    // Find which entry this leaf corresponds to
-    const leafValue = leaf[0] as string;
-    const entry = entries.find(
-      (e) => BigInt(computeLeafValue(e.address, e.count)) === BigInt(leafValue),
-    );
-    if (entry) {
-      results.push({
-        address: entry.address,
-        count: entry.count,
-        proof: tree.getProof(index),
-      });
+    if (BigInt(leaf[0] as string) === BigInt(leafValue)) {
+      return tree.getProof(index);
     }
   }
 
-  return { root: tree.root, entries: results };
+  return null;
+}
+
+/**
+ * Find an entry's count from a tree dump by address.
+ */
+export function findEntryInDump(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  treeDump: any,
+  entries: MerkleEntry[],
+  address: string,
+): MerkleEntry | null {
+  const normalized = address.toLowerCase();
+  return (
+    entries.find(
+      (e) =>
+        e.address.toLowerCase() === normalized ||
+        BigInt(e.address) === BigInt(address),
+    ) || null
+  );
 }

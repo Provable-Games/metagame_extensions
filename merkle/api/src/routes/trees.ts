@@ -1,17 +1,15 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../db/client.js";
-import { trees, treeEntries } from "../db/schema.js";
-import { buildTreeWithProofs } from "../merkle.js";
+import { trees } from "../db/schema.js";
+import { buildTree, findEntryInDump, getProofFromDump } from "../merkle.js";
 
 const app = new Hono();
 
 /**
  * POST /trees
- * Store a merkle tree with entries and precomputed proofs.
- * The id must match the on-chain tree ID from create_tree().
+ * Store a merkle tree. The id must match the on-chain tree ID.
  * Body: { id: number, entries: [{ address: string, count: number }] }
- * Returns: { id, root, entryCount }
  */
 app.post("/", async (c) => {
   const body = await c.req.json<{
@@ -20,10 +18,17 @@ app.post("/", async (c) => {
   }>();
 
   if (!body.id || typeof body.id !== "number") {
-    return c.json({ error: "id is required and must match the on-chain tree ID" }, 400);
+    return c.json(
+      { error: "id is required and must match the on-chain tree ID" },
+      400,
+    );
   }
 
-  if (!body.entries || !Array.isArray(body.entries) || body.entries.length === 0) {
+  if (
+    !body.entries ||
+    !Array.isArray(body.entries) ||
+    body.entries.length === 0
+  ) {
     return c.json({ error: "entries must be a non-empty array" }, 400);
   }
 
@@ -36,33 +41,27 @@ app.post("/", async (c) => {
     }
   }
 
-  // Check if tree already exists
-  const [existing] = await db.select().from(trees).where(eq(trees.id, body.id)).limit(1);
+  const [existing] = await db
+    .select()
+    .from(trees)
+    .where(eq(trees.id, body.id))
+    .limit(1);
   if (existing) {
     return c.json({ error: `Tree ${body.id} already exists` }, 409);
   }
 
-  const result = buildTreeWithProofs(body.entries);
+  const result = buildTree(body.entries);
 
   const [tree] = await db
     .insert(trees)
     .values({
       id: body.id,
       root: result.root,
-      entryCount: result.entries.length,
+      entryCount: body.entries.length,
+      entries: body.entries,
+      treeDump: result.dump,
     })
     .returning();
-
-  if (result.entries.length > 0) {
-    await db.insert(treeEntries).values(
-      result.entries.map((e) => ({
-        treeId: tree.id,
-        address: e.address.toLowerCase(),
-        count: e.count,
-        proof: e.proof,
-      })),
-    );
-  }
 
   return c.json({
     id: tree.id,
@@ -81,7 +80,16 @@ app.get("/:id", async (c) => {
     return c.json({ error: "Invalid tree ID" }, 400);
   }
 
-  const [tree] = await db.select().from(trees).where(eq(trees.id, id)).limit(1);
+  const [tree] = await db
+    .select({
+      id: trees.id,
+      root: trees.root,
+      entryCount: trees.entryCount,
+      createdAt: trees.createdAt,
+    })
+    .from(trees)
+    .where(eq(trees.id, id))
+    .limit(1);
 
   if (!tree) {
     return c.json({ error: "Tree not found" }, 404);
@@ -105,50 +113,57 @@ app.get("/:id/entries", async (c) => {
     return c.json({ error: "Invalid tree ID" }, 400);
   }
 
-  const entries = await db
-    .select({
-      address: treeEntries.address,
-      count: treeEntries.count,
-    })
-    .from(treeEntries)
-    .where(eq(treeEntries.treeId, id));
+  const [tree] = await db
+    .select({ entries: trees.entries, entryCount: trees.entryCount })
+    .from(trees)
+    .where(eq(trees.id, id))
+    .limit(1);
 
-  return c.json({ data: entries, total: entries.length });
+  if (!tree) {
+    return c.json({ error: "Tree not found" }, 404);
+  }
+
+  return c.json({ data: tree.entries, total: tree.entryCount });
 });
 
 /**
  * GET /trees/:id/proof/:address
- * Get the proof for a specific address in a tree.
- * Returns: { address, count, proof, qualification }
+ * Compute and return the proof for a specific address. Proof is generated on-demand.
  */
 app.get("/:id/proof/:address", async (c) => {
   const id = parseInt(c.req.param("id"));
-  const address = c.req.param("address").toLowerCase();
+  const address = c.req.param("address");
 
   if (isNaN(id)) {
     return c.json({ error: "Invalid tree ID" }, 400);
   }
 
-  const [entry] = await db
-    .select()
-    .from(treeEntries)
-    .where(and(eq(treeEntries.treeId, id), eq(treeEntries.address, address)))
+  const [tree] = await db
+    .select({ entries: trees.entries, treeDump: trees.treeDump })
+    .from(trees)
+    .where(eq(trees.id, id))
     .limit(1);
 
+  if (!tree) {
+    return c.json({ error: "Tree not found" }, 404);
+  }
+
+  const entry = findEntryInDump(tree.treeDump, tree.entries, address);
   if (!entry) {
     return c.json({ error: "Address not found in tree" }, 404);
   }
 
-  // Build qualification array: [count, ...proof]
-  const qualification = [
-    "0x" + entry.count.toString(16),
-    ...entry.proof,
-  ];
+  const proof = getProofFromDump(tree.treeDump, entry.address, entry.count);
+  if (!proof) {
+    return c.json({ error: "Could not compute proof" }, 500);
+  }
+
+  const qualification = ["0x" + entry.count.toString(16), ...proof];
 
   return c.json({
     address: entry.address,
     count: entry.count,
-    proof: entry.proof,
+    proof,
     qualification,
   });
 });

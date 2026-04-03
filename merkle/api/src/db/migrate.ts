@@ -8,19 +8,10 @@ const MIGRATION_SQL = `
     id INTEGER PRIMARY KEY,
     root TEXT NOT NULL,
     entry_count INTEGER NOT NULL,
+    entries JSONB NOT NULL,
+    tree_dump JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL
   );
-
-  CREATE TABLE IF NOT EXISTS tree_entries (
-    id SERIAL PRIMARY KEY,
-    tree_id INTEGER NOT NULL REFERENCES trees(id),
-    address TEXT NOT NULL,
-    count INTEGER NOT NULL,
-    proof JSONB NOT NULL
-  );
-
-  CREATE UNIQUE INDEX IF NOT EXISTS tree_address_idx
-    ON tree_entries(tree_id, address);
 `;
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {
