@@ -138,9 +138,9 @@ pub mod TournamentValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Tournament qualification is validated at registration time
-        // Once registered, the entry remains valid (registration_only = true)
-        self.entry_validator.initializer(true);
+        // Tournament qualification is based on owning tokens from previous tournaments,
+        // which doesn't change — players can safely enter at any time
+        self.entry_validator.initializer(false);
     }
 
     // Implement the EntryValidator trait for the contract

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useContract, useSendTransaction } from "@starknet-react/core";
+import { useAccount, useContract, useSendTransaction, useProvider } from "@starknet-react/core";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { CallData } from "starknet";
 
 export function CreateSnapshot() {
   const { account, address } = useAccount();
+  const { provider } = useProvider();
   const { chainConfig } = useChainConfig();
   const snapshotValidatorAddress = chainConfig.snapshotValidatorAddress;
   const navigate = useNavigate();
@@ -44,20 +45,29 @@ export function CreateSnapshot() {
 
     setIsCreating(true);
     try {
-      const calls = {
+      const result = await account.execute({
         contractAddress: snapshotValidatorAddress,
         entrypoint: "create_snapshot",
-        calldata: []
-      };
+        calldata: [],
+      });
 
-      await sendTransaction([calls]);
+      // Wait for the transaction and parse the SnapshotCreated event
+      const receipt = await provider.waitForTransaction(result.transaction_hash);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const events = (receipt as any).events || [];
+      // The SnapshotCreated event has snapshot_id as the first key
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const snapshotEvent = events.find((e: any) =>
+        e.from_address?.toLowerCase() === snapshotValidatorAddress.toLowerCase()
+      );
 
-      // In a real app, you would parse the transaction result to get the snapshot ID
-      // For now, we'll use a timestamp as a mock ID
-      // TODO: Parse actual snapshot ID from transaction events
-      const mockSnapshotId = Date.now().toString();
-      setSnapshotId(mockSnapshotId);
-
+      if (snapshotEvent?.keys?.[1]) {
+        // keys[0] is the event selector, keys[1] is snapshot_id
+        const id = BigInt(snapshotEvent.keys[1]).toString();
+        setSnapshotId(id);
+      } else {
+        console.error("Could not parse snapshot ID from transaction events");
+      }
     } catch (error) {
       console.error("Error creating snapshot:", error);
     } finally {
@@ -115,7 +125,7 @@ export function CreateSnapshot() {
       await sendTransaction([calls]);
 
       // Navigate to view the snapshot
-      navigate(`/snapshots/${snapshotId}`);
+      navigate(`/snapshot/view/${snapshotId}`);
     } catch (error) {
       console.error("Error uploading entries:", error);
     } finally {

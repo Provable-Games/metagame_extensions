@@ -14,7 +14,7 @@ export function SnapshotManager() {
           <CardHeader>
             <CardTitle>Welcome to Snapshot Manager</CardTitle>
             <CardDescription>
-              Connect your wallet to manage snapshots for tournament entries
+              Connect your wallet to manage snapshots for entry validation
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -32,7 +32,7 @@ export function SnapshotManager() {
       <div>
         <h1 className="text-3xl font-bold">Snapshot Management</h1>
         <p className="text-muted-foreground mt-2">
-          Create and manage snapshots for tournament entry validation
+          Create and manage snapshots for entry validation
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export function SnapshotManager() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/create">
+            <Link to="/snapshot/create">
               <Button className="w-full">Create New</Button>
             </Link>
           </CardContent>
@@ -65,7 +65,7 @@ export function SnapshotManager() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/snapshots">
+            <Link to="/snapshot/view">
               <Button variant="outline" className="w-full">View All</Button>
             </Link>
           </CardContent>
@@ -82,7 +82,7 @@ export function SnapshotManager() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/snapshots">
+            <Link to="/snapshot/view">
               <Button variant="secondary" className="w-full">Manage Locks</Button>
             </Link>
           </CardContent>
@@ -132,9 +132,9 @@ export function SnapshotManager() {
               4
             </div>
             <div>
-              <h3 className="font-semibold">Use in Tournaments</h3>
+              <h3 className="font-semibold">Use in Contexts</h3>
               <p className="text-sm text-muted-foreground">
-                Reference the snapshot ID when creating tournaments on Budokan
+                Reference the snapshot ID when configuring entry requirements
               </p>
             </div>
           </div>

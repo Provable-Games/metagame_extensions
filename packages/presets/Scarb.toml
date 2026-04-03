@@ -9,6 +9,7 @@ openzeppelin_introspection.workspace = true
 openzeppelin_interfaces.workspace = true
 metagame_extensions_interfaces.workspace = true
 metagame_extensions_entry_requirement.workspace = true
+openzeppelin_merkle_tree.workspace = true
 
 [dev-dependencies]
 snforge_std.workspace = true

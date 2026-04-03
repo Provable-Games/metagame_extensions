@@ -81,7 +81,6 @@ pub mod SnapshotValidator {
         #[flat]
         SRC5Event: SRC5Component::Event,
         SnapshotCreated: SnapshotCreated,
-        SnapshotEntryAdded: SnapshotEntryAdded,
         SnapshotDataUploaded: SnapshotDataUploaded,
         SnapshotLocked: SnapshotLocked,
     }
@@ -95,18 +94,10 @@ pub mod SnapshotValidator {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SnapshotEntryAdded {
-        #[key]
-        snapshot_id: u64,
-        address: ContractAddress,
-        count: u8,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SnapshotDataUploaded {
         #[key]
         snapshot_id: u64,
-        entries_added: u32,
+        entries: Span<Entry>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -117,9 +108,9 @@ pub mod SnapshotValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Snapshot is a point-in-time check, so registration_only = true (never ban after
-        // registration)
-        self.entry_validator.initializer(true);
+        // Snapshot data is immutable once locked and entries are tracked via used counts,
+        // so players can safely enter at any time — no registration period required
+        self.entry_validator.initializer(false);
     }
 
     // Implement the EntryValidator trait for the contract
@@ -242,19 +233,13 @@ pub mod SnapshotValidator {
             while i < length {
                 let entry = *snapshot_values.at(i);
                 self.snapshot_entries.write((snapshot_id, entry.address), entry.count);
-                self
-                    .emit(
-                        SnapshotEntryAdded {
-                            snapshot_id, address: entry.address, count: entry.count,
-                        },
-                    );
                 i += 1;
             }
 
             metadata.status = SnapshotStatus::InProgress;
             self.snapshot_metadata.write(snapshot_id, metadata);
 
-            self.emit(SnapshotDataUploaded { snapshot_id, entries_added: length })
+            self.emit(SnapshotDataUploaded { snapshot_id, entries: snapshot_values })
         }
 
         fn lock_snapshot(ref self: ContractState, snapshot_id: u64) {

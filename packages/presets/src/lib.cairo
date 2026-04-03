@@ -8,6 +8,7 @@ pub mod tests {
     pub mod test_erc20_balance_validator_fork;
     pub mod test_governance_validator;
     pub mod test_governance_validator_fork;
+    pub mod test_merkle_validator;
     pub mod test_opus_troves_validator_fork;
     pub mod test_snapshot_validator_fork;
     pub mod test_tournament_validator_fork;

@@ -16,6 +16,7 @@ edition = "2024_07"
 starknet = "2.15.1"
 openzeppelin_introspection = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
 openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
+openzeppelin_merkle_tree = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v3.0.0" }
 snforge_std = "0.56.0"
 metagame_extensions_interfaces = { path = "packages/interfaces" }
 metagame_extensions_entry_requirement = { path = "packages/entry_requirement" }
