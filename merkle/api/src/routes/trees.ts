@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
-import { db } from "../db/client.js";
-import { trees } from "../db/schema.js";
+import { eq, and } from "drizzle-orm";
+import { db, pool } from "../db/client.js";
+import { trees, treeEntries } from "../db/schema.js";
 import { buildTree, findEntryInDump, getProofFromDump } from "../merkle.js";
 
 const app = new Hono();
@@ -97,6 +97,17 @@ app.post("/", async (c) => {
     })
     .returning();
 
+  // Bulk insert into tree_entries for O(1) address lookups.
+  // Use raw SQL with unnest for efficient bulk insert of large entry sets.
+  const addresses = body.entries.map((e) => e.address.toLowerCase());
+  const counts = body.entries.map((e) => e.count);
+
+  await pool.query(
+    `INSERT INTO tree_entries (tree_id, address, count)
+     SELECT $1, unnest($2::text[]), unnest($3::integer[])`,
+    [body.id, addresses, counts],
+  );
+
   return c.json({
     id: tree.id,
     name: tree.name,
@@ -145,7 +156,8 @@ app.get("/:id", async (c) => {
 
 /**
  * GET /trees/:id/entries
- * Get all entries for a tree.
+ * Get entries for a tree with pagination support.
+ * Query params: page (default 1), limit (default 50)
  */
 app.get("/:id/entries", async (c) => {
   const id = parseInt(c.req.param("id"));
@@ -153,8 +165,16 @@ app.get("/:id/entries", async (c) => {
     return c.json({ error: "Invalid tree ID" }, 400);
   }
 
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1") || 1);
+  const limit = Math.min(
+    1000,
+    Math.max(1, parseInt(c.req.query("limit") ?? "50") || 50),
+  );
+  const offset = (page - 1) * limit;
+
+  // Verify tree exists and get total count
   const [tree] = await db
-    .select({ entries: trees.entries, entryCount: trees.entryCount })
+    .select({ entryCount: trees.entryCount })
     .from(trees)
     .where(eq(trees.id, id))
     .limit(1);
@@ -163,7 +183,51 @@ app.get("/:id/entries", async (c) => {
     return c.json({ error: "Tree not found" }, 404);
   }
 
-  return c.json({ data: tree.entries, total: tree.entryCount });
+  // Query from the indexed tree_entries table
+  const rows = await db
+    .select({ address: treeEntries.address, count: treeEntries.count })
+    .from(treeEntries)
+    .where(eq(treeEntries.treeId, id))
+    .orderBy(treeEntries.id)
+    .limit(limit)
+    .offset(offset);
+
+  return c.json({
+    data: rows,
+    total: tree.entryCount,
+    page,
+    limit,
+    totalPages: Math.ceil(tree.entryCount / limit),
+  });
+});
+
+/**
+ * GET /trees/:id/entries/:address
+ * Look up a single address entry without computing a proof.
+ */
+app.get("/:id/entries/:address", async (c) => {
+  const id = parseInt(c.req.param("id"));
+  const address = c.req.param("address");
+
+  if (isNaN(id)) {
+    return c.json({ error: "Invalid tree ID" }, 400);
+  }
+
+  const normalized = address.toLowerCase();
+
+  const [entry] = await db
+    .select({ address: treeEntries.address, count: treeEntries.count })
+    .from(treeEntries)
+    .where(
+      and(eq(treeEntries.treeId, id), eq(treeEntries.address, normalized)),
+    )
+    .limit(1);
+
+  if (!entry) {
+    return c.json({ error: "Address not found in tree" }, 404);
+  }
+
+  return c.json({ address: entry.address, count: entry.count });
 });
 
 /**
@@ -178,8 +242,25 @@ app.get("/:id/proof/:address", async (c) => {
     return c.json({ error: "Invalid tree ID" }, 400);
   }
 
+  // Look up the address via the indexed tree_entries table (O(1))
+  const normalized = address.toLowerCase();
+  const [entry] = await db
+    .select({ address: treeEntries.address, count: treeEntries.count })
+    .from(treeEntries)
+    .where(
+      and(eq(treeEntries.treeId, id), eq(treeEntries.address, normalized)),
+    )
+    .limit(1);
+
+  if (!entry) {
+    return c.json({ error: "Address not found in tree" }, 404);
+  }
+
+  // Load tree dump and original entries for proof generation.
+  // We need the original-cased address from entries JSONB since tree_entries
+  // stores lowercase, and the leaf hash depends on the original casing.
   const [tree] = await db
-    .select({ entries: trees.entries, treeDump: trees.treeDump })
+    .select({ treeDump: trees.treeDump, entries: trees.entries })
     .from(trees)
     .where(eq(trees.id, id))
     .limit(1);
@@ -188,21 +269,20 @@ app.get("/:id/proof/:address", async (c) => {
     return c.json({ error: "Tree not found" }, 404);
   }
 
-  const entry = findEntryInDump(tree.treeDump, tree.entries, address);
-  if (!entry) {
-    return c.json({ error: "Address not found in tree" }, 404);
-  }
+  const originalEntry = findEntryInDump(tree.treeDump, tree.entries, address);
+  const entryAddress = originalEntry ? originalEntry.address : entry.address;
+  const entryCount = originalEntry ? originalEntry.count : entry.count;
 
-  const proof = getProofFromDump(tree.treeDump, entry.address, entry.count);
+  const proof = getProofFromDump(tree.treeDump, entryAddress, entryCount, id);
   if (!proof) {
     return c.json({ error: "Could not compute proof" }, 500);
   }
 
-  const qualification = ["0x" + entry.count.toString(16), ...proof];
+  const qualification = ["0x" + entryCount.toString(16), ...proof];
 
   return c.json({
-    address: entry.address,
-    count: entry.count,
+    address: entryAddress,
+    count: entryCount,
     proof,
     qualification,
   });

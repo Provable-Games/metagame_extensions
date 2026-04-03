@@ -14,6 +14,19 @@ const MIGRATION_SQL = `
 
   ALTER TABLE trees ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
   ALTER TABLE trees ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+
+  CREATE TABLE IF NOT EXISTS tree_entries (
+    id SERIAL PRIMARY KEY,
+    tree_id INTEGER NOT NULL REFERENCES trees(id),
+    address TEXT NOT NULL,
+    count INTEGER NOT NULL
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS tree_entries_tree_id_address_unique
+    ON tree_entries (tree_id, address);
+
+  CREATE INDEX IF NOT EXISTS tree_entries_tree_id_address_idx
+    ON tree_entries (tree_id, address);
 `;
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {

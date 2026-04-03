@@ -1,4 +1,13 @@
-import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  integer,
+  serial,
+  timestamp,
+  jsonb,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/pg-core";
 import type { MerkleEntry } from "../merkle.js";
 
 export const trees = pgTable("trees", {
@@ -11,3 +20,22 @@ export const trees = pgTable("trees", {
   treeDump: jsonb("tree_dump").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const treeEntries = pgTable(
+  "tree_entries",
+  {
+    id: serial("id").primaryKey(),
+    treeId: integer("tree_id")
+      .notNull()
+      .references(() => trees.id),
+    address: text("address").notNull(),
+    count: integer("count").notNull(),
+  },
+  (table) => [
+    uniqueIndex("tree_entries_tree_id_address_unique").on(
+      table.treeId,
+      table.address,
+    ),
+    index("tree_entries_tree_id_address_idx").on(table.treeId, table.address),
+  ],
+);
