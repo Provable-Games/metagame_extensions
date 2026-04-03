@@ -3,6 +3,8 @@ import type { MerkleEntry } from "../merkle.js";
 
 export const trees = pgTable("trees", {
   id: integer("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  description: text("description").notNull().default(""),
   root: text("root").notNull(),
   entryCount: integer("entry_count").notNull(),
   entries: jsonb("entries").$type<MerkleEntry[]>().notNull(),

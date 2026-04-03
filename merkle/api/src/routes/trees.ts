@@ -7,13 +7,45 @@ import { buildTree, findEntryInDump, getProofFromDump } from "../merkle.js";
 const app = new Hono();
 
 /**
+ * GET /trees
+ * List all trees with metadata (without entries/dump).
+ */
+app.get("/", async (c) => {
+  const rows = await db
+    .select({
+      id: trees.id,
+      name: trees.name,
+      description: trees.description,
+      root: trees.root,
+      entryCount: trees.entryCount,
+      createdAt: trees.createdAt,
+    })
+    .from(trees)
+    .orderBy(trees.id);
+
+  return c.json({
+    data: rows.map((t) => ({
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      root: t.root,
+      entryCount: t.entryCount,
+      createdAt: t.createdAt.toISOString(),
+    })),
+    total: rows.length,
+  });
+});
+
+/**
  * POST /trees
  * Store a merkle tree. The id must match the on-chain tree ID.
- * Body: { id: number, entries: [{ address: string, count: number }] }
+ * Body: { id: number, name?: string, description?: string, entries: [{ address: string, count: number }] }
  */
 app.post("/", async (c) => {
   const body = await c.req.json<{
     id: number;
+    name?: string;
+    description?: string;
     entries: Array<{ address: string; count: number }>;
   }>();
 
@@ -56,6 +88,8 @@ app.post("/", async (c) => {
     .insert(trees)
     .values({
       id: body.id,
+      name: body.name ?? "",
+      description: body.description ?? "",
       root: result.root,
       entryCount: body.entries.length,
       entries: body.entries,
@@ -65,6 +99,8 @@ app.post("/", async (c) => {
 
   return c.json({
     id: tree.id,
+    name: tree.name,
+    description: tree.description,
     root: tree.root,
     entryCount: tree.entryCount,
   });
@@ -83,6 +119,8 @@ app.get("/:id", async (c) => {
   const [tree] = await db
     .select({
       id: trees.id,
+      name: trees.name,
+      description: trees.description,
       root: trees.root,
       entryCount: trees.entryCount,
       createdAt: trees.createdAt,
@@ -97,6 +135,8 @@ app.get("/:id", async (c) => {
 
   return c.json({
     id: tree.id,
+    name: tree.name,
+    description: tree.description,
     root: tree.root,
     entryCount: tree.entryCount,
     createdAt: tree.createdAt.toISOString(),

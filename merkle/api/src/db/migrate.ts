@@ -1,17 +1,19 @@
 import pg from "pg";
 
 const MIGRATION_SQL = `
-  DROP TABLE IF EXISTS tree_entries;
-  DROP TABLE IF EXISTS trees;
-
   CREATE TABLE IF NOT EXISTS trees (
     id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
     root TEXT NOT NULL,
     entry_count INTEGER NOT NULL,
     entries JSONB NOT NULL,
     tree_dump JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL
   );
+
+  ALTER TABLE trees ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+  ALTER TABLE trees ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
 `;
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {
