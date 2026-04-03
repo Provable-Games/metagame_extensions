@@ -85,7 +85,7 @@ export function CreateMerkleTree() {
   };
 
   const handleCreate = async () => {
-    if (entries.length === 0 || !account || !validatorAddress) return;
+    if (entries.length === 0 || !account || !validatorAddress || !treeName.trim() || !treeDescription.trim()) return;
     setIsCreating(true);
     setError("");
     setResult(null);
@@ -309,7 +309,7 @@ export function CreateMerkleTree() {
             )}
             <Button
               onClick={handleCreate}
-              disabled={isCreating || !account || !validatorAddress}
+              disabled={isCreating || !account || !validatorAddress || !treeName.trim() || !treeDescription.trim()}
               className="w-full"
             >
               <GitBranch className="h-4 w-4 mr-2" />
