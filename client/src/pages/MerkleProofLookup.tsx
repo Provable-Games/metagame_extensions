@@ -23,8 +23,10 @@ import {
   buildQualification,
   type MerkleTreeData,
 } from "@/utils/merkleTree";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MERKLE_VALIDATOR_ABI } from "@/utils/contracts";
 import { useChainConfig } from "@/contexts/NetworkContext";
+import { MERKLE_API_URL } from "@/networks";
 import { useReadContract } from "@starknet-react/core";
 
 export function MerkleProofLookup() {
@@ -41,6 +43,11 @@ export function MerkleProofLookup() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [verifyContextId, setVerifyContextId] = useState("");
+
+  // API lookup state
+  const [apiTreeId, setApiTreeId] = useState("");
+  const [apiAddress, setApiAddress] = useState("");
+  const [apiLoading, setApiLoading] = useState(false);
 
   const shouldVerify =
     verifyContextId && validatorAddress && proofResult && treeData;
@@ -67,9 +74,9 @@ export function MerkleProofLookup() {
         const data = JSON.parse(
           event.target?.result as string
         ) as MerkleTreeData;
-        if (!data.root || !data.leaves || !data.entries) {
+        if (!data.root || !data.entries) {
           setError(
-            "Invalid merkle tree file: missing root, leaves, or entries"
+            "Invalid merkle tree file: missing root or entries"
           );
           return;
         }
@@ -105,6 +112,33 @@ export function MerkleProofLookup() {
     setProofResult({ count: entry.count, proof, qualification });
   };
 
+  const handleApiLookup = async () => {
+    if (!apiTreeId || !apiAddress) return;
+    setApiLoading(true);
+    setError("");
+    setProofResult(null);
+    try {
+      const res = await fetch(
+        `${MERKLE_API_URL}/trees/${apiTreeId}/proof/${apiAddress.toLowerCase()}`,
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Proof not found");
+        return;
+      }
+      const data = await res.json();
+      setProofResult({
+        count: data.count,
+        proof: data.proof,
+        qualification: data.qualification,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "API request failed");
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
   const handleCopyQualification = async () => {
     if (!proofResult) return;
     const text = JSON.stringify(proofResult.qualification);
@@ -118,98 +152,122 @@ export function MerkleProofLookup() {
       <div>
         <h1 className="text-3xl font-bold">Merkle Proof Lookup</h1>
         <p className="text-muted-foreground mt-2">
-          Upload a merkle tree file and look up proofs for individual addresses
+          Look up merkle proofs by tree ID or from a downloaded tree file
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Load Merkle Tree</CardTitle>
+          <CardTitle>Lookup Proof</CardTitle>
           <CardDescription>
-            Upload a merkle tree JSON file generated from the Create Merkle Tree
-            page
+            Fetch a proof from the API by tree ID, or load a tree file for local lookup
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="tree-file">Tree Data File</Label>
-            <Input
-              id="tree-file"
-              type="file"
-              accept=".json"
-              onChange={handleFileUpload}
-            />
-          </div>
+        <CardContent>
+          <Tabs defaultValue="api">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="api">By Tree ID</TabsTrigger>
+              <TabsTrigger value="file">From File</TabsTrigger>
+            </TabsList>
 
-          {error && !treeData && (
-            <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
+            <TabsContent value="api" className="space-y-4">
+              <div>
+                <Label htmlFor="api-tree-id">Tree ID</Label>
+                <Input
+                  id="api-tree-id"
+                  type="number"
+                  placeholder="e.g. 1"
+                  value={apiTreeId}
+                  onChange={(e) => { setApiTreeId(e.target.value); setProofResult(null); setError(""); }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="api-address">Player Address</Label>
+                <Input
+                  id="api-address"
+                  placeholder="0x..."
+                  value={apiAddress}
+                  onChange={(e) => { setApiAddress(e.target.value); setProofResult(null); setError(""); }}
+                />
+              </div>
+              <Button
+                onClick={handleApiLookup}
+                disabled={!apiTreeId || !apiAddress || apiLoading}
+                className="w-full"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                {apiLoading ? "Looking up..." : "Lookup Proof"}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="file" className="space-y-4">
+              <div>
+                <Label htmlFor="tree-file">Tree Data File</Label>
+                <Input
+                  id="tree-file"
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                />
+              </div>
+
+              {treeData && (
+                <div className="bg-muted rounded-md p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">Tree Loaded</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Root: </span>
+                      <span className="font-mono break-all">
+                        {treeData.root.slice(0, 20)}...
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Entries: </span>
+                      <span className="font-semibold">
+                        {treeData.entries.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {treeData && (
+                <>
+                  <div>
+                    <Label htmlFor="lookup-address">Player Address</Label>
+                    <Input
+                      id="lookup-address"
+                      placeholder="0x..."
+                      value={lookupAddress}
+                      onChange={(e) => {
+                        setLookupAddress(e.target.value);
+                        setProofResult(null);
+                        setError("");
+                      }}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleLookup}
+                    disabled={!lookupAddress}
+                    className="w-full"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Lookup Proof
+                  </Button>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {error && proofResult === null && (
+            <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3 mt-4">
               {error}
             </div>
           )}
-
-          {treeData && (
-            <div className="bg-muted rounded-md p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Upload className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-semibold">Tree Loaded</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Root: </span>
-                  <span className="font-mono break-all">
-                    {treeData.root.slice(0, 20)}...
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Entries: </span>
-                  <span className="font-semibold">
-                    {treeData.entries.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {treeData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Lookup Address</CardTitle>
-            <CardDescription>
-              Enter an address to find its entry count and generate a merkle
-              proof
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="lookup-address">Player Address</Label>
-              <Input
-                id="lookup-address"
-                placeholder="0x..."
-                value={lookupAddress}
-                onChange={(e) => {
-                  setLookupAddress(e.target.value);
-                  setProofResult(null);
-                  setError("");
-                }}
-              />
-            </div>
-
-            <Button
-              onClick={handleLookup}
-              disabled={!lookupAddress}
-              className="w-full"
-            >
-              <Search className="h-4 w-4 mr-2" />
-              Lookup Proof
-            </Button>
-
-            {error && proofResult === null && (
-              <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                {error}
-              </div>
-            )}
 
             {proofResult && (
               <div className="space-y-4">
@@ -261,9 +319,8 @@ export function MerkleProofLookup() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
 
       {proofResult && validatorAddress && (
         <Card>

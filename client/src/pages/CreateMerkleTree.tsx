@@ -26,6 +26,7 @@ import {
   type MerkleEntry,
 } from "@/utils/merkleTree";
 import { useChainConfig } from "@/contexts/NetworkContext";
+import { MERKLE_API_URL } from "@/networks";
 
 export function CreateMerkleTree() {
   const { account } = useAccount();
@@ -87,12 +88,28 @@ export function CreateMerkleTree() {
     setTreeData(null);
   };
 
-  const handleBuild = () => {
+  const [apiTreeId, setApiTreeId] = useState<number | null>(null);
+
+  const handleBuild = async () => {
     if (entries.length === 0) return;
     try {
+      // Build tree client-side
       const tree = buildMerkleTree(entries);
       setTreeData(tree);
       setError("");
+
+      // Store entries + proofs in the API
+      const res = await fetch(`${MERKLE_API_URL}/trees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApiTreeId(data.id);
+      } else {
+        console.error("Failed to store tree in API:", await res.text());
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to build merkle tree");
     }
@@ -346,10 +363,12 @@ export function CreateMerkleTree() {
               </div>
             )}
 
-            <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
-              Save the JSON file to generate proofs later using the Proof Lookup
-              page.
-            </div>
+            {apiTreeId && (
+              <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
+                Proofs stored in API (tree #{apiTreeId}). Proofs can be fetched at:{" "}
+                <code className="text-xs">{MERKLE_API_URL}/trees/{apiTreeId}/proof/ADDRESS</code>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

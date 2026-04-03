@@ -17,6 +17,10 @@ export interface ChainConfig {
   merkleValidatorAddress?: `0x${string}`;
 }
 
+export const MERKLE_API_URL =
+  import.meta.env.VITE_MERKLE_API_URL ||
+  "https://metagame-merkle-api.up.railway.app";
+
 export const CHAIN_ID_FELTS: Record<ChainId, string> = {
   SN_MAIN: "0x534e5f4d41494e",
   SN_SEPOLIA: "0x534e5f5345504f4c4941",
