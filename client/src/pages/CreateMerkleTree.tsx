@@ -107,7 +107,8 @@ export function CreateMerkleTree() {
         const data = await res.json();
         setApiTreeId(data.id);
       } else {
-        console.error("Failed to store tree in API:", await res.text());
+        const errText = await res.text();
+        setError(`Tree built locally but failed to store in API: ${errText}`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to build merkle tree");
