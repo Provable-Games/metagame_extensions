@@ -15,7 +15,6 @@ import {
   Upload,
   Plus,
   Trash2,
-  Download,
   GitBranch,
   Copy,
   Check,
@@ -113,19 +112,6 @@ export function CreateMerkleTree() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to build merkle tree");
     }
-  };
-
-  const handleDownload = () => {
-    if (!treeData) return;
-    const blob = new Blob([JSON.stringify(treeData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `merkle-tree-${treeData.root.slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleCopyRoot = async () => {
@@ -334,26 +320,19 @@ export function CreateMerkleTree() {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={handleDownload} className="flex-1">
-                <Download className="h-4 w-4 mr-2" />
-                Download Tree Data (JSON)
+            {validatorAddress && account && (
+              <Button
+                onClick={handleRegisterOnChain}
+                disabled={isRegistering || !!treeId}
+                className="w-full"
+              >
+                {isRegistering
+                  ? "Registering..."
+                  : treeId
+                    ? `Tree #${treeId}`
+                    : "Register On-Chain"}
               </Button>
-              {validatorAddress && account && (
-                <Button
-                  onClick={handleRegisterOnChain}
-                  disabled={isRegistering || !!treeId}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {isRegistering
-                    ? "Registering..."
-                    : treeId
-                      ? `Tree #${treeId}`
-                      : "Register On-Chain"}
-                </Button>
-              )}
-            </div>
+            )}
 
             {treeId && (
               <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md p-3">
