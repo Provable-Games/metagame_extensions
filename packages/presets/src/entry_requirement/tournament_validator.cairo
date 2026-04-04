@@ -100,13 +100,13 @@ pub mod TournamentValidator {
         /// Qualifying tournament IDs per tournament
         qualifying_tournament_ids: Map<u64, Vec<u64>>,
         /// Entry limit per tournament
-        tournament_entry_limit: Map<u64, u8>,
+        tournament_entry_limit: Map<u64, u32>,
         /// Top positions that count as winners (0 = all positions)
         top_positions: Map<u64, u32>,
         /// Entry count per (tournament_id, qualifying_token_id) - for PER_TOKEN mode
-        token_entries: Map<(u64, u64), u8>,
+        token_entries: Map<(u64, u64), u32>,
         /// Entry count per (tournament_id, player_address) - for ALL mode
-        player_entries: Map<(u64, ContractAddress), u8>,
+        player_entries: Map<(u64, ContractAddress), u32>,
         /// Used tokens per (tournament_id, qualifying_token_id) - for ALL mode ban tech
         used_tokens: Map<(u64, u64), bool>,
     }
@@ -133,7 +133,7 @@ pub mod TournamentValidator {
     struct EntryRecorded {
         tournament_id: u64,
         qualifying_token_id: u64,
-        entries_used: u8,
+        entries_used: u32,
     }
 
     #[constructor]
@@ -172,7 +172,7 @@ pub mod TournamentValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             // First, validate that the qualification is actually valid
             let is_valid = self.validate_entry_internal(context_id, player_address, qualification);
             if !is_valid {
@@ -215,7 +215,7 @@ pub mod TournamentValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             // config[0]: qualifier_type (0 = participants, 1 = top_position)
             // config[1]: qualifying_mode (0 = PER_TOKEN, 1 = ALL)

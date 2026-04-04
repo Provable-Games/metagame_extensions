@@ -28,8 +28,8 @@ pub mod open_entry_validator_mock {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        tournament_entry_limit: Map<u64, u8>,
-        tournament_entries: Map<(u64, ContractAddress), u8>,
+        context_entry_limit: Map<u64, u32>,
+        context_entries: Map<(u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -74,21 +74,21 @@ pub mod open_entry_validator_mock {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
-            let entry_limit = self.tournament_entry_limit.read(context_id);
+        ) -> Option<u32> {
+            let entry_limit = self.context_entry_limit.read(context_id);
             if entry_limit == 0 {
                 return Option::None; // Unlimited entries
             }
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
+            let current_entries = self.context_entries.read(key);
             let remaining_entries = entry_limit - current_entries;
             return Option::Some(remaining_entries);
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
-            self.tournament_entry_limit.write(context_id, entry_limit);
+            self.context_entry_limit.write(context_id, entry_limit);
         }
 
         fn on_entry_added(
@@ -99,8 +99,8 @@ pub mod open_entry_validator_mock {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
-            self.tournament_entries.write(key, current_entries + 1);
+            let current_entries = self.context_entries.read(key);
+            self.context_entries.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
@@ -111,9 +111,9 @@ pub mod open_entry_validator_mock {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
+            let current_entries = self.context_entries.read(key);
             if current_entries > 0 {
-                self.tournament_entries.write(key, current_entries - 1);
+                self.context_entries.write(key, current_entries - 1);
             }
         }
     }

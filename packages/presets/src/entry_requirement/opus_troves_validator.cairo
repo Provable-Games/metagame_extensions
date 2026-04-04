@@ -73,9 +73,9 @@ pub struct Health {
 
 #[starknet::interface]
 pub trait IOpusTrovesValidator<TState> {
-    fn get_debt_threshold(self: @TState, tournament_id: u64) -> u128;
-    fn get_value_per_entry(self: @TState, tournament_id: u64) -> u128;
-    fn get_max_entries(self: @TState, tournament_id: u64) -> u8;
+    fn get_debt_threshold(self: @TState, context_id: u64) -> u128;
+    fn get_value_per_entry(self: @TState, context_id: u64) -> u128;
+    fn get_max_entries(self: @TState, context_id: u64) -> u32;
 }
 
 #[starknet::contract]
@@ -127,19 +127,19 @@ pub mod OpusTrovesValidator {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         // Asset filtering (0 = wildcard, N = filter by N assets)
-        tournament_asset_count: Map<u64, u8>,
-        // Asset addresses for filtering (tournament_id, index) -> address
-        tournament_assets: Map<(u64, u8), ContractAddress>,
+        context_asset_count: Map<u64, u8>,
+        // Asset addresses for filtering (context_id, index) -> address
+        context_assets: Map<(u64, u8), ContractAddress>,
         // Minimum debt threshold to qualify
-        tournament_debt_threshold: Map<u64, u128>,
+        context_debt_threshold: Map<u64, u128>,
         // Fixed entry limit (0 = use value_per_entry instead)
-        tournament_entry_limit: Map<u64, u8>,
+        context_entry_limit: Map<u64, u32>,
         // Entry count per player
-        tournament_entries_per_address: Map<(u64, ContractAddress), u8>,
+        context_entries_per_address: Map<(u64, ContractAddress), u32>,
         // Debt required per entry (0 = use fixed limit)
-        tournament_value_per_entry: Map<u64, u128>,
+        context_value_per_entry: Map<u64, u128>,
         // Maximum entries cap (0 = no cap)
-        tournament_max_entries: Map<u64, u8>,
+        context_max_entries: Map<u64, u32>,
     }
 
     #[event]
@@ -187,13 +187,13 @@ pub mod OpusTrovesValidator {
             }
 
             // Check if player is over their quota
-            let value_per_entry = self.tournament_value_per_entry.read(context_id);
+            let value_per_entry = self.context_value_per_entry.read(context_id);
             if value_per_entry > 0 {
                 let (total_allowed_entries, _) = self
                     .calculate_entries_from_trove(context_id, current_owner);
 
                 let used_entries = self
-                    .tournament_entries_per_address
+                    .context_entries_per_address
                     .read((context_id, current_owner));
 
                 // Ban if player has more entries than currently allowed
@@ -208,14 +208,14 @@ pub mod OpusTrovesValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
-            let value_per_entry = self.tournament_value_per_entry.read(context_id);
+        ) -> Option<u32> {
+            let value_per_entry = self.context_value_per_entry.read(context_id);
 
             if value_per_entry > 0 {
                 let (total_entries_u8, _) = self
                     .calculate_entries_from_trove(context_id, player_address);
                 let used_entries = self
-                    .tournament_entries_per_address
+                    .context_entries_per_address
                     .read((context_id, player_address));
 
                 if total_entries_u8 > used_entries {
@@ -225,12 +225,12 @@ pub mod OpusTrovesValidator {
                 }
             } else {
                 // Fixed entry limit mode
-                let entry_limit = self.tournament_entry_limit.read(context_id);
+                let entry_limit = self.context_entry_limit.read(context_id);
                 if entry_limit == 0 {
                     return Option::None;
                 }
                 let used_entries = self
-                    .tournament_entries_per_address
+                    .context_entries_per_address
                     .read((context_id, player_address));
                 let remaining_entries = entry_limit - used_entries;
                 return Option::Some(remaining_entries);
@@ -238,7 +238,7 @@ pub mod OpusTrovesValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             // Config format:
             // [0]: asset_count (u8) - 0 = wildcard, N = filter by N assets
@@ -248,7 +248,7 @@ pub mod OpusTrovesValidator {
             // [N+3]: max_entries (u8) - maximum entries cap (0 = no cap)
 
             let asset_count: u8 = (*config.at(0)).try_into().unwrap();
-            self.tournament_asset_count.write(context_id, asset_count);
+            self.context_asset_count.write(context_id, asset_count);
 
             // Parse asset addresses
             let mut i: u8 = 0;
@@ -259,7 +259,7 @@ pub mod OpusTrovesValidator {
                 let asset_address: ContractAddress = (*config.at((1 + i).into()))
                     .try_into()
                     .unwrap();
-                self.tournament_assets.write((context_id, i), asset_address);
+                self.context_assets.write((context_id, i), asset_address);
                 i += 1;
             }
 
@@ -271,16 +271,16 @@ pub mod OpusTrovesValidator {
             } else {
                 0
             };
-            let max_entries: u8 = if config.len() > offset + 2 {
+            let max_entries: u32 = if config.len() > offset + 2 {
                 (*config.at(offset + 2)).try_into().unwrap()
             } else {
                 0
             };
 
-            self.tournament_debt_threshold.write(context_id, threshold);
-            self.tournament_entry_limit.write(context_id, entry_limit);
-            self.tournament_value_per_entry.write(context_id, value_per_entry);
-            self.tournament_max_entries.write(context_id, max_entries);
+            self.context_debt_threshold.write(context_id, threshold);
+            self.context_entry_limit.write(context_id, entry_limit);
+            self.context_value_per_entry.write(context_id, value_per_entry);
+            self.context_max_entries.write(context_id, max_entries);
         }
 
         fn on_entry_added(
@@ -291,8 +291,8 @@ pub mod OpusTrovesValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
-            self.tournament_entries_per_address.write(key, current_entries + 1);
+            let current_entries = self.context_entries_per_address.read(key);
+            self.context_entries_per_address.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
@@ -303,21 +303,21 @@ pub mod OpusTrovesValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
+            let current_entries = self.context_entries_per_address.read(key);
             if current_entries > 0 {
-                self.tournament_entries_per_address.write(key, current_entries - 1);
+                self.context_entries_per_address.write(key, current_entries - 1);
             }
         }
     }
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        /// Check if a trove matches the asset filter for a tournament
+        /// Check if a trove matches the asset filter for a context
         /// Returns true if asset_count=0 (wildcard) or trove contains at least one specified asset
         fn trove_matches_asset_filter(
-            self: @ContractState, tournament_id: u64, trove_id: u64,
+            self: @ContractState, context_id: u64, trove_id: u64,
         ) -> bool {
-            let asset_count = self.tournament_asset_count.read(tournament_id);
+            let asset_count = self.context_asset_count.read(context_id);
 
             // Wildcard mode: accept all troves
             if asset_count == 0 {
@@ -332,7 +332,7 @@ pub mod OpusTrovesValidator {
                     break;
                 }
 
-                let asset_address = self.tournament_assets.read((tournament_id, i));
+                let asset_address = self.context_assets.read((context_id, i));
                 let balance = abbot.get_trove_asset_balance(trove_id, asset_address);
 
                 // If trove has this asset, it matches the filter
@@ -347,10 +347,10 @@ pub mod OpusTrovesValidator {
             false
         }
 
-        /// Check if a player meets the debt threshold for a tournament
+        /// Check if a player meets the debt threshold for a context
         /// Sums debt across filtered troves (based on asset requirements)
         fn check_trove_requirements(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
             let abbot = IAbbotDispatcher { contract_address: abbot_address() };
             let mut user_troves: Span<u64> = abbot.get_user_trove_ids(player_address);
@@ -359,7 +359,7 @@ pub mod OpusTrovesValidator {
                 return false;
             }
 
-            let threshold = self.tournament_debt_threshold.read(tournament_id);
+            let threshold = self.context_debt_threshold.read(context_id);
             let shrine = IShrineDispatcher { contract_address: shrine_address() };
 
             // Sum debt across filtered troves (in wad units)
@@ -368,7 +368,7 @@ pub mod OpusTrovesValidator {
                 match user_troves.pop_front() {
                     Option::Some(trove_id) => {
                         // Check if trove matches asset filter
-                        if !self.trove_matches_asset_filter(tournament_id, *trove_id) {
+                        if !self.trove_matches_asset_filter(context_id, *trove_id) {
                             continue;
                         }
 
@@ -385,41 +385,41 @@ pub mod OpusTrovesValidator {
 
         /// Check if player has entries available (quota not exhausted)
         fn has_entries_available(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
-            let value_per_entry = self.tournament_value_per_entry.read(tournament_id);
+            let value_per_entry = self.context_value_per_entry.read(context_id);
 
             if value_per_entry > 0 {
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
 
                 if used_entries == 0 {
                     return true;
                 }
 
                 let (total_allowed_entries, _) = self
-                    .calculate_entries_from_trove(tournament_id, player_address);
+                    .calculate_entries_from_trove(context_id, player_address);
                 return used_entries < total_allowed_entries;
             } else {
                 // Fixed entry limit mode
-                let entry_limit = self.tournament_entry_limit.read(tournament_id);
+                let entry_limit = self.context_entry_limit.read(context_id);
                 if entry_limit == 0 {
                     return true;
                 }
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
                 return used_entries < entry_limit;
             }
         }
 
         /// Calculate entries from filtered troves
         /// Sums debt across filtered troves (based on asset requirements)
-        /// Returns (capped_entries_u8, total_debt_wad)
+        /// Returns (capped_entries_u32, total_debt_wad)
         fn calculate_entries_from_trove(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
-        ) -> (u8, Wad) {
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
+        ) -> (u32, Wad) {
             let abbot = IAbbotDispatcher { contract_address: abbot_address() };
             let mut user_troves: Span<u64> = abbot.get_user_trove_ids(player_address);
 
@@ -427,8 +427,8 @@ pub mod OpusTrovesValidator {
                 return (0, Zero::zero());
             }
 
-            let threshold = self.tournament_debt_threshold.read(tournament_id);
-            let value_per_entry = self.tournament_value_per_entry.read(tournament_id);
+            let threshold = self.context_debt_threshold.read(context_id);
+            let value_per_entry = self.context_value_per_entry.read(context_id);
             let shrine = IShrineDispatcher { contract_address: shrine_address() };
 
             // Sum debt across filtered troves (in wad units)
@@ -437,7 +437,7 @@ pub mod OpusTrovesValidator {
                 match user_troves.pop_front() {
                     Option::Some(trove_id) => {
                         // Check if trove matches asset filter
-                        if !self.trove_matches_asset_filter(tournament_id, *trove_id) {
+                        if !self.trove_matches_asset_filter(context_id, *trove_id) {
                             continue;
                         }
 
@@ -456,25 +456,21 @@ pub mod OpusTrovesValidator {
                 0
             };
 
-            // Convert to u8 with cap at 255
-            let mut total_entries_u8: u8 = match total_entries.try_into() {
+            // Convert to u32
+            let mut total_entries_u32: u32 = match total_entries.try_into() {
                 Option::Some(val) => val,
-                Option::None => { if total_entries > 255 {
-                    255_u8
-                } else {
-                    0
-                } },
+                Option::None => 0,
             };
 
             // Apply max entries cap if set
-            let max_entries = self.tournament_max_entries.read(tournament_id);
-            if max_entries > 0 && total_entries_u8 > max_entries {
-                total_entries_u8 = max_entries;
+            let max_entries = self.context_max_entries.read(context_id);
+            if max_entries > 0 && total_entries_u32 > max_entries {
+                total_entries_u32 = max_entries;
             }
 
             // Return entries and total debt as Wad
             let total_debt_wad_type: Wad = Wad { val: total_debt_wad };
-            (total_entries_u8, total_debt_wad_type)
+            (total_entries_u32, total_debt_wad_type)
         }
     }
 
@@ -482,16 +478,16 @@ pub mod OpusTrovesValidator {
     use super::IOpusTrovesValidator;
     #[abi(embed_v0)]
     impl OpusTrovesValidatorImpl of IOpusTrovesValidator<ContractState> {
-        fn get_debt_threshold(self: @ContractState, tournament_id: u64) -> u128 {
-            self.tournament_debt_threshold.read(tournament_id)
+        fn get_debt_threshold(self: @ContractState, context_id: u64) -> u128 {
+            self.context_debt_threshold.read(context_id)
         }
 
-        fn get_value_per_entry(self: @ContractState, tournament_id: u64) -> u128 {
-            self.tournament_value_per_entry.read(tournament_id)
+        fn get_value_per_entry(self: @ContractState, context_id: u64) -> u128 {
+            self.context_value_per_entry.read(context_id)
         }
 
-        fn get_max_entries(self: @ContractState, tournament_id: u64) -> u8 {
-            self.tournament_max_entries.read(tournament_id)
+        fn get_max_entries(self: @ContractState, context_id: u64) -> u32 {
+            self.context_max_entries.read(context_id)
         }
     }
 }

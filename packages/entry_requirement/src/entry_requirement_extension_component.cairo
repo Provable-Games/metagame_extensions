@@ -54,11 +54,11 @@ pub mod EntryRequirementExtensionComponent {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8>;
+        ) -> Option<u32>;
 
         /// Add configuration for a context
         fn add_config(
-            ref self: TContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: TContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         );
 
         /// Called when an entry is added
@@ -128,7 +128,7 @@ pub mod EntryRequirementExtensionComponent {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             let contract = self.get_contract();
             EntryRequirementExtension::entries_left(
                 contract, context_id, player_address, qualification,
@@ -138,7 +138,7 @@ pub mod EntryRequirementExtensionComponent {
         fn add_config(
             ref self: ComponentState<TContractState>,
             context_id: u64,
-            entry_limit: u8,
+            entry_limit: u32,
             config: Span<felt252>,
         ) {
             self.set_context_owner(context_id);

@@ -56,7 +56,7 @@ const REAL_PROOF_TIMESTAMP: u64 = 0x69883315;
 const FORK_BLOCK_TIME: u64 = 0x69883315 + 60; // 60 seconds after proof
 
 const TOURNAMENT_ID: u64 = 42;
-const ENTRY_LIMIT: u8 = 5;
+const ENTRY_LIMIT: u32 = 5;
 // Large max_proof_age so the fixture doesn't go stale
 const MAX_PROOF_AGE: felt252 = 86400; // 24 hours
 

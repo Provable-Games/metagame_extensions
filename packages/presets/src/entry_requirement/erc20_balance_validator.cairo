@@ -10,11 +10,11 @@ pub trait IERC20<TContractState> {
 
 #[starknet::interface]
 pub trait IEntryRequirementExtensionMock<TState> {
-    fn get_token_address(self: @TState, tournament_id: u64) -> ContractAddress;
-    fn get_min_threshold(self: @TState, tournament_id: u64) -> u256;
-    fn get_max_threshold(self: @TState, tournament_id: u64) -> u256;
-    fn get_value_per_entry(self: @TState, tournament_id: u64) -> u256;
-    fn get_max_entries(self: @TState, tournament_id: u64) -> u8;
+    fn get_token_address(self: @TState, context_id: u64) -> ContractAddress;
+    fn get_min_threshold(self: @TState, context_id: u64) -> u256;
+    fn get_max_threshold(self: @TState, context_id: u64) -> u256;
+    fn get_value_per_entry(self: @TState, context_id: u64) -> u256;
+    fn get_max_entries(self: @TState, context_id: u64) -> u32;
 }
 
 #[starknet::contract]
@@ -48,15 +48,15 @@ pub mod ERC20BalanceValidator {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        tournament_token_address: Map<u64, ContractAddress>,
-        tournament_min_threshold: Map<u64, u256>,
-        tournament_max_threshold: Map<u64, u256>,
-        tournament_entry_limit: Map<u64, u8>,
-        tournament_entries_per_address: Map<(u64, ContractAddress), u8>,
-        tournament_value_per_entry: Map<
+        context_token_address: Map<u64, ContractAddress>,
+        context_min_threshold: Map<u64, u256>,
+        context_max_threshold: Map<u64, u256>,
+        context_entry_limit: Map<u64, u32>,
+        context_entries_per_address: Map<(u64, ContractAddress), u32>,
+        context_value_per_entry: Map<
             u64, u256,
         >, // Token amount required per entry (0 = fixed limit)
-        tournament_max_entries: Map<u64, u8> // Maximum entries cap (0 = no cap)
+        context_max_entries: Map<u64, u32> // Maximum entries cap (0 = no cap)
     }
 
     #[event]
@@ -105,15 +105,15 @@ pub mod ERC20BalanceValidator {
             }
 
             // Check if player is over their quota
-            let value_per_entry = self.tournament_value_per_entry.read(context_id);
+            let value_per_entry = self.context_value_per_entry.read(context_id);
             if value_per_entry > 0 {
                 // Calculate current allowed entries based on current balance
-                let token_address = self.tournament_token_address.read(context_id);
+                let token_address = self.context_token_address.read(context_id);
                 let erc20 = IERC20Dispatcher { contract_address: token_address };
                 let balance = erc20.balance_of(current_owner);
 
-                let min_threshold = self.tournament_min_threshold.read(context_id);
-                let max_threshold = self.tournament_max_threshold.read(context_id);
+                let min_threshold = self.context_min_threshold.read(context_id);
+                let max_threshold = self.context_max_threshold.read(context_id);
 
                 // Determine the effective balance for calculation
                 let effective_balance = if max_threshold > 0 && balance > max_threshold {
@@ -130,24 +130,20 @@ pub mod ERC20BalanceValidator {
                 };
 
                 let key = (context_id, current_owner);
-                let used_entries = self.tournament_entries_per_address.read(key);
+                let used_entries = self.context_entries_per_address.read(key);
 
-                // Convert u256 to u8 safely for comparison
-                let total_allowed_u8: u8 = if total_allowed_entries > 255 {
-                    255_u8
-                } else {
-                    match total_allowed_entries.try_into() {
-                        Option::Some(val) => val,
-                        Option::None => 0,
-                    }
+                // Convert u256 to u32 safely for comparison
+                let total_allowed_u32: u32 = match total_allowed_entries.try_into() {
+                    Option::Some(val) => val,
+                    Option::None => 0,
                 };
 
                 // Apply max entries cap if set
-                let max_entries = self.tournament_max_entries.read(context_id);
-                let final_allowed = if max_entries > 0 && total_allowed_u8 > max_entries {
+                let max_entries = self.context_max_entries.read(context_id);
+                let final_allowed = if max_entries > 0 && total_allowed_u32 > max_entries {
                     max_entries
                 } else {
-                    total_allowed_u8
+                    total_allowed_u32
                 };
 
                 // Ban if player has more entries than currently allowed
@@ -164,17 +160,17 @@ pub mod ERC20BalanceValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
-            let value_per_entry = self.tournament_value_per_entry.read(context_id);
+        ) -> Option<u32> {
+            let value_per_entry = self.context_value_per_entry.read(context_id);
 
             if value_per_entry > 0 {
                 // Calculate entries based on token balance
-                let token_address = self.tournament_token_address.read(context_id);
+                let token_address = self.context_token_address.read(context_id);
                 let erc20 = IERC20Dispatcher { contract_address: token_address };
                 let balance = erc20.balance_of(player_address);
 
-                let min_threshold = self.tournament_min_threshold.read(context_id);
-                let max_threshold = self.tournament_max_threshold.read(context_id);
+                let min_threshold = self.context_min_threshold.read(context_id);
+                let max_threshold = self.context_max_threshold.read(context_id);
 
                 // Check if balance is within valid range
                 if balance < min_threshold {
@@ -197,44 +193,40 @@ pub mod ERC20BalanceValidator {
                 };
 
                 let key = (context_id, player_address);
-                let used_entries = self.tournament_entries_per_address.read(key);
+                let used_entries = self.context_entries_per_address.read(key);
 
-                // Convert u256 to u8 safely
-                let mut total_entries_u8: u8 = if total_entries > 255 {
-                    255_u8 // Cap at max u8
-                } else {
-                    match total_entries.try_into() {
-                        Option::Some(val) => val,
-                        Option::None => { return Option::Some(0); },
-                    }
+                // Convert u256 to u32 safely
+                let mut total_entries_u32: u32 = match total_entries.try_into() {
+                    Option::Some(val) => val,
+                    Option::None => { return Option::Some(0); },
                 };
 
                 // Apply max entries cap if set
-                let max_entries = self.tournament_max_entries.read(context_id);
-                if max_entries > 0 && total_entries_u8 > max_entries {
-                    total_entries_u8 = max_entries;
+                let max_entries = self.context_max_entries.read(context_id);
+                if max_entries > 0 && total_entries_u32 > max_entries {
+                    total_entries_u32 = max_entries;
                 }
 
-                if total_entries_u8 > used_entries {
-                    return Option::Some(total_entries_u8 - used_entries);
+                if total_entries_u32 > used_entries {
+                    return Option::Some(total_entries_u32 - used_entries);
                 } else {
                     return Option::Some(0);
                 }
             } else {
                 // Use fixed entry limit (original behavior)
-                let entry_limit = self.tournament_entry_limit.read(context_id);
+                let entry_limit = self.context_entry_limit.read(context_id);
                 if entry_limit == 0 {
                     return Option::None; // Unlimited entries
                 }
                 let key = (context_id, player_address);
-                let current_entries = self.tournament_entries_per_address.read(key);
+                let current_entries = self.context_entries_per_address.read(key);
                 let remaining_entries = entry_limit - current_entries;
                 return Option::Some(remaining_entries);
             }
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             // Config format: [token_address, min_threshold_low, min_threshold_high,
             // max_threshold_low, max_threshold_high, value_per_entry_low, value_per_entry_high,
@@ -274,18 +266,18 @@ pub mod ERC20BalanceValidator {
                 low: value_per_entry_low, high: value_per_entry_high,
             };
 
-            let max_entries: u8 = if config.len() > 7 {
+            let max_entries: u32 = if config.len() > 7 {
                 (*config.at(7)).try_into().unwrap()
             } else {
                 0 // Default to no cap if not provided
             };
 
-            self.tournament_token_address.write(context_id, token_address);
-            self.tournament_min_threshold.write(context_id, min_threshold);
-            self.tournament_max_threshold.write(context_id, max_threshold);
-            self.tournament_entry_limit.write(context_id, entry_limit);
-            self.tournament_value_per_entry.write(context_id, value_per_entry);
-            self.tournament_max_entries.write(context_id, max_entries);
+            self.context_token_address.write(context_id, token_address);
+            self.context_min_threshold.write(context_id, min_threshold);
+            self.context_max_threshold.write(context_id, max_threshold);
+            self.context_entry_limit.write(context_id, entry_limit);
+            self.context_value_per_entry.write(context_id, value_per_entry);
+            self.context_max_entries.write(context_id, max_entries);
         }
 
         fn on_entry_added(
@@ -296,8 +288,8 @@ pub mod ERC20BalanceValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
-            self.tournament_entries_per_address.write(key, current_entries + 1);
+            let current_entries = self.context_entries_per_address.read(key);
+            self.context_entries_per_address.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
@@ -308,26 +300,26 @@ pub mod ERC20BalanceValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
+            let current_entries = self.context_entries_per_address.read(key);
             if current_entries > 0 {
-                self.tournament_entries_per_address.write(key, current_entries - 1);
+                self.context_entries_per_address.write(key, current_entries - 1);
             }
         }
     }
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        /// Check if a player meets the balance requirements for a tournament
+        /// Check if a player meets the balance requirements for a context
         fn check_balance_requirements(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
-            let token_address = self.tournament_token_address.read(tournament_id);
+            let token_address = self.context_token_address.read(context_id);
             let erc20 = IERC20Dispatcher { contract_address: token_address };
             let balance = erc20.balance_of(player_address);
 
             // Check if balance meets the minimum threshold
-            let min_threshold = self.tournament_min_threshold.read(tournament_id);
-            let max_threshold = self.tournament_max_threshold.read(tournament_id);
+            let min_threshold = self.context_min_threshold.read(context_id);
+            let max_threshold = self.context_max_threshold.read(context_id);
 
             // Balance must be >= min_threshold
             if balance < min_threshold {
@@ -344,15 +336,15 @@ pub mod ERC20BalanceValidator {
 
         /// Check if player has entries available (quota not exhausted)
         fn has_entries_available(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
-            let value_per_entry = self.tournament_value_per_entry.read(tournament_id);
+            let value_per_entry = self.context_value_per_entry.read(context_id);
 
             if value_per_entry > 0 {
                 // Check quota based on balance
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
 
                 // If no entries used yet, they have entries available
                 if used_entries == 0 {
@@ -360,12 +352,12 @@ pub mod ERC20BalanceValidator {
                 }
 
                 // Calculate current allowed entries based on balance
-                let token_address = self.tournament_token_address.read(tournament_id);
+                let token_address = self.context_token_address.read(context_id);
                 let erc20 = IERC20Dispatcher { contract_address: token_address };
                 let balance = erc20.balance_of(player_address);
 
-                let min_threshold = self.tournament_min_threshold.read(tournament_id);
-                let max_threshold = self.tournament_max_threshold.read(tournament_id);
+                let min_threshold = self.context_min_threshold.read(context_id);
+                let max_threshold = self.context_max_threshold.read(context_id);
 
                 let effective_balance = if max_threshold > 0 && balance > max_threshold {
                     max_threshold
@@ -379,32 +371,28 @@ pub mod ERC20BalanceValidator {
                     0
                 };
 
-                let total_allowed_u8: u8 = if total_allowed_entries > 255 {
-                    255_u8
-                } else {
-                    match total_allowed_entries.try_into() {
-                        Option::Some(val) => val,
-                        Option::None => 0,
-                    }
+                let total_allowed_u32: u32 = match total_allowed_entries.try_into() {
+                    Option::Some(val) => val,
+                    Option::None => 0,
                 };
 
-                let max_entries = self.tournament_max_entries.read(tournament_id);
-                let final_allowed = if max_entries > 0 && total_allowed_u8 > max_entries {
+                let max_entries = self.context_max_entries.read(context_id);
+                let final_allowed = if max_entries > 0 && total_allowed_u32 > max_entries {
                     max_entries
                 } else {
-                    total_allowed_u8
+                    total_allowed_u32
                 };
 
                 return used_entries < final_allowed;
             } else {
                 // Fixed entry limit mode
-                let entry_limit = self.tournament_entry_limit.read(tournament_id);
+                let entry_limit = self.context_entry_limit.read(context_id);
                 if entry_limit == 0 {
                     return true; // Unlimited
                 }
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
                 return used_entries < entry_limit;
             }
         }
@@ -414,24 +402,24 @@ pub mod ERC20BalanceValidator {
     use super::IEntryRequirementExtensionMock;
     #[abi(embed_v0)]
     impl EntryValidatorMockImpl of IEntryRequirementExtensionMock<ContractState> {
-        fn get_token_address(self: @ContractState, tournament_id: u64) -> ContractAddress {
-            self.tournament_token_address.read(tournament_id)
+        fn get_token_address(self: @ContractState, context_id: u64) -> ContractAddress {
+            self.context_token_address.read(context_id)
         }
 
-        fn get_min_threshold(self: @ContractState, tournament_id: u64) -> u256 {
-            self.tournament_min_threshold.read(tournament_id)
+        fn get_min_threshold(self: @ContractState, context_id: u64) -> u256 {
+            self.context_min_threshold.read(context_id)
         }
 
-        fn get_max_threshold(self: @ContractState, tournament_id: u64) -> u256 {
-            self.tournament_max_threshold.read(tournament_id)
+        fn get_max_threshold(self: @ContractState, context_id: u64) -> u256 {
+            self.context_max_threshold.read(context_id)
         }
 
-        fn get_value_per_entry(self: @ContractState, tournament_id: u64) -> u256 {
-            self.tournament_value_per_entry.read(tournament_id)
+        fn get_value_per_entry(self: @ContractState, context_id: u64) -> u256 {
+            self.context_value_per_entry.read(context_id)
         }
 
-        fn get_max_entries(self: @ContractState, tournament_id: u64) -> u8 {
-            self.tournament_max_entries.read(tournament_id)
+        fn get_max_entries(self: @ContractState, context_id: u64) -> u32 {
+            self.context_max_entries.read(context_id)
         }
     }
 }

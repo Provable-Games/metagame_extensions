@@ -37,12 +37,12 @@ fn address4() -> ContractAddress {
 }
 
 /// Compute the leaf value (what gets passed to StandardMerkleTree)
-fn compute_leaf_value(address: ContractAddress, count: u8) -> felt252 {
+fn compute_leaf_value(address: ContractAddress, count: u32) -> felt252 {
     PedersenTrait::new(0).update(address.into()).update(count.into()).finalize()
 }
 
 /// Compute the StandardMerkleTree leaf hash: H(0, value, 1)
-fn compute_leaf_hash(address: ContractAddress, count: u8) -> felt252 {
+fn compute_leaf_hash(address: ContractAddress, count: u32) -> felt252 {
     let value = compute_leaf_value(address, count);
     PedersenTrait::new(0).update(value).update(1).finalize()
 }
@@ -60,10 +60,10 @@ fn commutative_hash(a: felt252, b: felt252) -> felt252 {
 
 /// Sorts 4 leaves and returns them in ascending order by u256 value.
 fn sort_leaves() -> (
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
 ) {
     // Use leaf_hash (not leaf_value) for sorting, as that's what the tree operates on
     let leaf1 = compute_leaf_hash(address1(), 3);
@@ -71,7 +71,7 @@ fn sort_leaves() -> (
     let leaf3 = compute_leaf_hash(address3(), 1);
     let leaf4 = compute_leaf_hash(address4(), 2);
 
-    let mut arr: Array<(felt252, ContractAddress, u8)> = array![
+    let mut arr: Array<(felt252, ContractAddress, u32)> = array![
         (leaf1, address1(), 3), (leaf2, address2(), 5), (leaf3, address3(), 1),
         (leaf4, address4(), 2),
     ];
@@ -91,8 +91,8 @@ fn sort_leaves() -> (
 }
 
 fn sort_two(
-    a: (felt252, ContractAddress, u8), b: (felt252, ContractAddress, u8),
-) -> ((felt252, ContractAddress, u8), (felt252, ContractAddress, u8)) {
+    a: (felt252, ContractAddress, u32), b: (felt252, ContractAddress, u32),
+) -> ((felt252, ContractAddress, u32), (felt252, ContractAddress, u32)) {
     let (a_leaf, _, _) = a;
     let (b_leaf, _, _) = b;
     let a_u256: u256 = a_leaf.into();
@@ -109,10 +109,10 @@ fn build_tree_parts() -> (
     felt252,
     felt252,
     felt252,
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
-    (felt252, ContractAddress, u8),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
+    (felt252, ContractAddress, u32),
 ) {
     let (s0, s1, s2, s3) = sort_leaves();
     let (s0_leaf, _, _) = s0;
@@ -154,7 +154,7 @@ fn deploy_merkle_validator() -> ContractAddress {
 }
 
 fn configure_merkle_validator(
-    validator_address: ContractAddress, context_id: u64, entry_limit: u8, root: felt252,
+    validator_address: ContractAddress, context_id: u64, entry_limit: u32, root: felt252,
 ) {
     let merkle = IMerkleValidatorDispatcher { contract_address: validator_address };
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
@@ -168,7 +168,7 @@ fn configure_merkle_validator(
     stop_cheat_caller_address(validator_address);
 }
 
-fn build_qualification(count: u8, proof: Span<felt252>) -> Array<felt252> {
+fn build_qualification(count: u32, proof: Span<felt252>) -> Array<felt252> {
     let mut qual: Array<felt252> = array![count.into()];
     let mut i: u32 = 0;
     while i < proof.len() {
@@ -200,7 +200,7 @@ fn test_merkle_valid_proof() {
     let (s2_leaf, _, _) = s2;
     let (s3_leaf, _, _) = s3;
 
-    let leaves: Array<(felt252, ContractAddress, u8)> = array![s0, s1, s2, s3];
+    let leaves: Array<(felt252, ContractAddress, u32)> = array![s0, s1, s2, s3];
     let mut i: u32 = 0;
     while i < 4 {
         let (_, addr, count) = *leaves.at(i);
@@ -274,7 +274,7 @@ fn test_merkle_wrong_count() {
     let (s2_leaf, _, _) = s2;
     let (s3_leaf, _, _) = s3;
 
-    let wrong_count: u8 = s0_count + 1;
+    let wrong_count: u32 = s0_count + 1;
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(wrong_count, proof.span());
     let valid = validator.valid_entry(context_id, s0_addr, qual.span());
@@ -295,7 +295,7 @@ fn test_merkle_entries_left() {
     let (s2_leaf, _, _) = s2;
     let (s3_leaf, _, _) = s3;
 
-    let leaves: Array<(felt252, ContractAddress, u8)> = array![s0, s1, s2, s3];
+    let leaves: Array<(felt252, ContractAddress, u32)> = array![s0, s1, s2, s3];
     let mut i: u32 = 0;
     while i < 4 {
         let (_, addr, count) = *leaves.at(i);
@@ -361,7 +361,7 @@ fn test_merkle_entry_limit_cap() {
     let (root, n01, n23, s0, s1, s2, s3) = build_tree_parts();
     let context_id: u64 = 1;
     let validator_address = deploy_merkle_validator();
-    let entry_limit: u8 = 2;
+    let entry_limit: u32 = 2;
     configure_merkle_validator(validator_address, context_id, entry_limit, root);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
@@ -371,7 +371,7 @@ fn test_merkle_entry_limit_cap() {
     let (s2_leaf, _, _) = s2;
     let (s3_leaf, _, _) = s3;
 
-    let leaves: Array<(felt252, ContractAddress, u8)> = array![s0, s1, s2, s3];
+    let leaves: Array<(felt252, ContractAddress, u32)> = array![s0, s1, s2, s3];
     let mut i: u32 = 0;
     let mut found = false;
     while i < 4 {
@@ -393,7 +393,7 @@ fn test_merkle_entry_limit_cap() {
 #[test]
 fn test_merkle_single_leaf() {
     let addr = address1();
-    let count: u8 = 3;
+    let count: u32 = 3;
     // For a single leaf, root = leaf_hash (no branch hashing needed)
     let root = compute_leaf_hash(addr, count);
 

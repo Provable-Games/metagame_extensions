@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { db, pool } from "../db/client.js";
 import { trees, treeEntries } from "../db/schema.js";
 import { buildTree, getProofFromDump } from "../merkle.js";
@@ -11,6 +11,19 @@ const app = new Hono();
  * List all trees with metadata.
  */
 app.get("/", async (c) => {
+  const page = Math.max(1, parseInt(c.req.query("page") ?? "1") || 1);
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(c.req.query("limit") ?? "20") || 20),
+  );
+  const offset = (page - 1) * limit;
+
+  const [countResult] = await db
+    .select({ count: count() })
+    .from(trees);
+
+  const total = countResult.count;
+
   const rows = await db
     .select({
       id: trees.id,
@@ -21,7 +34,9 @@ app.get("/", async (c) => {
       createdAt: trees.createdAt,
     })
     .from(trees)
-    .orderBy(trees.id);
+    .orderBy(trees.id)
+    .limit(limit)
+    .offset(offset);
 
   return c.json({
     data: rows.map((t) => ({
@@ -32,7 +47,10 @@ app.get("/", async (c) => {
       entryCount: t.entryCount,
       createdAt: t.createdAt.toISOString(),
     })),
-    total: rows.length,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
   });
 });
 

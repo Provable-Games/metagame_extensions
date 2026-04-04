@@ -10,7 +10,7 @@ pub trait IMerkleValidator<TState> {
         self: @TState,
         tree_id: u64,
         player_address: ContractAddress,
-        count: u8,
+        count: u32,
         proof: Span<felt252>,
     ) -> bool;
 }
@@ -58,8 +58,8 @@ pub mod MerkleValidator {
         // Context -> tree mapping
         context_tree: Map<u64, u64>,
         // Entry tracking
-        merkle_entry_limit: Map<u64, u8>,
-        merkle_entry_count: Map<(u64, ContractAddress), u8>,
+        merkle_entry_limit: Map<u64, u32>,
+        merkle_entry_count: Map<(u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -105,7 +105,7 @@ pub mod MerkleValidator {
     /// verify_pedersen which uses the same commutative hash (with length suffix).
     ///
     /// The leaf_hash passed to verify_pedersen must be the StandardMerkleTree leaf hash:
-    fn compute_leaf_hash(address: ContractAddress, count: u8) -> felt252 {
+    fn compute_leaf_hash(address: ContractAddress, count: u32) -> felt252 {
         // First compute the leaf value (what gets passed to StandardMerkleTree.of([[value]]))
         let leaf_value = PedersenTrait::new(0)
             .update(address.into())
@@ -125,7 +125,7 @@ pub mod MerkleValidator {
             assert!(qualification.len() >= 1, "MerkleValidator: qualification too short");
 
             let count_felt: felt252 = *qualification.at(0);
-            let count: u8 = count_felt.try_into().unwrap();
+            let count: u32 = count_felt.try_into().unwrap();
             let proof = qualification.slice(1, qualification.len() - 1);
 
             let tree_id = self.context_tree.read(context_id);
@@ -154,13 +154,13 @@ pub mod MerkleValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             if qualification.len() < 1 {
                 return Option::Some(0);
             }
 
             let count_felt: felt252 = *qualification.at(0);
-            let count: u8 = count_felt.try_into().unwrap();
+            let count: u32 = count_felt.try_into().unwrap();
             let proof = qualification.slice(1, qualification.len() - 1);
 
             let tree_id = self.context_tree.read(context_id);
@@ -191,7 +191,7 @@ pub mod MerkleValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             assert!(config.len() >= 1, "MerkleValidator: config must contain tree ID");
             let tree_id_felt: felt252 = *config.at(0);
@@ -260,7 +260,7 @@ pub mod MerkleValidator {
             self: @ContractState,
             tree_id: u64,
             player_address: ContractAddress,
-            count: u8,
+            count: u32,
             proof: Span<felt252>,
         ) -> bool {
             let root = self.tree_roots.read(tree_id);
