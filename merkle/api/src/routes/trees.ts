@@ -3,6 +3,7 @@ import { eq, and, count } from "drizzle-orm";
 import { db, pool } from "../db/client.js";
 import { trees, treeEntries } from "../db/schema.js";
 import { buildTree, getProofFromDump } from "../merkle.js";
+import { getOnChainTreeRoot } from "../onchain.js";
 
 const app = new Hono();
 
@@ -101,6 +102,35 @@ app.post("/", async (c) => {
   }
 
   const result = buildTree(body.entries);
+
+  // Verify the computed root matches what's registered on-chain
+  const onChainRoot = await getOnChainTreeRoot(body.id);
+  if (onChainRoot === null) {
+    return c.json(
+      {
+        error:
+          "Could not verify tree on-chain. Ensure MERKLE_VALIDATOR_ADDRESS and STARKNET_RPC_URL are configured.",
+      },
+      503,
+    );
+  }
+
+  if (BigInt(onChainRoot) === 0n) {
+    return c.json(
+      { error: `Tree ${body.id} does not exist on-chain` },
+      404,
+    );
+  }
+
+  if (BigInt(onChainRoot) !== BigInt(result.root)) {
+    return c.json(
+      {
+        error:
+          "Computed merkle root does not match on-chain root. Entries may be incorrect.",
+      },
+      403,
+    );
+  }
 
   const [tree] = await db
     .insert(trees)
