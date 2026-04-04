@@ -174,7 +174,7 @@ fn build_qualification(count: u8, proof: Span<felt252>) -> Array<felt252> {
     while i < proof.len() {
         qual.append(*proof.at(i));
         i += 1;
-    };
+    }
     qual
 }
 
@@ -386,7 +386,7 @@ fn test_merkle_entry_limit_cap() {
             break;
         }
         i += 1;
-    };
+    }
     assert!(found, "address2 should be found in sorted leaves");
 }
 

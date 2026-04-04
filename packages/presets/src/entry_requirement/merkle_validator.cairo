@@ -92,7 +92,8 @@ pub mod MerkleValidator {
     /// and the tree library handles the leaf hashing (pedersen(0, value, 1)).
     ///
     /// For our use case, the leaf value passed to the tree is:
-    ///   pedersen(pedersen(0, address), count)  (i.e. PedersenTrait::new(0).update(addr).update(count).finalize())
+    ///   pedersen(pedersen(0, address), count)  (i.e.
+    ///   PedersenTrait::new(0).update(addr).update(count).finalize())
     ///
     /// The StandardMerkleTree then applies its leaf hash:
     ///   leaf_hash = PedersenTrait::new(0).update(value).update(1).finalize()
@@ -225,7 +226,6 @@ pub mod MerkleValidator {
             }
         }
     }
-
     use super::IMerkleValidator;
     #[abi(embed_v0)]
     impl MerkleValidatorImpl of IMerkleValidator<ContractState> {
