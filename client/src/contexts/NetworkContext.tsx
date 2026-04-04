@@ -30,12 +30,19 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   const { chain } = useNetwork();
 
   const value = useMemo(() => {
+    // URL param takes precedence so shared links work regardless of wallet state
+    const urlChainId = getDefaultChainId();
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasUrlParam = urlParams.has("network");
+
     let chainId: ChainId;
-    if (chain?.id) {
+    if (hasUrlParam) {
+      chainId = urlChainId;
+    } else if (chain?.id) {
       const name = feltToShortString(chain.id);
       chainId = name === "SN_SEPOLIA" ? "SN_SEPOLIA" : "SN_MAIN";
     } else {
-      chainId = getDefaultChainId();
+      chainId = urlChainId;
     }
 
     const chainConfig = getNetworkConfig(chainId);

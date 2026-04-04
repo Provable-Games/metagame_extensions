@@ -17,7 +17,7 @@ export function NetworkSwitcher() {
   const { chainConfig, isMainnet } = useChainConfig();
   const { switchToMainnet, switchToSepolia } = useSwitchNetwork();
 
-  if (status !== "connected") return null;
+  // Show switcher always so shared links can be changed before connecting
 
   return (
     <DropdownMenu>
