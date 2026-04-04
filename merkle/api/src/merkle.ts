@@ -38,7 +38,7 @@ const leafIndexCache = new Map<number, Map<bigint, number>>();
  * Build (or retrieve from cache) a Map from leaf BigInt value to its index
  * in the merkle tree, enabling O(1) proof lookups.
  */
-export function getLeafIndexMap(
+function getLeafIndexMap(
   treeId: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   treeDump: any,
@@ -56,62 +56,21 @@ export function getLeafIndexMap(
 }
 
 /**
- * Invalidate the cached leaf index map for a tree (e.g. if the tree is rebuilt).
- */
-export function invalidateLeafIndexCache(treeId: number): void {
-  leafIndexCache.delete(treeId);
-}
-
-/**
- * Get proof for an address from a tree dump. Computed on-demand.
- * When treeId is provided, uses a cached leaf-to-index map for O(1) lookup.
+ * Get proof for an address from a tree dump using cached O(1) index lookup.
  */
 export function getProofFromDump(
+  treeId: number,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   treeDump: any,
   address: string,
   count: number,
-  treeId?: number,
 ): string[] | null {
   const tree = StandardMerkleTree.load(treeDump);
   const leafValue = computeLeafValue(address, count);
-  const leafBigInt = BigInt(leafValue);
-
-  // Fast path: use cached index map
-  if (treeId !== undefined) {
-    const indexMap = getLeafIndexMap(treeId, treeDump);
-    const index = indexMap.get(leafBigInt);
-    if (index !== undefined) {
-      return tree.getProof(index);
-    }
-    return null;
+  const indexMap = getLeafIndexMap(treeId, treeDump);
+  const index = indexMap.get(BigInt(leafValue));
+  if (index !== undefined) {
+    return tree.getProof(index);
   }
-
-  // Fallback: O(n) scan for backward compatibility
-  for (const [index, leaf] of tree.entries()) {
-    if (BigInt(leaf[0] as string) === leafBigInt) {
-      return tree.getProof(index);
-    }
-  }
-
   return null;
-}
-
-/**
- * Find an entry's count from a tree dump by address.
- */
-export function findEntryInDump(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  treeDump: any,
-  entries: MerkleEntry[],
-  address: string,
-): MerkleEntry | null {
-  const normalized = address.toLowerCase();
-  return (
-    entries.find(
-      (e) =>
-        e.address.toLowerCase() === normalized ||
-        BigInt(e.address) === BigInt(address),
-    ) || null
-  );
 }

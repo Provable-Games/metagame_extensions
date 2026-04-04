@@ -7,13 +7,9 @@ const MIGRATION_SQL = `
     description TEXT NOT NULL DEFAULT '',
     root TEXT NOT NULL,
     entry_count INTEGER NOT NULL,
-    entries JSONB NOT NULL,
     tree_dump JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL
   );
-
-  ALTER TABLE trees ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-  ALTER TABLE trees ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
 
   CREATE TABLE IF NOT EXISTS tree_entries (
     id SERIAL PRIMARY KEY,
@@ -23,9 +19,6 @@ const MIGRATION_SQL = `
   );
 
   CREATE UNIQUE INDEX IF NOT EXISTS tree_entries_tree_id_address_unique
-    ON tree_entries (tree_id, address);
-
-  CREATE INDEX IF NOT EXISTS tree_entries_tree_id_address_idx
     ON tree_entries (tree_id, address);
 `;
 
