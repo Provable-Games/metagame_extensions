@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Plus, Trash2, GitBranch, Copy, Check } from "lucide-react";
 import { buildMerkleTree, type MerkleEntry } from "@/utils/merkleTree";
 import { useChainConfig } from "@/contexts/NetworkContext";
-import { MERKLE_API_URL } from "@/networks";
+import { getMerkleApiUrl } from "@/networks";
 
 export function CreateMerkleTree() {
   const { account } = useAccount();
@@ -132,7 +132,8 @@ export function CreateMerkleTree() {
 
       // Step 3: Store in API with the on-chain tree ID
       setStatus("Storing proofs in API...");
-      const res = await fetch(`${MERKLE_API_URL}/trees`, {
+      const merkleApiUrl = getMerkleApiUrl(chainConfig.chainId);
+      const res = await fetch(`${merkleApiUrl}/trees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: treeId, name: treeName, description: treeDescription, entries }),
@@ -366,7 +367,7 @@ export function CreateMerkleTree() {
                 when configuring contexts with the Merkle Validator.
               </p>
               <p className="text-xs text-green-700 dark:text-green-300">
-                Proofs: {MERKLE_API_URL}/trees/{result.treeId}/proof/ADDRESS
+                Proofs: {getMerkleApiUrl(chainConfig.chainId)}/trees/{result.treeId}/proof/ADDRESS
               </p>
             </div>
           </CardContent>

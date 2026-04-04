@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, Copy, Check } from "lucide-react";
-import { MERKLE_API_URL } from "@/networks";
+import { getMerkleApiUrl } from "@/networks";
+import { useChainConfig } from "@/contexts/NetworkContext";
 
 export function MerkleProofLookup() {
+  const { chainConfig } = useChainConfig();
   const [treeId, setTreeId] = useState("");
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export function MerkleProofLookup() {
     setProofResult(null);
     try {
       const res = await fetch(
-        `${MERKLE_API_URL}/trees/${treeId}/proof/${address.toLowerCase()}`,
+        `${getMerkleApiUrl(chainConfig.chainId)}/trees/${treeId}/proof/${address.toLowerCase()}`,
       );
       if (!res.ok) {
         const data = await res.json();

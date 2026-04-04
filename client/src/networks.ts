@@ -17,9 +17,18 @@ export interface ChainConfig {
   merkleValidatorAddress?: `0x${string}`;
 }
 
-export const MERKLE_API_URL =
-  import.meta.env.VITE_MERKLE_API_URL ||
-  "https://metagame-merkle-api.up.railway.app";
+export const MERKLE_API_URLS: Record<ChainId, string> = {
+  SN_SEPOLIA:
+    import.meta.env.VITE_SEPOLIA_MERKLE_API_URL ||
+    "https://metagame-merkle-api.up.railway.app",
+  SN_MAIN:
+    import.meta.env.VITE_MAINNET_MERKLE_API_URL ||
+    "https://metagame-merkle-api.up.railway.app",
+};
+
+export function getMerkleApiUrl(chainId: ChainId): string {
+  return MERKLE_API_URLS[chainId];
+}
 
 export const CHAIN_ID_FELTS: Record<ChainId, string> = {
   SN_MAIN: "0x534e5f4d41494e",

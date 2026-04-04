@@ -1,4 +1,3 @@
-import { useAccount } from "@starknet-react/core";
 import { Globe } from "lucide-react";
 import { useChainConfig } from "@/contexts/NetworkContext";
 import { useSwitchNetwork } from "@/hooks/useSwitchNetwork";
@@ -13,7 +12,6 @@ import {
 } from "./ui/dropdown-menu";
 
 export function NetworkSwitcher() {
-  const { status } = useAccount();
   const { chainConfig, isMainnet } = useChainConfig();
   const { switchToMainnet, switchToSepolia } = useSwitchNetwork();
 
