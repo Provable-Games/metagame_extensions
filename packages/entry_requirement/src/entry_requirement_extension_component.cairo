@@ -6,8 +6,6 @@ pub mod EntryRequirementExtensionComponent {
     use core::num::traits::Zero;
     use metagame_extensions_interfaces::entry_requirement_extension::{
         IENTRY_REQUIREMENT_EXTENSION_ID, IEntryRequirementExtension,
-        LEGACY_IENTRY_REQUIREMENT_EXTENSION_ID_V3, LEGACY_IENTRY_VALIDATOR_ID_V1,
-        LEGACY_IENTRY_VALIDATOR_ID_V2,
     };
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
@@ -187,9 +185,6 @@ pub mod EntryRequirementExtensionComponent {
 
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IENTRY_REQUIREMENT_EXTENSION_ID);
-            src5_component.register_interface(LEGACY_IENTRY_REQUIREMENT_EXTENSION_ID_V3);
-            src5_component.register_interface(LEGACY_IENTRY_VALIDATOR_ID_V2);
-            src5_component.register_interface(LEGACY_IENTRY_VALIDATOR_ID_V1);
         }
 
         fn get_context_owner(

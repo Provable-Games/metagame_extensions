@@ -6,7 +6,7 @@
 pub mod EntryFeeExtensionComponent {
     use core::num::traits::Zero;
     use metagame_extensions_interfaces::entry_fee_extension::{
-        IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension, LEGACY_IENTRY_FEE_EXTENSION_ID,
+        IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension,
     };
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
@@ -84,7 +84,6 @@ pub mod EntryFeeExtensionComponent {
         fn initializer(ref self: ComponentState<TContractState>) {
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IENTRY_FEE_EXTENSION_ID);
-            src5_component.register_interface(LEGACY_IENTRY_FEE_EXTENSION_ID);
         }
 
         fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {

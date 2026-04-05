@@ -1,11 +1,9 @@
 use starknet::ContractAddress;
 
+/// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
+/// - context_owner, add_prize, claim_prize
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x02e7351c43ff3a80ab04f2fb889cd9bc0b885243574fb5db3e5fa4a9bca3f332;
-
-/// Legacy interface ID from when the trait used single `owner_address()`.
-pub const LEGACY_IPRIZE_EXTENSION_ID: felt252 =
-    0x81dddaf0108625e748615f819e4dd9c9ef6bc6fa5386be1520440780699de0;
+    0x392092021f090ebe4ed2465b9c7a988663e13abd1f66a117781968490890eb6;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {

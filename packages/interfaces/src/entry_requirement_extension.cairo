@@ -1,18 +1,10 @@
 use starknet::ContractAddress;
 
+/// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
+/// - context_owner, registration_only, valid_entry, should_ban,
+///   entries_left, add_config, add_entry, remove_entry
 pub const IENTRY_REQUIREMENT_EXTENSION_ID: felt252 =
-    0x0246df26c275bb93d66fdc2d8ce9eeec84a7fcf7e82fe115797f30a95cd03a79;
-
-/// Legacy interface IDs for backward compatibility with deployed contracts.
-/// V3: from when the trait used single `owner_address()` instead of `context_owner(context_id)`.
-/// V2: from when the trait used `tournament_id` / `game_token_id: u64`.
-/// V1: from when the trait used `budokan_address` instead of `owner_address`.
-pub const LEGACY_IENTRY_REQUIREMENT_EXTENSION_ID_V3: felt252 =
-    0x03932b83d6f280c123c10e3eec69c9f5776a2a1de7b7d401120c49a9936954fa;
-pub const LEGACY_IENTRY_VALIDATOR_ID_V2: felt252 =
-    0x73b204ef90f88bbdf6a178473d1445e76fd9a48a188c6659cb93f988b8458a;
-pub const LEGACY_IENTRY_VALIDATOR_ID_V1: felt252 =
-    0x01158754d5cc62137c4de2cbd0e65cbd163990af29f0182006f26fe0cac00bb6;
+    0x14b9d09eb1e1cc70379a716ec48881b23799f24e8652eeec720a46c6c076618;
 
 #[starknet::interface]
 pub trait IEntryRequirementExtension<TState> {
