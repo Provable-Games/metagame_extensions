@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Open Entry Validator Deployment Script
-# Deploys the open_entry_validator_mock contract to Starknet
+# Merkle Validator Deployment Script
+# Deploys the MerkleValidator contract to Starknet
 
 set -euo pipefail
 
@@ -49,13 +49,6 @@ case "$STARKNET_NETWORK" in
         ;;
 esac
 
-# Check if required environment variables are set
-print_info "Checking environment variables..."
-
-required_vars=()
-
-missing_vars=()
-
 # Debug output for environment variables
 print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
@@ -66,21 +59,6 @@ echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
 URL_FLAG=""
 if [ -n "${STARKNET_RPC:-}" ]; then
     URL_FLAG="--url $STARKNET_RPC"
-fi
-
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var:-}" ]; then
-        missing_vars+=("$var")
-    fi
-done
-
-if [ ${#missing_vars[@]} -ne 0 ]; then
-    print_error "The following required environment variables are not set:"
-    for var in "${missing_vars[@]}"; do
-        echo "  - $var"
-    done
-    echo "Please set these variables before running the script."
-    exit 1
 fi
 
 # ============================
@@ -111,9 +89,9 @@ print_info "Building contracts..."
 cd "$SCRIPT_DIR/.."
 scarb build
 
-if [ ! -f "target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json" ]; then
-    print_error "open_entry_validator_mock contract build failed or contract file not found"
-    print_error "Expected: target/dev/metagame_extensions_test_common_open_entry_validator_mock.contract_class.json"
+if [ ! -f "target/dev/metagame_extensions_presets_MerkleValidator.contract_class.json" ]; then
+    print_error "MerkleValidator contract build failed or contract file not found"
+    print_error "Expected: target/dev/metagame_extensions_presets_MerkleValidator.contract_class.json"
     echo "Available contract files:"
     ls -la target/dev/*.contract_class.json 2>/dev/null || echo "No contract files found"
     exit 1
@@ -125,8 +103,8 @@ fi
 
 print_info "Calculating class hash from artifact..."
 CLASS_HASH_OUTPUT=$(sncast --profile $SNCAST_PROFILE utils class-hash \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common 2>&1)
+    --contract-name MerkleValidator \
+    --package metagame_extensions_presets 2>&1)
 CLASS_HASH=$(echo "$CLASS_HASH_OUTPUT" | grep -oE '0x[0-9a-fA-F]+' | head -1)
 
 if [ -z "$CLASS_HASH" ]; then
@@ -137,15 +115,15 @@ fi
 print_info "Class hash: $CLASS_HASH"
 
 # ============================
-# DECLARE OPEN ENTRY VALIDATOR
+# DECLARE MERKLE VALIDATOR
 # ============================
 
-print_info "Declaring open_entry_validator_mock contract..."
+print_info "Declaring MerkleValidator contract..."
 
 DECLARE_OUTPUT=$(sncast --profile $SNCAST_PROFILE --wait declare \
     $URL_FLAG \
-    --contract-name open_entry_validator_mock \
-    --package metagame_extensions_test_common \
+    --contract-name MerkleValidator \
+    --package metagame_extensions_presets \
     2>&1) || true
 
 # Check declaration result
@@ -173,13 +151,13 @@ if [ -z "$CLASS_HASH" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock class hash: $CLASS_HASH"
+print_info "MerkleValidator class hash: $CLASS_HASH"
 
 # ============================
-# DEPLOY OPEN ENTRY VALIDATOR
+# DEPLOY MERKLE VALIDATOR
 # ============================
 
-print_info "Deploying open_entry_validator_mock contract..."
+print_info "Deploying MerkleValidator contract..."
 
 # Retry deployment up to 3 times
 MAX_RETRIES=3
@@ -215,13 +193,13 @@ if [ -z "$CONTRACT_ADDRESS" ]; then
     exit 1
 fi
 
-print_info "open_entry_validator_mock contract deployed at address: $CONTRACT_ADDRESS"
+print_info "MerkleValidator contract deployed at address: $CONTRACT_ADDRESS"
 
 # ============================
 # SAVE DEPLOYMENT INFO
 # ============================
 
-DEPLOYMENT_FILE="deployments/open_entry_validator_$(date +%Y%m%d_%H%M%S).json"
+DEPLOYMENT_FILE="deployments/merkle_validator_$(date +%Y%m%d_%H%M%S).json"
 mkdir -p deployments
 
 cat > "$DEPLOYMENT_FILE" << EOF
@@ -229,10 +207,10 @@ cat > "$DEPLOYMENT_FILE" << EOF
   "network": "$STARKNET_NETWORK",
   "profile": "$SNCAST_PROFILE",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "open_entry_validator": {
+  "merkle_validator": {
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
-    "description": "Open entry validator that allows all players to enter without token requirements",
+    "description": "Merkle tree-based entry validator using Pedersen proofs for allowlist/weighted entries",
     "registration_only": false
   }
 }
@@ -247,24 +225,31 @@ print_info "Deployment info saved to: $DEPLOYMENT_FILE"
 echo
 print_info "=== DEPLOYMENT SUCCESSFUL ==="
 echo
-echo "Open Entry Validator Contract:"
+echo "Merkle Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
 echo ""
 
 echo "Next steps:"
-echo "1. Verify the contract on Starkscan/Voyager"
-echo "2. Test the valid_entry function to ensure anyone can enter"
-echo "3. Integrate with your game contracts"
+echo "1. Create a merkle tree by calling create_tree(root) with your computed root"
+echo "2. Use the returned tree_id when configuring tournaments via add_config"
+echo "3. Players submit merkle proofs as qualification data to enter tournaments"
 echo ""
 
 echo "To interact with the contract:"
-echo "  export ENTRY_VALIDATOR=$CONTRACT_ADDRESS"
+echo "  export MERKLE_VALIDATOR=$CONTRACT_ADDRESS"
 echo ""
 
-echo "Example: Test entry validation:"
+echo "Example: Create a merkle tree:"
+echo "  sncast --profile $SNCAST_PROFILE --url \$STARKNET_RPC invoke \\"
+echo "    --contract-address \$MERKLE_VALIDATOR \\"
+echo "    --function create_tree \\"
+echo "    --calldata <merkle_root>"
+echo ""
+
+echo "Example: Verify a proof:"
 echo "  sncast --profile $SNCAST_PROFILE --url \$STARKNET_RPC call \\"
-echo "    --contract-address \$ENTRY_VALIDATOR \\"
-echo "    --function valid_entry \\"
-echo "    --calldata <player_address> 0"
+echo "    --contract-address \$MERKLE_VALIDATOR \\"
+echo "    --function verify_proof \\"
+echo "    --calldata <tree_id> <player_address> <count> <proof_len> <proof...>"
 echo ""

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useReadContract } from "@starknet-react/core";
+import { Coins } from "lucide-react";
 import { useChainConfig } from "@/contexts/NetworkContext";
 import { ERC20_BALANCE_VALIDATOR_ABI } from "@/utils/contracts";
 import { ValidatorConfigCard } from "@/components/ValidatorConfigCard";
 import { EligibilityChecker } from "@/components/EligibilityChecker";
 import { AddressDisplay } from "@/components/AddressDisplay";
+import { PageHeader } from "@/components/PageHeader";
 
 export function ERC20BalanceValidatorPage() {
   const { chainConfig } = useChainConfig();
@@ -57,63 +59,58 @@ export function ERC20BalanceValidatorPage() {
   const hasData = tokenAddress !== undefined;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">ERC20 Balance Validator</h1>
-        <p className="text-muted-foreground mt-2">
-          Entry validation based on ERC20 token balance thresholds
-        </p>
-        {validatorAddress && (
-          <p className="text-xs text-muted-foreground mt-1 font-mono">
-            {validatorAddress}
-          </p>
-        )}
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader
+        title="ERC20 Balance validator"
+        description="Entry validation based on ERC20 token balance thresholds"
+        icon={Coins}
+        contractAddress={validatorAddress}
+      />
 
       {!validatorAddress ? (
-        <div className="text-sm text-muted-foreground bg-muted rounded-md p-4">
+        <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
           This validator is not deployed on the current network.
         </div>
       ) : (
         <>
           <ValidatorConfigCard
-            title="Context Config"
+            title="Context config"
             description="View the ERC20 balance requirements for a context"
             contextId={contextId}
             onContextIdChange={setContextId}
             isLoading={isLoading}
             hasData={!!hasData}
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Token Address</p>
+                <p className="text-xs text-muted-foreground mb-1">Token address</p>
                 {tokenAddress ? (
                   <AddressDisplay address={String(tokenAddress)} />
                 ) : (
-                  <p className="text-sm">-</p>
+                  <p className="text-sm text-muted-foreground">-</p>
                 )}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Max Entries</p>
-                <p className="text-sm font-semibold">
+                <p className="text-xs text-muted-foreground mb-1">Max entries</p>
+                <p className="text-sm font-medium tabular-nums">
                   {maxEntries !== undefined ? String(maxEntries) : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Min Threshold</p>
-                <p className="text-sm font-mono">
+                <p className="text-xs text-muted-foreground mb-1">Min threshold</p>
+                <p className="text-sm font-mono tabular-nums">
                   {minThreshold !== undefined ? String(minThreshold) : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Max Threshold</p>
-                <p className="text-sm font-mono">
+                <p className="text-xs text-muted-foreground mb-1">Max threshold</p>
+                <p className="text-sm font-mono tabular-nums">
                   {maxThreshold !== undefined ? String(maxThreshold) : "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Value Per Entry</p>
-                <p className="text-sm font-mono">
+                <p className="text-xs text-muted-foreground mb-1">Value per entry</p>
+                <p className="text-sm font-mono tabular-nums">
                   {valuePerEntry !== undefined ? String(valuePerEntry) : "-"}
                 </p>
               </div>

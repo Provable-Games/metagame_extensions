@@ -1,179 +1,187 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useChainConfig } from "@/contexts/NetworkContext";
-import { MERKLE_VALIDATOR_ABI } from "@/utils/contracts";
-import { ValidatorConfigCard } from "@/components/ValidatorConfigCard";
-import { useReadContract } from "@starknet-react/core";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, GitBranch } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/PageHeader";
+import {
+  Plus,
+  GitBranch,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Search,
+  ArrowRight,
+} from "lucide-react";
+import {
+  fetchMerkleTrees,
+  type MerkleTree,
+  type MerkleTreesResponse,
+} from "@provable-games/metagame-sdk";
 
 export function MerkleValidatorPage() {
   const { chainConfig } = useChainConfig();
   const validatorAddress = chainConfig.merkleValidatorAddress;
-  const [contextId, setContextId] = useState("");
 
-  const queryArgs = contextId ? [BigInt(contextId)] : undefined;
+  const [treesResponse, setTreesResponse] =
+    useState<MerkleTreesResponse | null>(null);
+  const [treesLoading, setTreesLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [search, setSearch] = useState("");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: treeId, isLoading: loadingTreeId } = useReadContract({
-    address: validatorAddress as `0x${string}`,
-    abi: MERKLE_VALIDATOR_ABI,
-    functionName: "get_context_tree",
-    args: queryArgs,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any);
+  useEffect(() => {
+    if (!validatorAddress) return;
+    setTreesLoading(true);
+    fetchMerkleTrees({ page, limit, chainId: chainConfig.chainId })
+      .then(setTreesResponse)
+      .finally(() => setTreesLoading(false));
+  }, [validatorAddress, page, chainConfig.chainId]);
 
-  const treeIdNum = treeId !== undefined ? Number(treeId) : undefined;
+  const trees = treesResponse?.data ?? [];
+  const totalPages = treesResponse?.totalPages ?? 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: merkleRoot, isLoading: loadingRoot } = useReadContract({
-    address: validatorAddress as `0x${string}`,
-    abi: MERKLE_VALIDATOR_ABI,
-    functionName: "get_tree_root",
-    args: treeIdNum ? [BigInt(treeIdNum)] : undefined,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any);
-
-  const isLoading = loadingTreeId || loadingRoot;
-  const hasData = treeIdNum !== undefined;
+  const filteredTrees = useMemo(() => {
+    if (!search.trim()) return trees;
+    const q = search.trim().toLowerCase();
+    return trees.filter(
+      (t) =>
+        String(t.id) === q ||
+        String(t.id).includes(q) ||
+        t.name.toLowerCase().includes(q),
+    );
+  }, [trees, search]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Merkle Validator</h1>
-        <p className="text-muted-foreground mt-2">
-          Entry validation using merkle tree proofs for allowlist-based access
-        </p>
-        {validatorAddress && (
-          <p className="text-xs text-muted-foreground mt-1 font-mono">
-            {validatorAddress}
-          </p>
-        )}
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader
+        title="Merkle validator"
+        description="Allowlist-based entry validation using merkle proofs"
+        icon={GitBranch}
+        contractAddress={validatorAddress}
+        action={
+          validatorAddress ? (
+            <Link to="/merkle/create">
+              <Button size="sm">
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Create tree
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
       {!validatorAddress ? (
-        <div className="text-sm text-muted-foreground bg-muted rounded-md p-4">
+        <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
           This validator is not deployed on the current network.
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Create Merkle Tree
-                </CardTitle>
-                <CardDescription>
-                  Build a merkle tree from a list of addresses and entry counts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link to="/merkle/create">
-                  <Button className="w-full">Create Tree</Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Proof Lookup
-                </CardTitle>
-                <CardDescription>
-                  Look up an address in a merkle tree to get its proof for
-                  contract calls
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link to="/merkle/proof">
-                  <Button variant="outline" className="w-full">
-                    Lookup Proof
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-
-          <ValidatorConfigCard
-            title="Context Config"
-            description="View the merkle root configured for a context"
-            contextId={contextId}
-            onContextIdChange={setContextId}
-            isLoading={isLoading}
-            hasData={!!hasData}
-          >
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Tree ID</p>
-                <p className="text-sm font-semibold">
-                  {treeIdNum !== undefined && treeIdNum > 0 ? `#${treeIdNum}` : "Not configured"}
-                </p>
+          {treesLoading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span className="text-sm">Loading trees...</span>
+            </div>
+          ) : trees.length === 0 ? (
+            <div className="text-center py-16 space-y-3">
+              <div className="rounded-lg bg-muted/50 p-3 inline-block">
+                <GitBranch className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Merkle Root</p>
-                <p className="text-sm font-mono break-all">
-                  {merkleRoot !== undefined ? String(merkleRoot) : "-"}
+                <p className="text-sm text-muted-foreground">
+                  No trees created yet
                 </p>
+                <Link
+                  to="/merkle/create"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Create your first tree
+                </Link>
               </div>
             </div>
-          </ValidatorConfigCard>
+          ) : (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by ID or name..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GitBranch className="h-5 w-5" />
-                How It Works
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold">
-                  1
+              {filteredTrees.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No trees match "{search}"
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredTrees.map((tree: MerkleTree) => (
+                    <Link
+                      key={tree.id}
+                      to={`/merkle/tree/${tree.id}`}
+                      className="group block"
+                    >
+                      <div className="rounded-xl border border-border/60 bg-card p-4 flex items-start justify-between gap-4 transition-all duration-200 hover:border-primary/30 hover:bg-accent/30 active:scale-[0.99]">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              #{tree.id}
+                            </span>
+                            <span className="text-sm text-muted-foreground truncate">
+                              {tree.name}
+                            </span>
+                          </div>
+                          {tree.description && (
+                            <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">
+                              {tree.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm tabular-nums">
+                              {tree.entryCount}{" "}
+                              {tree.entryCount === 1 ? "address" : "addresses"}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground/60">
+                              {new Date(tree.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-                <div>
-                  <h3 className="font-semibold">Build a Merkle Tree</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Use the Create Merkle Tree page to build a tree from
-                    addresses and entry counts, then download the tree data as
-                    JSON
-                  </p>
+              )}
+
+              {totalPages > 1 && !search && (
+                <div className="flex items-center justify-between pt-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-semibold">Register Tree On-Chain</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Register the merkle root on-chain to get a Tree ID, then
-                    reference that ID when configuring contexts
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold">
-                  3
-                </div>
-                <div>
-                  <h3 className="font-semibold">Generate Proofs</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Use the Proof Lookup page to generate merkle proofs for
-                    individual addresses to use as qualification data
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

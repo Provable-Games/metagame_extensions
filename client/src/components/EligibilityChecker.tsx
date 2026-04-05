@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAccount, useReadContract } from "@starknet-react/core";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, XCircle, Search } from "lucide-react";
+import { CheckCircle, XCircle, Search, Loader2 } from "lucide-react";
 
 interface QualificationField {
   name: string;
@@ -63,7 +62,6 @@ export function EligibilityChecker({
 
   const isLoading = isLoadingValid || isLoadingEntries;
 
-  // Parse the boolean result from Cairo enum
   const isEligible = validEntryData !== undefined
     ? typeof validEntryData === "boolean"
       ? validEntryData
@@ -73,7 +71,6 @@ export function EligibilityChecker({
         : false
     : undefined;
 
-  // Parse entries_left Option<u8>
   const entriesLeft = entriesLeftData !== undefined
     ? typeof entriesLeftData === "object" && entriesLeftData !== null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,7 +79,7 @@ export function EligibilityChecker({
         ? Number((entriesLeftData as any).Some)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : "None" in (entriesLeftData as any)
-          ? null // None = unlimited
+          ? null
           : typeof entriesLeftData === "number" ? entriesLeftData : undefined
       : typeof entriesLeftData === "number"
         ? entriesLeftData
@@ -90,22 +87,22 @@ export function EligibilityChecker({
     : undefined;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Check Eligibility</CardTitle>
-        <CardDescription>
-          Check if a player is eligible for a context with this validator
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="rounded-xl border border-border/60 bg-card">
+      <div className="p-5 pb-0">
+        <h3 className="text-sm font-medium">Check eligibility</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Verify if a player meets the entry requirements for a context
+        </p>
+      </div>
+      <div className="p-5 space-y-4">
         {!validatorAddress && (
-          <div className="text-sm text-muted-foreground bg-muted rounded-md p-3">
+          <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
             This validator is not deployed on the current network.
           </div>
         )}
 
         <div>
-          <Label htmlFor="elig-context-id">Context ID</Label>
+          <Label htmlFor="elig-context-id" className="text-xs">Context ID</Label>
           <Input
             id="elig-context-id"
             type="number"
@@ -113,23 +110,25 @@ export function EligibilityChecker({
             value={contextId}
             onChange={(e) => { setContextId(e.target.value); setChecked(false); }}
             disabled={!validatorAddress}
+            className="mt-1.5"
           />
         </div>
 
         <div>
-          <Label htmlFor="elig-player-address">Player Address</Label>
+          <Label htmlFor="elig-player-address" className="text-xs">Player address</Label>
           <Input
             id="elig-player-address"
             placeholder="0x..."
             value={playerAddress}
             onChange={(e) => { setPlayerAddress(e.target.value); setChecked(false); }}
             disabled={!validatorAddress}
+            className="mt-1.5"
           />
         </div>
 
         {qualificationFields.map((field, index) => (
           <div key={field.name}>
-            <Label htmlFor={`qual-${field.name}`}>{field.name}</Label>
+            <Label htmlFor={`qual-${field.name}`} className="text-xs">{field.name}</Label>
             <Input
               id={`qual-${field.name}`}
               placeholder={field.placeholder}
@@ -141,6 +140,7 @@ export function EligibilityChecker({
                 setChecked(false);
               }}
               disabled={!validatorAddress}
+              className="mt-1.5"
             />
           </div>
         ))}
@@ -149,38 +149,46 @@ export function EligibilityChecker({
           onClick={handleCheck}
           disabled={!validatorAddress || !contextId || !playerAddress}
           className="w-full"
+          size="sm"
         >
-          <Search className="h-4 w-4 mr-2" />
-          Check Eligibility
+          <Search className="h-3.5 w-3.5 mr-1.5" />
+          Check eligibility
         </Button>
 
+        {checked && isLoading && (
+          <div className="flex items-center justify-center text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <span className="text-xs">Checking...</span>
+          </div>
+        )}
+
         {checked && shouldQuery && !isLoading && isEligible !== undefined && (
-          <div className="bg-muted rounded-md p-4 space-y-2">
+          <div className={`rounded-lg p-4 ${
+            isEligible
+              ? "bg-emerald-500/10 border border-emerald-500/20"
+              : "bg-destructive/10 border border-destructive/20"
+          }`}>
             <div className="flex items-center gap-2">
               {isEligible ? (
                 <>
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="font-semibold text-green-600 dark:text-green-400">Eligible</span>
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Eligible</span>
                 </>
               ) : (
                 <>
-                  <XCircle className="h-5 w-5 text-red-500" />
-                  <span className="font-semibold text-red-600 dark:text-red-400">Not Eligible</span>
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <span className="text-sm font-medium text-destructive">Not eligible</span>
                 </>
               )}
             </div>
             {entriesLeft !== undefined && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1.5 ml-6">
                 Entries remaining: {entriesLeft === null ? "Unlimited" : entriesLeft}
               </p>
             )}
           </div>
         )}
-
-        {checked && isLoading && (
-          <div className="text-center text-muted-foreground py-2">Checking...</div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,10 @@ module.exports = {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    fontFamily: {
+      sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+      mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

@@ -19,7 +19,7 @@ services:
       PORT: "3002"
       ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174"
       STARKNET_RPC_URL: "https://api.cartridge.gg/x/starknet/sepolia"
-      MERKLE_VALIDATOR_ADDRESS: "0x048a24bb277dd9659997b92b18aea10c209713f817a549a5154c63677de6ea14"
+      MERKLE_VALIDATOR_ADDRESS: "0x07a5b716c65ac5726ecd0b023ff1b4cc9090820707a508b49f5ed42e44a401c4"
     depends_on:
       - db
 

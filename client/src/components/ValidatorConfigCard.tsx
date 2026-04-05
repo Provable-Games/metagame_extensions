@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 interface ValidatorConfigCardProps {
   title: string;
@@ -22,33 +22,37 @@ export function ValidatorConfigCard({
   hasData,
 }: ValidatorConfigCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="rounded-xl border border-border/60 bg-card">
+      <div className="p-5 pb-0">
+        <h3 className="text-sm font-medium">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+      <div className="p-5 space-y-4">
         <div>
-          <Label htmlFor="context-id">Context ID</Label>
-          <div className="flex gap-2">
-            <Input
-              id="context-id"
-              type="number"
-              placeholder="Enter context ID"
-              value={contextId}
-              onChange={(e) => onContextIdChange(e.target.value)}
-            />
-          </div>
+          <Label htmlFor="context-id" className="text-xs">
+            Context ID
+          </Label>
+          <Input
+            id="context-id"
+            type="number"
+            placeholder="Enter context ID"
+            value={contextId}
+            onChange={(e) => onContextIdChange(e.target.value)}
+            className="mt-1.5"
+          />
         </div>
 
         {isLoading && (
-          <div className="text-center text-muted-foreground py-4">Loading config...</div>
+          <div className="flex items-center justify-center text-muted-foreground py-6">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <span className="text-xs">Loading config...</span>
+          </div>
         )}
 
         {contextId && hasData && !isLoading && (
-          <div className="space-y-3 pt-2">{children}</div>
+          <div className="pt-2 border-t border-border/40">{children}</div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

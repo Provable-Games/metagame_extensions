@@ -32,7 +32,7 @@ import {
 import { useChainConfig } from "@/contexts/NetworkContext";
 import { CallData } from "starknet";
 import { EntryManager } from "@/components/EntryManager";
-import { normalizeAddress, addressesEqual } from "@/utils/address";
+import { padAddress } from "@provable-games/metagame-sdk";
 
 export function ViewSnapshots() {
   const { id } = useParams();
@@ -136,7 +136,7 @@ export function ViewSnapshots() {
         }
 
         // Convert and normalize owner address
-        const owner = normalizeAddress(someData.owner);
+        const owner = padAddress(someData.owner);
 
         return {
           owner,
@@ -334,7 +334,7 @@ export function ViewSnapshots() {
                   </div>
                 </div>
 
-                {metadata.status !== "Locked" && addressesEqual(metadata.owner, address) && (
+                {metadata.status !== "Locked" && padAddress(metadata.owner) === padAddress(address ?? "") && (
                   <div className="space-y-4">
                     <div className="flex gap-2">
                       <Button
@@ -389,7 +389,7 @@ export function ViewSnapshots() {
             </CardContent>
           </Card>
 
-          {showAddEntries && metadata && metadata.status !== "Locked" && addressesEqual(metadata.owner, address) && (
+          {showAddEntries && metadata && metadata.status !== "Locked" && padAddress(metadata.owner) === padAddress(address ?? "") && (
             <EntryManager
               onUpload={handleUploadEntries}
               isUploading={isUploading || isPending}

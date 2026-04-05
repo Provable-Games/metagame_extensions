@@ -11,7 +11,7 @@ import { TournamentValidatorPage } from "./pages/TournamentValidatorPage";
 import { ZkPassportValidatorPage } from "./pages/ZkPassportValidatorPage";
 import { MerkleValidatorPage } from "./pages/MerkleValidatorPage";
 import { CreateMerkleTree } from "./pages/CreateMerkleTree";
-import { MerkleProofLookup } from "./pages/MerkleProofLookup";
+import { MerkleTreeDetail } from "./pages/MerkleTreeDetail";
 
 function App() {
   return (
@@ -28,8 +28,8 @@ function App() {
         <Route path="tournament" element={<TournamentValidatorPage />} />
         <Route path="zk-passport" element={<ZkPassportValidatorPage />} />
         <Route path="merkle" element={<MerkleValidatorPage />} />
+        <Route path="merkle/tree/:id" element={<MerkleTreeDetail />} />
         <Route path="merkle/create" element={<CreateMerkleTree />} />
-        <Route path="merkle/proof" element={<MerkleProofLookup />} />
       </Route>
     </Routes>
   );
