@@ -2,29 +2,32 @@
 [![Starknet Foundry](https://img.shields.io/badge/snforge-0.56.0-purple)](https://foundry-rs.github.io/starknet-foundry/)
 [![codecov](https://codecov.io/gh/Provable-Games/budokan_extensions/graph/badge.svg?token=K2VbKS8j8R)](https://codecov.io/gh/Provable-Games/budokan_extensions)
 
-# Budokan Extensions
+# Metagame Extensions
 
-Modular entry validators for tournament platforms on Starknet. Compatible with [Budokan](https://github.com/Provable-Games/budokan) and any platform implementing the same interfaces. Each validator defines qualification criteria that determine who can enter a tournament and how many entries they receive.
+Modular extension contracts for metagame platforms on Starknet. Compatible with [Budokan](https://github.com/Provable-Games/budokan) and any platform implementing the same interfaces. Extensions define entry requirements, entry fees, prize distribution, and qualification criteria.
 
 ## Packages
 
-| Package | Description |
-| ------- | ----------- |
-| [`entry_validator_interfaces`](packages/interfaces/) | Pure traits and types for entry validators |
-| [`entry_validator_component`](packages/entry_validator/) | `EntryValidatorComponent` SDK for building validators |
-| [`entry_requirement_extensions`](packages/presets/) | Pre-built validator contracts |
-| [`entry_validator_test_common`](packages/test_common/) | Shared test mocks and constants |
+| Package | Path | Description |
+| ------- | ---- | ----------- |
+| `metagame_extensions_interfaces` | `packages/interfaces/` | Pure traits and types for all extensions |
+| `metagame_extensions_entry_requirement` | `packages/entry_requirement/` | `EntryRequirementExtensionComponent` for building entry validators |
+| `metagame_extensions_entry_fee` | `packages/entry_fee/` | `EntryFeeExtensionComponent` for entry fee logic |
+| `metagame_extensions_prize` | `packages/prize/` | `PrizeExtensionComponent` for prize distribution |
+| `metagame_extensions_presets` | `packages/presets/` | Pre-built validator contracts |
+| `metagame_extensions_test_common` | `packages/test_common/` | Shared test mocks and constants |
 
 ## Validators
 
-| Validator         | Description                                                   |
-| ----------------- | ------------------------------------------------------------- |
-| **ERC20 Balance** | Entries based on ERC20 token balance with min/max thresholds  |
-| **Governance**    | Entries based on governance voting power and participation    |
-| **Snapshot**      | Entries based on historical point-in-time snapshot data       |
-| **Opus Troves**   | Entries based on Opus Protocol debt positions                 |
-| **Tournament**    | Entries based on prior tournament qualification               |
-| **ZK Passport**   | Privacy-preserving entry via ZK proofs (Garaga Honk verifier) |
+| Validator | Description |
+| --------- | ----------- |
+| **ERC20 Balance** | Entries based on ERC20 token balance with min/max thresholds |
+| **Governance** | Entries based on governance voting power and participation |
+| **Merkle** | Entries based on merkle allowlist with off-chain proof API |
+| **Snapshot** | Entries based on historical point-in-time snapshot data |
+| **Opus Troves** | Entries based on Opus Protocol debt positions |
+| **Tournament** | Entries based on prior tournament qualification |
+| **ZK Passport** | Privacy-preserving entry via ZK proofs (Garaga Honk verifier) |
 
 ## Getting Started
 
@@ -45,8 +48,8 @@ scarb build                             # Build all packages
 
 ```bash
 snforge test --workspace                # Run all tests
-snforge test -p entry_requirement_extensions        # Run validator tests only
-snforge test -p entry_requirement_extensions <name> # Run a specific test by filter
+snforge test -p metagame_extensions_presets        # Run validator tests only
+snforge test -p metagame_extensions_presets <name> # Run a specific test by filter
 snforge test --workspace --coverage     # Run with code coverage
 ```
 
@@ -56,12 +59,6 @@ snforge test --workspace --coverage     # Run with code coverage
 scarb fmt --workspace                   # Format Cairo files
 scarb fmt --check --workspace           # Check formatting (used in CI)
 ```
-
-## Deployed Contracts
-
-| Validator | Mainnet | Sepolia |
-| --------- | ------- | ------- |
-| **ZK Passport** | [`0x01a2...2f4c`](https://voyager.online/contract/0x01a25f04d151c1295ba3223f7e63b89ec89762fe29d68c5f1896f86cadf62f4c) | [`0x046a...0c7f`](https://sepolia.voyager.online/contract/0x046af2c4fe14ddf0f6a3bf91a3981e71c1b150e85701d387a05a201b1c530c7f) |
 
 ## Deployment
 
@@ -73,10 +70,12 @@ cp .env.example .env
 # Edit .env with STARKNET_NETWORK, OWNER_ADDRESS, etc.
 
 # 2. Deploy a validator
-./scripts/deploy_snapshot_validator.sh
 ./scripts/deploy_erc20_balance_validator.sh
-./scripts/deploy_tournament_validator.sh
+./scripts/deploy_governance_validator.sh
 ./scripts/deploy_opus_troves_validator.sh
+./scripts/deploy_snapshot_validator.sh
+./scripts/deploy_tournament_validator.sh
+./scripts/deploy_zkpassport_validator.sh
 ./scripts/deploy_open_entry_validator.sh
 ```
 
