@@ -5,9 +5,7 @@
 #[starknet::component]
 pub mod PrizeExtensionComponent {
     use core::num::traits::Zero;
-    use metagame_extensions_interfaces::prize_extension::{
-        IPRIZE_EXTENSION_ID, IPrizeExtension,
-    };
+    use metagame_extensions_interfaces::prize_extension::{IPRIZE_EXTENSION_ID, IPrizeExtension};
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
