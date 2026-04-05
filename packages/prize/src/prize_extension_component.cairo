@@ -5,9 +5,7 @@
 #[starknet::component]
 pub mod PrizeExtensionComponent {
     use core::num::traits::Zero;
-    use metagame_extensions_interfaces::prize_extension::{
-        IPRIZE_EXTENSION_ID, IPrizeExtension, LEGACY_IPRIZE_EXTENSION_ID,
-    };
+    use metagame_extensions_interfaces::prize_extension::{IPRIZE_EXTENSION_ID, IPrizeExtension};
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
@@ -78,7 +76,6 @@ pub mod PrizeExtensionComponent {
         fn initializer(ref self: ComponentState<TContractState>) {
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IPRIZE_EXTENSION_ID);
-            src5_component.register_interface(LEGACY_IPRIZE_EXTENSION_ID);
         }
 
         fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {
