@@ -9,6 +9,25 @@ export interface ChainConfig {
   rpcUrl: string;
   explorerUrl: string;
   snapshotValidatorAddress: `0x${string}`;
+  erc20BalanceValidatorAddress?: `0x${string}`;
+  governanceValidatorAddress?: `0x${string}`;
+  opusTrovesValidatorAddress?: `0x${string}`;
+  tournamentValidatorAddress?: `0x${string}`;
+  zkPassportValidatorAddress?: `0x${string}`;
+  merkleValidatorAddress?: `0x${string}`;
+}
+
+export const MERKLE_API_URLS: Record<ChainId, string> = {
+  SN_SEPOLIA:
+    import.meta.env.VITE_SEPOLIA_MERKLE_API_URL ||
+    "https://metagame-merkle-api.up.railway.app",
+  SN_MAIN:
+    import.meta.env.VITE_MAINNET_MERKLE_API_URL ||
+    "https://metagame-merkle-api.up.railway.app",
+};
+
+export function getMerkleApiUrl(chainId: ChainId): string {
+  return MERKLE_API_URLS[chainId];
 }
 
 export const CHAIN_ID_FELTS: Record<ChainId, string> = {
@@ -29,6 +48,30 @@ const NETWORKS: Record<ChainId, ChainConfig> = {
       import.meta.env.VITE_MAINNET_SNAPSHOT_VALIDATOR_ADDRESS ||
       "0x03e6820e9e1cfb5c22465a86f469c651355f05397e29fc94de8e832d5f3d8ede"
     ) as `0x${string}`,
+    erc20BalanceValidatorAddress: (
+      import.meta.env.VITE_MAINNET_ERC20_BALANCE_VALIDATOR_ADDRESS ||
+      "0x051f5fc1ddcffcb0bf548378e0166a5e5328fb4894efbab170e3fb1a4c0cdfdf"
+    ) as `0x${string}`,
+    tournamentValidatorAddress: (
+      import.meta.env.VITE_MAINNET_TOURNAMENT_VALIDATOR_ADDRESS ||
+      "0x0771b57c0709fc4407ff8b63d573f302b96fb03638364032fad734e3c310b9e0"
+    ) as `0x${string}`,
+    governanceValidatorAddress: import.meta.env
+      .VITE_MAINNET_GOVERNANCE_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    opusTrovesValidatorAddress: import.meta.env
+      .VITE_MAINNET_OPUS_TROVES_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    zkPassportValidatorAddress: import.meta.env
+      .VITE_MAINNET_ZK_PASSPORT_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    merkleValidatorAddress: import.meta.env
+      .VITE_MAINNET_MERKLE_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
   },
   SN_SEPOLIA: {
     chainId: "SN_SEPOLIA",
@@ -39,7 +82,31 @@ const NETWORKS: Record<ChainId, ChainConfig> = {
       "https://api.cartridge.gg/x/starknet/sepolia",
     explorerUrl: "https://sepolia.voyager.online",
     snapshotValidatorAddress: (
-      import.meta.env.VITE_SEPOLIA_SNAPSHOT_VALIDATOR_ADDRESS || "0x0"
+      import.meta.env.VITE_SEPOLIA_SNAPSHOT_VALIDATOR_ADDRESS || "0x05520239f16dc58c5dfdccb1f0480977e7fea18d4305e64f5eae88ae786a22fe"
+    ) as `0x${string}`,
+    erc20BalanceValidatorAddress: (
+      import.meta.env.VITE_SEPOLIA_ERC20_BALANCE_VALIDATOR_ADDRESS ||
+      "0x028112199f873e919963277b41ef1231365986e2fd7722501cd7d293de60b64e"
+    ) as `0x${string}`,
+    tournamentValidatorAddress: (
+      import.meta.env.VITE_SEPOLIA_TOURNAMENT_VALIDATOR_ADDRESS ||
+      "0x07eade45e4317b1a036e3a8123bb1f95215d37a6f6b0cea25cdd48030a932dfc"
+    ) as `0x${string}`,
+    governanceValidatorAddress: import.meta.env
+      .VITE_SEPOLIA_GOVERNANCE_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    opusTrovesValidatorAddress: import.meta.env
+      .VITE_SEPOLIA_OPUS_TROVES_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    zkPassportValidatorAddress: import.meta.env
+      .VITE_SEPOLIA_ZK_PASSPORT_VALIDATOR_ADDRESS as
+      | `0x${string}`
+      | undefined,
+    merkleValidatorAddress: (
+      import.meta.env.VITE_SEPOLIA_MERKLE_VALIDATOR_ADDRESS ||
+      "0x048a24bb277dd9659997b92b18aea10c209713f817a549a5154c63677de6ea14"
     ) as `0x${string}`,
   },
 };

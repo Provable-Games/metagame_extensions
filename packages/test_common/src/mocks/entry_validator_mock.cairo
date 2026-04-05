@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IEntryRequirementExtensionMock<TState> {
-    fn get_tournament_erc721_address(self: @TState, context_id: u64) -> ContractAddress;
+    fn get_context_erc721_address(self: @TState, context_id: u64) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -37,7 +37,7 @@ pub mod entry_validator_mock {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        tournament_erc721_address: Map<u64, ContractAddress>,
+        context_erc721_address: Map<u64, ContractAddress>,
     }
 
     #[event]
@@ -62,9 +62,9 @@ pub mod entry_validator_mock {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let erc721_address = self.tournament_erc721_address.read(context_id);
+            let erc721_address = self.context_erc721_address.read(context_id);
 
-            // Check if ERC721 address is set for this tournament
+            // Check if ERC721 address is set for this context
             if erc721_address.is_zero() {
                 return false;
             }
@@ -84,7 +84,7 @@ pub mod entry_validator_mock {
             qualification: Span<felt252>,
         ) -> bool {
             // Ban if player no longer owns the ERC721 token
-            let erc721_address = self.tournament_erc721_address.read(context_id);
+            let erc721_address = self.context_erc721_address.read(context_id);
             if erc721_address.is_zero() {
                 return false;
             }
@@ -99,17 +99,17 @@ pub mod entry_validator_mock {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             // For this mock, we assume unlimited entries
             Option::None
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             // Extract ERC721 address from config (first element)
             let erc721_address: ContractAddress = (*config.at(0)).try_into().unwrap();
-            self.tournament_erc721_address.write(context_id, erc721_address);
+            self.context_erc721_address.write(context_id, erc721_address);
         }
 
         fn on_entry_added(
@@ -135,8 +135,8 @@ pub mod entry_validator_mock {
     use super::IEntryRequirementExtensionMock;
     #[abi(embed_v0)]
     impl EntryValidatorMockImpl of IEntryRequirementExtensionMock<ContractState> {
-        fn get_tournament_erc721_address(self: @ContractState, context_id: u64) -> ContractAddress {
-            self.tournament_erc721_address.read(context_id)
+        fn get_context_erc721_address(self: @ContractState, context_id: u64) -> ContractAddress {
+            self.context_erc721_address.read(context_id)
         }
     }
 }

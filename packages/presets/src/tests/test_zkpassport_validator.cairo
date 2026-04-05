@@ -14,7 +14,7 @@ use starknet::ContractAddress;
 // Test constants
 const TOURNAMENT_ID: u64 = 1;
 const TOURNAMENT_ID_2: u64 = 2;
-const ENTRY_LIMIT: u8 = 3;
+const ENTRY_LIMIT: u32 = 3;
 const SERVICE_SCOPE: felt252 = 'zkpassport_scope';
 const SERVICE_SUBSCOPE: felt252 = 'bigproof_subscope';
 const PARAM_COMMITMENT: felt252 = 'age_commitment';

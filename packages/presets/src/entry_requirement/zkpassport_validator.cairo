@@ -32,13 +32,13 @@ pub trait IUltraKeccakZKHonkVerifier<TContractState> {
 
 #[starknet::interface]
 pub trait IZkPassportValidator<TState> {
-    fn get_verifier_address(self: @TState, tournament_id: u64) -> ContractAddress;
-    fn get_expected_service_scope(self: @TState, tournament_id: u64) -> felt252;
-    fn get_expected_service_subscope(self: @TState, tournament_id: u64) -> felt252;
-    fn get_expected_param_commitment(self: @TState, tournament_id: u64) -> felt252;
-    fn get_max_proof_age(self: @TState, tournament_id: u64) -> u64;
-    fn get_expected_nullifier_type(self: @TState, tournament_id: u64) -> felt252;
-    fn is_nullifier_used(self: @TState, tournament_id: u64, nullifier_hash: felt252) -> bool;
+    fn get_verifier_address(self: @TState, context_id: u64) -> ContractAddress;
+    fn get_expected_service_scope(self: @TState, context_id: u64) -> felt252;
+    fn get_expected_service_subscope(self: @TState, context_id: u64) -> felt252;
+    fn get_expected_param_commitment(self: @TState, context_id: u64) -> felt252;
+    fn get_max_proof_age(self: @TState, context_id: u64) -> u64;
+    fn get_expected_nullifier_type(self: @TState, context_id: u64) -> felt252;
+    fn is_nullifier_used(self: @TState, context_id: u64, nullifier_hash: felt252) -> bool;
 }
 
 #[starknet::contract]
@@ -87,8 +87,8 @@ pub mod ZkPassportValidator {
         max_proof_age: Map<u64, u64>,
         expected_nullifier_type: Map<u64, felt252>,
         // Entry tracking
-        tournament_entry_limit: Map<u64, u8>,
-        tournament_entries: Map<(u64, ContractAddress), u8>,
+        context_entry_limit: Map<u64, u32>,
+        context_entries: Map<(u64, ContractAddress), u32>,
         // Sybil prevention (per-tournament)
         used_nullifiers: Map<(u64, felt252), bool>,
     }
@@ -225,7 +225,7 @@ pub mod ZkPassportValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             // Check nullifier if qualification data is provided
             if qualification.len() >= 2 {
                 let nullifier_low: felt252 = *qualification.at(0);
@@ -236,17 +236,17 @@ pub mod ZkPassportValidator {
                 }
             }
 
-            let entry_limit = self.tournament_entry_limit.read(context_id);
+            let entry_limit = self.context_entry_limit.read(context_id);
             if entry_limit == 0 {
                 return Option::None;
             }
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
+            let current_entries = self.context_entries.read(key);
             Option::Some(entry_limit - current_entries)
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             assert!(config.len() >= 6, "ZkPassportValidator: config must have at least 6 elements");
 
@@ -264,7 +264,7 @@ pub mod ZkPassportValidator {
             self.max_proof_age.write(context_id, max_age);
 
             self.expected_nullifier_type.write(context_id, *config.at(5));
-            self.tournament_entry_limit.write(context_id, entry_limit);
+            self.context_entry_limit.write(context_id, entry_limit);
         }
 
         fn on_entry_added(
@@ -282,8 +282,8 @@ pub mod ZkPassportValidator {
 
             // Track entry count
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
-            self.tournament_entries.write(key, current_entries + 1);
+            let current_entries = self.context_entries.read(key);
+            self.context_entries.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
@@ -301,9 +301,9 @@ pub mod ZkPassportValidator {
 
             // Decrement entry count
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries.read(key);
+            let current_entries = self.context_entries.read(key);
             if current_entries > 0 {
-                self.tournament_entries.write(key, current_entries - 1);
+                self.context_entries.write(key, current_entries - 1);
             }
         }
     }
@@ -317,34 +317,34 @@ pub mod ZkPassportValidator {
 
     #[abi(embed_v0)]
     impl ZkPassportValidatorImpl of IZkPassportValidator<ContractState> {
-        fn get_verifier_address(self: @ContractState, tournament_id: u64) -> ContractAddress {
-            self.verifier_address.read(tournament_id)
+        fn get_verifier_address(self: @ContractState, context_id: u64) -> ContractAddress {
+            self.verifier_address.read(context_id)
         }
 
-        fn get_expected_service_scope(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.expected_service_scope.read(tournament_id)
+        fn get_expected_service_scope(self: @ContractState, context_id: u64) -> felt252 {
+            self.expected_service_scope.read(context_id)
         }
 
-        fn get_expected_service_subscope(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.expected_service_subscope.read(tournament_id)
+        fn get_expected_service_subscope(self: @ContractState, context_id: u64) -> felt252 {
+            self.expected_service_subscope.read(context_id)
         }
 
-        fn get_expected_param_commitment(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.expected_param_commitment.read(tournament_id)
+        fn get_expected_param_commitment(self: @ContractState, context_id: u64) -> felt252 {
+            self.expected_param_commitment.read(context_id)
         }
 
-        fn get_max_proof_age(self: @ContractState, tournament_id: u64) -> u64 {
-            self.max_proof_age.read(tournament_id)
+        fn get_max_proof_age(self: @ContractState, context_id: u64) -> u64 {
+            self.max_proof_age.read(context_id)
         }
 
-        fn get_expected_nullifier_type(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.expected_nullifier_type.read(tournament_id)
+        fn get_expected_nullifier_type(self: @ContractState, context_id: u64) -> felt252 {
+            self.expected_nullifier_type.read(context_id)
         }
 
         fn is_nullifier_used(
-            self: @ContractState, tournament_id: u64, nullifier_hash: felt252,
+            self: @ContractState, context_id: u64, nullifier_hash: felt252,
         ) -> bool {
-            self.used_nullifiers.read((tournament_id, nullifier_hash))
+            self.used_nullifiers.read((context_id, nullifier_hash))
         }
     }
 }

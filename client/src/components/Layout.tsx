@@ -1,9 +1,27 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { WalletConnect } from "./WalletConnect";
 import { NetworkSwitcher } from "./NetworkSwitcher";
-import { Camera } from "lucide-react";
+import { Shield } from "lucide-react";
+
+const navLinks = [
+  { label: "Dashboard", path: "/" },
+  { label: "Snapshot", path: "/snapshot" },
+  { label: "ERC20", path: "/erc20-balance" },
+  { label: "Governance", path: "/governance" },
+  { label: "Opus", path: "/opus-troves" },
+  { label: "Tournament", path: "/tournament" },
+  { label: "ZK Passport", path: "/zk-passport" },
+  { label: "Merkle", path: "/merkle" },
+];
 
 export function Layout() {
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -11,22 +29,23 @@ export function Layout() {
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <Link to="/" className="flex items-center gap-2 font-semibold text-lg">
-                <Camera className="h-6 w-6" />
-                Snapshot Manager
+                <Shield className="h-6 w-6" />
+                Metagame Admin
               </Link>
               <div className="flex items-center gap-4">
-                <Link
-                  to="/create"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Create Snapshot
-                </Link>
-                <Link
-                  to="/snapshots"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  View Snapshots
-                </Link>
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`text-sm transition-colors ${
+                      isActive(link.path)
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
             </div>
             <div className="flex items-center gap-2">

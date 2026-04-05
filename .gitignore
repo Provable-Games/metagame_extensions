@@ -14,3 +14,5 @@ argent_account_mainnet.json
 
 **/snfoundry_trace
 **/coverage
+**/node_modules
+**/dist

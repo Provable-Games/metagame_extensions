@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 #[derive(Copy, Drop, Serde, starknet::Store)]
 pub struct Entry {
     pub address: ContractAddress,
-    pub count: u8,
+    pub count: u32,
 }
 
 #[derive(Copy, Drop, Serde, starknet::Store, PartialEq)]
@@ -26,7 +26,7 @@ pub trait ISnapshotValidator<TState> {
     fn upload_snapshot_data(ref self: TState, snapshot_id: u64, snapshot_values: Span<Entry>);
     fn lock_snapshot(ref self: TState, snapshot_id: u64);
     fn get_snapshot_metadata(self: @TState, snapshot_id: u64) -> Option<SnapshotMetadata>;
-    fn get_snapshot_entry(self: @TState, snapshot_id: u64, player_address: ContractAddress) -> u8;
+    fn get_snapshot_entry(self: @TState, snapshot_id: u64, player_address: ContractAddress) -> u32;
     fn is_snapshot_locked(self: @TState, snapshot_id: u64) -> bool;
 }
 
@@ -66,10 +66,10 @@ pub mod SnapshotValidator {
         src5: SRC5Component::Storage,
         // Snapshot ID-based storage
         snapshot_metadata: Map<u64, SnapshotMetadata>,
-        snapshot_entries: Map<(u64, ContractAddress), u8>,
+        snapshot_entries: Map<(u64, ContractAddress), u32>,
         snapshot_exists: Map<u64, bool>,
-        tournament_snapshot: Map<u64, u64>,
-        tournament_address_entries_used: Map<(u64, ContractAddress), u8>,
+        context_snapshot: Map<u64, u64>,
+        context_address_entries_used: Map<(u64, ContractAddress), u32>,
         snapshot_id_counter: u64,
     }
 
@@ -81,7 +81,6 @@ pub mod SnapshotValidator {
         #[flat]
         SRC5Event: SRC5Component::Event,
         SnapshotCreated: SnapshotCreated,
-        SnapshotEntryAdded: SnapshotEntryAdded,
         SnapshotDataUploaded: SnapshotDataUploaded,
         SnapshotLocked: SnapshotLocked,
     }
@@ -95,18 +94,10 @@ pub mod SnapshotValidator {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct SnapshotEntryAdded {
-        #[key]
-        snapshot_id: u64,
-        address: ContractAddress,
-        count: u8,
-    }
-
-    #[derive(Drop, starknet::Event)]
     struct SnapshotDataUploaded {
         #[key]
         snapshot_id: u64,
-        entries_added: u32,
+        entries: Span<Entry>,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -117,9 +108,9 @@ pub mod SnapshotValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Snapshot is a point-in-time check, so registration_only = true (never ban after
-        // registration)
-        self.entry_validator.initializer(true);
+        // Snapshot data is immutable once locked and entries are tracked via used counts,
+        // so players can safely enter at any time — no registration period required
+        self.entry_validator.initializer(false);
     }
 
     // Implement the EntryValidator trait for the contract
@@ -130,7 +121,7 @@ pub mod SnapshotValidator {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let snapshot_id = self.tournament_snapshot.read(context_id);
+            let snapshot_id = self.context_snapshot.read(context_id);
             let address_entries = self.snapshot_entries.read((snapshot_id, player_address));
             address_entries > 0
         }
@@ -153,24 +144,24 @@ pub mod SnapshotValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
-            let snapshot_id = self.tournament_snapshot.read(context_id);
+        ) -> Option<u32> {
+            let snapshot_id = self.context_snapshot.read(context_id);
             let address_entries = self.snapshot_entries.read((snapshot_id, player_address));
-            let tournament_used_entries = self
-                .tournament_address_entries_used
+            let context_used_entries = self
+                .context_address_entries_used
                 .read((context_id, player_address));
-            let remaining_entries = address_entries - tournament_used_entries;
+            let remaining_entries = address_entries - context_used_entries;
             Option::Some(remaining_entries)
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             let snapshot_id_felt = *config.at(0);
             let snapshot_id: u64 = snapshot_id_felt.try_into().unwrap();
             assert!(self.snapshot_exists.read(snapshot_id), "Snapshot does not exist");
             assert!(self.is_snapshot_locked(snapshot_id), "Snapshot must be locked before use");
-            self.tournament_snapshot.write(context_id, snapshot_id);
+            self.context_snapshot.write(context_id, snapshot_id);
         }
 
         fn on_entry_added(
@@ -180,12 +171,8 @@ pub mod SnapshotValidator {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used_entries = self
-                .tournament_address_entries_used
-                .read((context_id, player_address));
-            self
-                .tournament_address_entries_used
-                .write((context_id, player_address), used_entries + 1);
+            let used_entries = self.context_address_entries_used.read((context_id, player_address));
+            self.context_address_entries_used.write((context_id, player_address), used_entries + 1);
         }
 
         fn on_entry_removed(
@@ -195,12 +182,10 @@ pub mod SnapshotValidator {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used_entries = self
-                .tournament_address_entries_used
-                .read((context_id, player_address));
+            let used_entries = self.context_address_entries_used.read((context_id, player_address));
             if used_entries > 0 {
                 self
-                    .tournament_address_entries_used
+                    .context_address_entries_used
                     .write((context_id, player_address), used_entries - 1);
             }
         }
@@ -242,19 +227,13 @@ pub mod SnapshotValidator {
             while i < length {
                 let entry = *snapshot_values.at(i);
                 self.snapshot_entries.write((snapshot_id, entry.address), entry.count);
-                self
-                    .emit(
-                        SnapshotEntryAdded {
-                            snapshot_id, address: entry.address, count: entry.count,
-                        },
-                    );
                 i += 1;
             }
 
             metadata.status = SnapshotStatus::InProgress;
             self.snapshot_metadata.write(snapshot_id, metadata);
 
-            self.emit(SnapshotDataUploaded { snapshot_id, entries_added: length })
+            self.emit(SnapshotDataUploaded { snapshot_id, entries: snapshot_values })
         }
 
         fn lock_snapshot(ref self: ContractState, snapshot_id: u64) {
@@ -283,7 +262,7 @@ pub mod SnapshotValidator {
 
         fn get_snapshot_entry(
             self: @ContractState, snapshot_id: u64, player_address: ContractAddress,
-        ) -> u8 {
+        ) -> u32 {
             assert!(self.snapshot_exists.read(snapshot_id), "Snapshot does not exist");
             self.snapshot_entries.read((snapshot_id, player_address))
         }

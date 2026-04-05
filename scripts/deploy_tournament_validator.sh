@@ -52,10 +52,6 @@ esac
 # Check if required environment variables are set
 print_info "Checking environment variables..."
 
-required_vars=()
-
-missing_vars=()
-
 # Debug output for environment variables
 print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
@@ -65,21 +61,6 @@ echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
 URL_FLAG=""
 if [ -n "${STARKNET_RPC:-}" ]; then
     URL_FLAG="--url $STARKNET_RPC"
-fi
-
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var:-}" ]; then
-        missing_vars+=("$var")
-    fi
-done
-
-if [ ${#missing_vars[@]} -ne 0 ]; then
-    print_error "The following required environment variables are not set:"
-    for var in "${missing_vars[@]}"; do
-        echo "  - $var"
-    done
-    echo "Please set these variables before running the script."
-    exit 1
 fi
 
 # ============================
@@ -232,7 +213,7 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Tournament-based entry validator - validates based on participation/winning in qualifying tournaments",
-    "registration_only": true
+    "registration_only": false
   }
 }
 EOF
@@ -249,7 +230,7 @@ echo
 echo "Tournament Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
-echo "  Registration Only: true (hard-coded)"
+echo "  Registration Only: false"
 echo ""
 
 echo "Next steps:"

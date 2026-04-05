@@ -30,6 +30,7 @@ dependencies = [
  "metagame_extensions_test_common",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
+ "openzeppelin_merkle_tree",
  "snforge_std",
 ]
 
@@ -64,6 +65,11 @@ source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd
 dependencies = [
  "openzeppelin_interfaces",
 ]
+
+[[package]]
+name = "openzeppelin_merkle_tree"
+version = "3.0.0"
+source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v3.0.0#ddd3338e787a3fbf4a92b366640a57ee364390cb"
 
 [[package]]
 name = "snforge_scarb_plugin"

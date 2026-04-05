@@ -60,7 +60,7 @@ fn create_erc20_config(
     min_threshold: u256,
     max_threshold: u256,
     value_per_entry: u256,
-    max_entries: u8,
+    max_entries: u32,
 ) -> Span<felt252> {
     array![
         token_address.into(), min_threshold.low.into(), min_threshold.high.into(),
@@ -94,7 +94,7 @@ fn test_erc20_validator_config_storage() {
     let min_threshold: u256 = 1000;
     let max_threshold: u256 = 10000;
     let value_per_entry: u256 = 500;
-    let max_entries: u8 = 10;
+    let max_entries: u32 = 10;
 
     let config = create_erc20_config(
         token_addr, min_threshold, max_threshold, value_per_entry, max_entries,
@@ -508,7 +508,7 @@ fn test_erc20_validator_fork_create_tournament() {
     let min_threshold: u256 = 1000000000000000000; // 1 STRK (18 decimals)
     let max_threshold: u256 = 0; // No max
     let value_per_entry: u256 = 0; // Fixed entry limit
-    let max_entries: u8 = 0;
+    let max_entries: u32 = 0;
 
     let config = create_erc20_config(
         token_address, min_threshold, max_threshold, value_per_entry, max_entries,
@@ -759,7 +759,7 @@ fn test_erc20_validator_entries_based_on_balance() {
     let token_address = eth_token_address();
     let min_threshold: u256 = 100000000000000000; // 0.1 ETH
     let value_per_entry: u256 = 100000000000000000; // 0.1 ETH per entry
-    let max_entries: u8 = 10; // Cap at 10 entries
+    let max_entries: u32 = 10; // Cap at 10 entries
 
     let config = create_erc20_config(token_address, min_threshold, 0, value_per_entry, max_entries);
 
@@ -1011,7 +1011,7 @@ fn test_erc20_validator_max_entries_cap() {
     let token_addr: ContractAddress = 0x123.try_into().unwrap();
     let min_threshold: u256 = 100;
     let value_per_entry: u256 = 10; // Would give many entries
-    let max_entries: u8 = 5; // But capped at 5
+    let max_entries: u32 = 5; // But capped at 5
 
     let config = create_erc20_config(token_addr, min_threshold, 0, value_per_entry, max_entries);
 

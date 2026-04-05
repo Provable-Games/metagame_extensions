@@ -29,7 +29,7 @@ fn deploy_entry_validator() -> ContractAddress {
 fn configure_entry_validator(
     validator_address: ContractAddress,
     tournament_id: u64,
-    entry_limit: u8,
+    entry_limit: u32,
     erc721_addr: ContractAddress,
 ) {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
@@ -47,7 +47,7 @@ fn deploy_open_entry_validator() -> ContractAddress {
 }
 
 fn configure_open_entry_validator(
-    validator_address: ContractAddress, tournament_id: u64, entry_limit: u8,
+    validator_address: ContractAddress, tournament_id: u64, entry_limit: u32,
 ) {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     start_cheat_caller_address(validator_address, owner_address());
@@ -167,7 +167,7 @@ fn test_entry_validator_stores_correct_erc721_address() {
     };
 
     // Verify the entry validator stores the correct ERC721 address for this tournament
-    let stored_address = entry_validator_mock.get_tournament_erc721_address(tournament_id);
+    let stored_address = entry_validator_mock.get_context_erc721_address(tournament_id);
     assert(stored_address == erc721_address(), 'Wrong ERC721 address stored');
 }
 

@@ -46,10 +46,10 @@ pub trait IEntryRequirementExtension<TState> {
         context_id: u64,
         player_address: ContractAddress,
         qualification: Span<felt252>,
-    ) -> Option<u8>;
+    ) -> Option<u32>;
 
     /// Add configuration for a context
-    fn add_config(ref self: TState, context_id: u64, entry_limit: u8, config: Span<felt252>);
+    fn add_config(ref self: TState, context_id: u64, entry_limit: u32, config: Span<felt252>);
 
     /// Add an entry for a player in a context
     /// game_token_id is tracked to support per-entry banning decisions

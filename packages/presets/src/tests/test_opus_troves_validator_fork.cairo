@@ -157,7 +157,7 @@ fn test_opus_validator_debt_based() {
     let asset_count: u8 = 0; // 0 = wildcard (all troves)
     let threshold: u128 = 5000000000000000000; // 5 yin minimum (5e18)
     let value_per_entry: u128 = 2000000000000000000; // 2 yin per entry (2e18)
-    let max_entries: u8 = 50;
+    let max_entries: u32 = 50;
 
     let extension_config = ExtensionConfig {
         address: validator_address,
@@ -300,7 +300,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
     let asset_count: u8 = 0; // 0 = wildcard (all troves)
     let threshold: u128 = 10000000000000000000; // 10 yin (10e18)
     let value_per_entry: u128 = 5000000000000000000; // 5 yin per entry (5e18)
-    let max_entries: u8 = 20;
+    let max_entries: u32 = 20;
 
     let extension_config = ExtensionConfig {
         address: validator_address,
@@ -399,7 +399,7 @@ fn test_opus_validator_asset_filtering() {
     let asset_count: u8 = 1; // Filter by 1 asset
     let threshold: u128 = 5000000000000000000; // 5 yin minimum (5e18)
     let value_per_entry: u128 = 2000000000000000000; // 2 yin per entry (2e18)
-    let max_entries: u8 = 50;
+    let max_entries: u32 = 50;
 
     let extension_config = ExtensionConfig {
         address: validator_address,
@@ -491,7 +491,7 @@ fn test_opus_validator_config_zero_threshold() {
     let asset_count: u8 = 0;
     let threshold: u128 = 0; // 0 yin minimum
     let value_per_entry: u128 = 1000000000000000000; // 1 yin per entry (1e18 wad)
-    let max_entries: u8 = 0;
+    let max_entries: u32 = 0;
 
     let extension_config = ExtensionConfig {
         address: validator_address,

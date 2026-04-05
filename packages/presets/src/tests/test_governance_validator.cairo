@@ -21,7 +21,7 @@ fn deploy_governance_validator() -> ContractAddress {
 fn configure_governance_validator(
     validator_address: ContractAddress,
     tournament_id: u64,
-    entry_limit: u8,
+    entry_limit: u32,
     governor_address: ContractAddress,
     governance_token_address: ContractAddress,
     balance_threshold: u256,

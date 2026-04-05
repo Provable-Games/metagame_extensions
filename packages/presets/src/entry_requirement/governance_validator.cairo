@@ -32,7 +32,7 @@ pub mod GovernanceValidator {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        entry_limit: Map<u64, u8>,
+        entry_limit: Map<u64, u32>,
         governor_address: Map<u64, ContractAddress>,
         governance_token_address: Map<u64, ContractAddress>,
         balance_threshold: Map<u64, u256>,
@@ -40,7 +40,7 @@ pub mod GovernanceValidator {
         check_voted: Map<u64, bool>,
         votes_threshold: Map<u64, u256>,
         votes_per_entry: Map<u64, u256>,
-        tournament_entries_per_address: Map<(u64, ContractAddress), u8>,
+        context_entries_per_address: Map<(u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -99,11 +99,12 @@ pub mod GovernanceValidator {
                 let balance_threshold = self.balance_threshold.read(context_id);
                 let total_allowed_entries = (vote_count - balance_threshold) / votes_per_entry;
                 let used_entries = self
-                    .tournament_entries_per_address
+                    .context_entries_per_address
                     .read((context_id, current_owner));
 
                 // Ban if player has more entries than currently allowed
-                return used_entries > total_allowed_entries.low.try_into().unwrap();
+                let total_allowed_u32: u32 = total_allowed_entries.try_into().unwrap();
+                return used_entries > total_allowed_u32;
             }
 
             // For fixed entry limits, player shouldn't be over quota
@@ -116,7 +117,7 @@ pub mod GovernanceValidator {
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
-        ) -> Option<u8> {
+        ) -> Option<u32> {
             let votes_per_entry = self.votes_per_entry.read(context_id);
             if votes_per_entry > 0 {
                 // calculate the number of entries based on the votes
@@ -130,9 +131,10 @@ pub mod GovernanceValidator {
                 let balance_threshold = self.balance_threshold.read(context_id);
                 let total_entries = (vote_count - balance_threshold) / votes_per_entry;
                 let used_entries = self
-                    .tournament_entries_per_address
+                    .context_entries_per_address
                     .read((context_id, player_address));
-                let remaining_entries = total_entries.low.try_into().unwrap() - used_entries;
+                let total_entries_u32: u32 = total_entries.try_into().unwrap();
+                let remaining_entries = total_entries_u32 - used_entries;
                 return Option::Some(remaining_entries);
             } else {
                 let entry_limit = self.entry_limit.read(context_id);
@@ -140,14 +142,14 @@ pub mod GovernanceValidator {
                     return Option::None; // Unlimited entries
                 }
                 let key = (context_id, player_address);
-                let current_entries = self.tournament_entries_per_address.read(key);
+                let current_entries = self.context_entries_per_address.read(key);
                 let remaining_entries = entry_limit - current_entries;
                 return Option::Some(remaining_entries);
             }
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u8, config: Span<felt252>,
+            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
             let governor_address: ContractAddress = (*config.at(0)).try_into().unwrap();
             let governance_token_address: ContractAddress = (*config.at(1)).try_into().unwrap();
@@ -175,8 +177,8 @@ pub mod GovernanceValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
-            self.tournament_entries_per_address.write(key, current_entries + 1);
+            let current_entries = self.context_entries_per_address.read(key);
+            self.context_entries_per_address.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
@@ -187,42 +189,42 @@ pub mod GovernanceValidator {
             qualification: Span<felt252>,
         ) {
             let key = (context_id, player_address);
-            let current_entries = self.tournament_entries_per_address.read(key);
+            let current_entries = self.context_entries_per_address.read(key);
             if current_entries > 0 {
-                self.tournament_entries_per_address.write(key, current_entries - 1);
+                self.context_entries_per_address.write(key, current_entries - 1);
             }
         }
     }
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        /// Check if a player meets the governance requirements for a tournament
+        /// Check if a player meets the governance requirements for a context
         fn check_governance_requirements(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
             // Check the delegate of the address
-            let governance_token_address = self.governance_token_address.read(tournament_id);
+            let governance_token_address = self.governance_token_address.read(context_id);
             let erc20_dispatcher = IERC20Dispatcher { contract_address: governance_token_address };
             let balance = erc20_dispatcher.balance_of(player_address);
             let votes_dispatcher = IVotesDispatcher { contract_address: governance_token_address };
             let delegates = votes_dispatcher.delegates(player_address);
 
             // If no delegate, or balance below threshold, reject entry
-            if delegates.is_zero() || balance < self.balance_threshold.read(tournament_id) {
+            if delegates.is_zero() || balance < self.balance_threshold.read(context_id) {
                 return false;
             }
 
-            let check_voted = self.check_voted.read(tournament_id);
+            let check_voted = self.check_voted.read(context_id);
             if check_voted {
-                let proposal_id = self.proposal_id.read(tournament_id);
-                let governor_address = self.governor_address.read(tournament_id);
+                let proposal_id = self.proposal_id.read(context_id);
+                let governor_address = self.governor_address.read(context_id);
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let has_voted = governor_dispatcher.has_voted(proposal_id, player_address);
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(player_address, proposal_snapshot);
-                let votes_meet_threshold = vote_count >= self.votes_threshold.read(tournament_id);
+                let votes_meet_threshold = vote_count >= self.votes_threshold.read(context_id);
                 has_voted && votes_meet_threshold
             } else {
                 true
@@ -231,14 +233,14 @@ pub mod GovernanceValidator {
 
         /// Check if player has entries available (quota not exhausted)
         fn has_entries_available(
-            self: @ContractState, tournament_id: u64, player_address: ContractAddress,
+            self: @ContractState, context_id: u64, player_address: ContractAddress,
         ) -> bool {
-            let votes_per_entry = self.votes_per_entry.read(tournament_id);
+            let votes_per_entry = self.votes_per_entry.read(context_id);
             if votes_per_entry > 0 {
                 // Check quota based on votes
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
 
                 // If no entries used yet, they have entries available
                 if used_entries == 0 {
@@ -246,27 +248,27 @@ pub mod GovernanceValidator {
                 }
 
                 // Calculate current allowed entries
-                let proposal_id = self.proposal_id.read(tournament_id);
-                let governor_address = self.governor_address.read(tournament_id);
+                let proposal_id = self.proposal_id.read(context_id);
+                let governor_address = self.governor_address.read(context_id);
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(player_address, proposal_snapshot);
-                let balance_threshold = self.balance_threshold.read(tournament_id);
+                let balance_threshold = self.balance_threshold.read(context_id);
                 let total_allowed_entries = (vote_count - balance_threshold) / votes_per_entry;
-                let total_allowed_u8: u8 = total_allowed_entries.low.try_into().unwrap();
+                let total_allowed_u32: u32 = total_allowed_entries.try_into().unwrap();
 
-                return used_entries < total_allowed_u8;
+                return used_entries < total_allowed_u32;
             } else {
                 // Fixed entry limit mode
-                let entry_limit = self.entry_limit.read(tournament_id);
+                let entry_limit = self.entry_limit.read(context_id);
                 if entry_limit == 0 {
                     return true; // Unlimited
                 }
                 let used_entries = self
-                    .tournament_entries_per_address
-                    .read((tournament_id, player_address));
+                    .context_entries_per_address
+                    .read((context_id, player_address));
                 return used_entries < entry_limit;
             }
         }
