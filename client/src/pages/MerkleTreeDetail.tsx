@@ -6,11 +6,10 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   padAddress,
   displayAddress,
-  fetchMerkleTrees,
   fetchMerkleTreeEntries,
-  type MerkleTree,
   type MerkleTreeEntriesResponse,
 } from "@provable-games/metagame-sdk";
+import { createMerkleClient, type MerkleTree } from "@provable-games/metagame-sdk/merkle";
 import {
   GitBranch,
   ChevronLeft,
@@ -33,15 +32,14 @@ export function MerkleTreeDetail() {
   const [exporting, setExporting] = useState(false);
   const entriesLimit = 50;
 
-  // Fetch tree metadata
+  // Fetch tree metadata by ID
   useEffect(() => {
     if (treeId === null) return;
     setTreeLoading(true);
-    fetchMerkleTrees({ page: 1, limit: 100, chainId: chainConfig.chainId })
-      .then((res) => {
-        const found = res.data.find((t) => t.id === treeId);
-        setTree(found ?? null);
-      })
+    const client = createMerkleClient({ chainId: chainConfig.chainId });
+    client
+      .getTree(treeId)
+      .then((found) => setTree(found))
       .finally(() => setTreeLoading(false));
   }, [treeId, chainConfig.chainId]);
 

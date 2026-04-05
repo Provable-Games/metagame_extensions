@@ -91,7 +91,7 @@ export function ValidatorDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     {deployed && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" title="Deployed on this network" />
                     )}
                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
                   </div>
