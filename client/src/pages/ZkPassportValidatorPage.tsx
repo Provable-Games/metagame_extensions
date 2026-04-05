@@ -15,7 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, CheckCircle, XCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle, ShieldCheck } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export function ZkPassportValidatorPage() {
   const { chainConfig } = useChainConfig();
@@ -106,28 +107,22 @@ export function ZkPassportValidatorPage() {
       : undefined;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">ZK Passport Validator</h1>
-        <p className="text-muted-foreground mt-2">
-          Entry validation via zero-knowledge passport proof with sybil
-          prevention
-        </p>
-        {validatorAddress && (
-          <p className="text-xs text-muted-foreground mt-1 font-mono">
-            {validatorAddress}
-          </p>
-        )}
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader
+        title="ZK Passport validator"
+        description="Entry via zero-knowledge passport proof with sybil prevention"
+        icon={ShieldCheck}
+        contractAddress={validatorAddress}
+      />
 
       {!validatorAddress ? (
-        <div className="text-sm text-muted-foreground bg-muted rounded-md p-4">
+        <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-4">
           This validator is not deployed on the current network.
         </div>
       ) : (
         <>
           <ValidatorConfigCard
-            title="Context Config"
+            title="Context config"
             description="View ZK Passport verification requirements for a context"
             contextId={contextId}
             onContextIdChange={setContextId}

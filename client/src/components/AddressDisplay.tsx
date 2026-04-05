@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { normalizeAddress } from "@/utils/address";
+import { padAddress, displayAddress } from "@provable-games/metagame-sdk";
 
 interface AddressDisplayProps {
   address: string;
@@ -8,8 +8,8 @@ interface AddressDisplayProps {
 
 export function AddressDisplay({ address, className = "" }: AddressDisplayProps) {
   const [copied, setCopied] = useState(false);
-  const normalized = normalizeAddress(address);
-  const truncated = `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+  const normalized = padAddress(address);
+  const truncated = displayAddress(normalized);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(normalized);

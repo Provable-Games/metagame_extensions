@@ -10,13 +10,13 @@ importers:
     dependencies:
       '@cartridge/connector':
         specifier: ^0.10.7
-        version: 0.10.7(@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@8.9.2)(typescript@5.9.3))(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
+        version: 0.10.7(@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3))(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
       '@cartridge/controller':
         specifier: ^0.10.7
         version: 0.10.7(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
-      '@ericnordelo/strk-merkle-tree':
-        specifier: ^1.0.1
-        version: 1.0.1
+      '@provable-games/metagame-sdk':
+        specifier: file:../../metagame-sdk
+        version: file:../../metagame-sdk(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -37,13 +37,16 @@ importers:
         version: 5.0.3
       '@starknet-react/core':
         specifier: ^5.0.3
-        version: 5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@8.9.2)(typescript@5.9.3)
+        version: 5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      cookie:
+        specifier: ^1.1.1
+        version: 1.1.1
       lucide-react:
         specifier: ^0.552.0
         version: 0.552.0(react@18.3.1)
@@ -57,8 +60,8 @@ importers:
         specifier: ^7.9.5
         version: 7.13.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       starknet:
-        specifier: ^8.6.0
-        version: 8.9.2
+        specifier: ^9.2.1
+        version: 9.4.2(typescript@5.9.3)(zod@3.25.76)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.5.0
@@ -665,6 +668,18 @@ packages:
   '@phosphor-icons/webcomponents@2.1.5':
     resolution: {integrity: sha512-JcvQkZxvcX2jK+QCclm8+e8HXqtdFW9xV4/kk2aL9Y3dJA2oQVt+pzbv1orkumz3rfx4K9mn9fDoMr1He1yr7Q==}
 
+  '@provable-games/metagame-sdk@file:../../metagame-sdk':
+    resolution: {directory: ../../metagame-sdk, type: directory}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      react: '>=18.0.0'
+      starknet: '>=9.0.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      starknet:
+        optional: true
+
   '@radix-ui/primitive@1.1.3':
     resolution: {integrity: sha512-JTF99U/6XIjCBo0wqkU5sK10glYe27MRRsfwoiq5zzOEZLHU3A3KCMa5X/azekYRCJ0HlwI0crAXS/5dEHTzDg==}
 
@@ -1058,66 +1073,79 @@ packages:
     resolution: {integrity: sha512-L+34Qqil+v5uC0zEubW7uByo78WOCIrBvci69E7sFASRl0X7b/MB6Cqd1lky/CtcSVTydWa2WZwFuWexjS5o6g==}
     cpu: [arm]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-arm-musleabihf@4.60.1':
     resolution: {integrity: sha512-n83O8rt4v34hgFzlkb1ycniJh7IR5RCIqt6mz1VRJD6pmhRi0CXdmfnLu9dIUS6buzh60IvACM842Ffb3xd6Gg==}
     cpu: [arm]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-arm64-gnu@4.60.1':
     resolution: {integrity: sha512-Nql7sTeAzhTAja3QXeAI48+/+GjBJ+QmAH13snn0AJSNL50JsDqotyudHyMbO2RbJkskbMbFJfIJKWA6R1LCJQ==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-arm64-musl@4.60.1':
     resolution: {integrity: sha512-+pUymDhd0ys9GcKZPPWlFiZ67sTWV5UU6zOJat02M1+PiuSGDziyRuI/pPue3hoUwm2uGfxdL+trT6Z9rxnlMA==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-loong64-gnu@4.60.1':
     resolution: {integrity: sha512-VSvgvQeIcsEvY4bKDHEDWcpW4Yw7BtlKG1GUT4FzBUlEKQK0rWHYBqQt6Fm2taXS+1bXvJT6kICu5ZwqKCnvlQ==}
     cpu: [loong64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-loong64-musl@4.60.1':
     resolution: {integrity: sha512-4LqhUomJqwe641gsPp6xLfhqWMbQV04KtPp7/dIp0nzPxAkNY1AbwL5W0MQpcalLYk07vaW9Kp1PBhdpZYYcEw==}
     cpu: [loong64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-ppc64-gnu@4.60.1':
     resolution: {integrity: sha512-tLQQ9aPvkBxOc/EUT6j3pyeMD6Hb8QF2BTBnCQWP/uu1lhc9AIrIjKnLYMEroIz/JvtGYgI9dF3AxHZNaEH0rw==}
     cpu: [ppc64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-ppc64-musl@4.60.1':
     resolution: {integrity: sha512-RMxFhJwc9fSXP6PqmAz4cbv3kAyvD1etJFjTx4ONqFP9DkTkXsAMU4v3Vyc5BgzC+anz7nS/9tp4obsKfqkDHg==}
     cpu: [ppc64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-riscv64-gnu@4.60.1':
     resolution: {integrity: sha512-QKgFl+Yc1eEk6MmOBfRHYF6lTxiiiV3/z/BRrbSiW2I7AFTXoBFvdMEyglohPj//2mZS4hDOqeB0H1ACh3sBbg==}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-riscv64-musl@4.60.1':
     resolution: {integrity: sha512-RAjXjP/8c6ZtzatZcA1RaQr6O1TRhzC+adn8YZDnChliZHviqIjmvFwHcxi4JKPSDAt6Uhf/7vqcBzQJy0PDJg==}
     cpu: [riscv64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-linux-s390x-gnu@4.60.1':
     resolution: {integrity: sha512-wcuocpaOlaL1COBYiA89O6yfjlp3RwKDeTIA0hM7OpmhR1Bjo9j31G1uQVpDlTvwxGn2nQs65fBFL5UFd76FcQ==}
     cpu: [s390x]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-x64-gnu@4.60.1':
     resolution: {integrity: sha512-77PpsFQUCOiZR9+LQEFg9GClyfkNXj1MP6wRnzYs0EeWbPcHs02AXu4xuUbM1zhwn3wqaizle3AEYg5aeoohhg==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rollup/rollup-linux-x64-musl@4.60.1':
     resolution: {integrity: sha512-5cIATbk5vynAjqqmyBjlciMJl1+R/CwX9oLk/EyiFXDWd95KpHdrOJT//rnUl4cUcskrd0jCCw3wpZnhIHdD9w==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rollup/rollup-openbsd-x64@4.60.1':
     resolution: {integrity: sha512-cl0w09WsCi17mcmWqqglez9Gk8isgeWvoUZ3WiJFYSR3zjBQc2J5/ihSjpl+VLjPqjQ/1hJRcqBfLjssREQILw==}
@@ -1539,6 +1567,12 @@ packages:
       typescript:
         optional: true
 
+  '@starknet-io/get-starknet-wallet-standard@5.0.0':
+    resolution: {integrity: sha512-isDNGDlp16W24HE4IuweYXLDRZN0JbsDnazAieeKXE87Mn+jqhsjgTsMxcwWTjX7v906Bjz39FiDjGUddnr36g==}
+
+  '@starknet-io/types-js@0.10.0':
+    resolution: {integrity: sha512-7ALSydz6pq3YIOpq5a7OkkxqwJciMc9Nlph0OGjhcC3xX0xH30XgizmziLyYVN10oO9+BJk8M9KbJjpzdbtRSw==}
+
   '@starknet-io/types-js@0.7.10':
     resolution: {integrity: sha512-1VtCqX4AHWJlRRSYGSn+4X1mqolI1Tdq62IwzoU2vUuEE72S1OlEeGhpvd6XsdqXcfHmVzYfj8k1XtKBQqwo9w==}
 
@@ -1729,6 +1763,10 @@ packages:
 
   '@wallet-standard/base@1.1.0':
     resolution: {integrity: sha512-DJDQhjKmSNVLKWItoKThJS+CsJQjR9AOBOirBVT1F9YpRyC9oYHE+ZnSf8y8bxUphtKqdQMPVQ2mHohYdRvDVQ==}
+    engines: {node: '>=16'}
+
+  '@wallet-standard/features@1.1.0':
+    resolution: {integrity: sha512-hiEivWNztx73s+7iLxsuD1sOJ28xtRix58W7Xnz4XzzA/pF0+aicnWgjOdA10doVDEDZdUuZCIIqG96SFNlDUg==}
     engines: {node: '>=16'}
 
   '@wallet-standard/wallet@1.1.0':
@@ -2758,6 +2796,14 @@ packages:
       typescript:
         optional: true
 
+  ox@0.4.4:
+    resolution: {integrity: sha512-oJPEeCDs9iNiPs6J0rTx+Y0KGeCGyCAA3zo94yZhm8G5WpOxrwUtn2Ie/Y8IyARSqqY/j9JTKA3Fc1xs1DvFnw==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   ox@0.6.9:
     resolution: {integrity: sha512-wi5ShvzE4eOcTwQVsIPdFr+8ycyX+5le/96iAJutaZAvCes1J0+RvpEPg5QDPDiaR0XQQAvZVl7AwqQcINuUug==}
     peerDependencies:
@@ -3106,6 +3152,10 @@ packages:
 
   starknet@8.9.2:
     resolution: {integrity: sha512-+dp+o2w67fV6JyVOVkYeM1Ec71aORHc/JrF4VHLlfeGee0nLilooCQLE2u6hUcSGQG2x2/fvzkxYpIN+k1JBvA==}
+    engines: {node: '>=22'}
+
+  starknet@9.4.2:
+    resolution: {integrity: sha512-NFtg077DjddHUSh8sLZ5uB149LEF4NR90FuJ0oF7+zhce7l0oG9Ubqr3H4+jHm/ghHtV+yjlv1UhEoo4SBfILA==}
     engines: {node: '>=22'}
 
   string-width@4.2.3:
@@ -3676,10 +3726,10 @@ snapshots:
       - zod
     optional: true
 
-  '@cartridge/connector@0.10.7(@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@8.9.2)(typescript@5.9.3))(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)':
+  '@cartridge/connector@0.10.7(@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3))(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)':
     dependencies:
       '@cartridge/controller': 0.10.7(@types/react@18.3.28)(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
-      '@starknet-react/core': 5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@8.9.2)(typescript@5.9.3)
+      '@starknet-react/core': 5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -4194,6 +4244,16 @@ snapshots:
   '@phosphor-icons/webcomponents@2.1.5':
     dependencies:
       lit: 3.3.0
+
+  '@provable-games/metagame-sdk@file:../../metagame-sdk(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))':
+    dependencies:
+      '@ericnordelo/strk-merkle-tree': 1.0.1
+      '@rollup/rollup-linux-arm64-gnu': 4.60.1
+    optionalDependencies:
+      react: 18.3.1
+      starknet: 9.4.2(typescript@5.9.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - encoding
 
   '@radix-ui/primitive@1.1.3': {}
 
@@ -4810,8 +4870,7 @@ snapshots:
   '@rollup/rollup-linux-arm-musleabihf@4.60.1':
     optional: true
 
-  '@rollup/rollup-linux-arm64-gnu@4.60.1':
-    optional: true
+  '@rollup/rollup-linux-arm64-gnu@4.60.1': {}
 
   '@rollup/rollup-linux-arm64-musl@4.60.1':
     optional: true
@@ -4892,7 +4951,7 @@ snapshots:
 
   '@scure/bip32@1.7.0':
     dependencies:
-      '@noble/curves': 1.9.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
 
@@ -5379,6 +5438,18 @@ snapshots:
       - fastestsmallesttextencoderdecoder
     optional: true
 
+  '@starknet-io/get-starknet-wallet-standard@5.0.0(typescript@5.9.3)(zod@3.25.76)':
+    dependencies:
+      '@starknet-io/types-js': 0.7.10
+      '@wallet-standard/base': 1.1.0
+      '@wallet-standard/features': 1.1.0
+      ox: 0.4.4(typescript@5.9.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - typescript
+      - zod
+
+  '@starknet-io/types-js@0.10.0': {}
+
   '@starknet-io/types-js@0.7.10': {}
 
   '@starknet-io/types-js@0.8.4': {}
@@ -5389,7 +5460,7 @@ snapshots:
 
   '@starknet-react/chains@5.0.3': {}
 
-  '@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@8.9.2)(typescript@5.9.3)':
+  '@starknet-react/core@5.0.3(get-starknet-core@4.0.0)(react@18.3.1)(starknet@9.4.2(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)':
     dependencies:
       '@starknet-io/types-js': 0.7.10
       '@starknet-react/chains': 5.0.3
@@ -5398,7 +5469,7 @@ snapshots:
       eventemitter3: 5.0.4
       get-starknet-core: 4.0.0
       react: 18.3.1
-      starknet: 8.9.2
+      starknet: 9.4.2(typescript@5.9.3)(zod@3.25.76)
       viem: 2.47.6(typescript@5.9.3)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
@@ -5655,6 +5726,10 @@ snapshots:
       - supports-color
 
   '@wallet-standard/base@1.1.0': {}
+
+  '@wallet-standard/features@1.1.0':
+    dependencies:
+      '@wallet-standard/base': 1.1.0
 
   '@wallet-standard/wallet@1.1.0':
     dependencies:
@@ -7163,6 +7238,20 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
+  ox@0.4.4(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
   ox@0.6.9(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
@@ -7511,6 +7600,23 @@ snapshots:
       lossless-json: 4.3.0
       pako: 2.1.0
       ts-mixer: 6.0.4
+
+  starknet@9.4.2(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@noble/curves': 1.7.0
+      '@noble/hashes': 1.6.1
+      '@scure/base': 1.2.6
+      '@scure/starknet': 1.1.0
+      '@starknet-io/get-starknet-wallet-standard': 5.0.0(typescript@5.9.3)(zod@3.25.76)
+      '@starknet-io/starknet-types-010': '@starknet-io/types-js@0.10.0'
+      '@starknet-io/starknet-types-09': '@starknet-io/types-js@0.9.2'
+      abi-wan-kanabi: 2.2.4
+      lossless-json: 4.3.0
+      pako: 2.1.0
+      ts-mixer: 6.0.4
+    transitivePeerDependencies:
+      - typescript
+      - zod
 
   string-width@4.2.3:
     dependencies:

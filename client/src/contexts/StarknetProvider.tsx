@@ -29,6 +29,10 @@ const snapshotMethods = [
   { name: "lock_snapshot", entrypoint: "lock_snapshot" },
 ];
 
+const merkleMethods = [
+  { name: "create_tree", entrypoint: "create_tree" },
+];
+
 function buildPolicies() {
   const contracts: Record<
     string,
@@ -42,6 +46,16 @@ function buildPolicies() {
   if (sepoliaConfig.snapshotValidatorAddress) {
     contracts[sepoliaConfig.snapshotValidatorAddress] = {
       methods: snapshotMethods,
+    };
+  }
+  if (mainnetConfig.merkleValidatorAddress) {
+    contracts[mainnetConfig.merkleValidatorAddress] = {
+      methods: merkleMethods,
+    };
+  }
+  if (sepoliaConfig.merkleValidatorAddress) {
+    contracts[sepoliaConfig.merkleValidatorAddress] = {
+      methods: merkleMethods,
     };
   }
   return contracts;

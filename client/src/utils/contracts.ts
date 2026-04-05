@@ -1,4 +1,4 @@
-// Re-export all ABIs
+// Re-export all ABIs from SDK
 export {
   SNAPSHOT_VALIDATOR_ABI,
   ERC20_BALANCE_VALIDATOR_ABI,
@@ -7,7 +7,7 @@ export {
   TOURNAMENT_VALIDATOR_ABI,
   ZK_PASSPORT_VALIDATOR_ABI,
   MERKLE_VALIDATOR_ABI,
-} from "./abis";
+} from "@provable-games/metagame-sdk/abis";
 
 // Type definitions
 export interface Entry {
