@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAccount, useProvider } from "@starknet-react/core";
 import {
   Card,
@@ -11,15 +11,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Plus, Trash2, GitBranch, Copy, Check } from "lucide-react";
-import { buildMerkleTree, type MerkleEntry } from "@/utils/merkleTree";
+import { Upload, Plus, Trash2, Copy, Check } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { GitBranch } from "lucide-react";
+import { type MerkleEntry } from "@provable-games/metagame-sdk/merkle";
+import { createMetagameClient, padAddress, displayAddress } from "@provable-games/metagame-sdk";
 import { useChainConfig } from "@/contexts/NetworkContext";
-import { getMerkleApiUrl } from "@/networks";
 
 export function CreateMerkleTree() {
   const { account } = useAccount();
   const { provider } = useProvider();
   const { chainConfig } = useChainConfig();
+  const metagameClient = useMemo(
+    () => createMetagameClient({ chainId: chainConfig.chainId }),
+    [chainConfig.chainId],
+  );
   const validatorAddress = chainConfig.merkleValidatorAddress;
   const [treeName, setTreeName] = useState("");
   const [treeDescription, setTreeDescription] = useState("");
@@ -91,17 +97,13 @@ export function CreateMerkleTree() {
     setResult(null);
 
     try {
-      // Step 1: Build tree client-side
+      // Step 1: Build tree and get calldata for on-chain registration
       setStatus("Building merkle tree...");
-      const tree = buildMerkleTree(entries);
+      const { tree, call } = metagameClient.merkle.buildTreeCalldata(entries, validatorAddress);
 
       // Step 2: Register on-chain
       setStatus("Registering on-chain...");
-      const txResult = await account.execute({
-        contractAddress: validatorAddress,
-        entrypoint: "create_tree",
-        calldata: [tree.root],
-      });
+      const txResult = await account.execute(call);
 
       setStatus("Waiting for transaction confirmation...");
       const receipt = await provider.waitForTransaction(
@@ -111,38 +113,26 @@ export function CreateMerkleTree() {
       // Parse tree ID from event
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const events = (receipt as any).events || [];
-      // Compare addresses as BigInt to handle padding differences
-      const validatorBigInt = BigInt(validatorAddress);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const treeEvent = events.find((e: any) => {
-        try {
-          return BigInt(e.from_address) === validatorBigInt;
-        } catch {
-          return false;
-        }
-      });
+      const treeId = metagameClient.merkle.parseTreeIdFromEvents(events, validatorAddress);
 
-      if (!treeEvent?.keys?.[1]) {
+      if (treeId === null) {
         console.error("Events received:", JSON.stringify(events, null, 2));
         setError("Transaction succeeded but could not parse tree ID from events");
         return;
       }
 
-      const treeId = Number(BigInt(treeEvent.keys[1]));
-
       // Step 3: Store in API with the on-chain tree ID
       setStatus("Storing proofs in API...");
-      const merkleApiUrl = getMerkleApiUrl(chainConfig.chainId);
-      const res = await fetch(`${merkleApiUrl}/trees`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: treeId, name: treeName, description: treeDescription, entries }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
+      try {
+        await metagameClient.merkle.createTree({
+          treeId,
+          name: treeName,
+          description: treeDescription,
+          entries,
+        });
+      } catch (apiErr) {
         setError(
-          `On-chain tree #${treeId} created, but failed to store proofs in API: ${errText}`,
+          `On-chain tree #${treeId} created, but failed to store proofs in API: ${apiErr instanceof Error ? apiErr.message : String(apiErr)}`,
         );
         setResult({ treeId: String(treeId), root: tree.root, entryCount: entries.length });
         return;
@@ -165,14 +155,13 @@ export function CreateMerkleTree() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Create Merkle Tree</h1>
-        <p className="text-muted-foreground mt-2">
-          Add entries, register the merkle root on-chain, and store proofs for
-          lookup
-        </p>
-      </div>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <PageHeader
+        title="Create merkle tree"
+        description="Add entries, register the merkle root on-chain, and store proofs for lookup"
+        icon={GitBranch}
+        backTo="/merkle"
+      />
 
       <Card>
         <CardHeader>
@@ -246,22 +235,24 @@ export function CreateMerkleTree() {
               <h3 className="font-semibold text-sm">
                 Entries ({entries.length})
               </h3>
-              <div className="max-h-64 overflow-y-auto space-y-2">
+              <div className="max-h-64 overflow-y-auto space-y-1">
                 {entries.map((entry, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 border rounded"
+                    className="flex items-center gap-2 px-3 py-1.5 border border-border/40 rounded-lg text-xs"
                   >
-                    <span className="flex-1 text-sm font-mono truncate">
-                      {entry.address}
+                    <span className="flex-1 font-mono truncate" title={padAddress(entry.address)}>
+                      <span className="hidden sm:inline">{padAddress(entry.address)}</span>
+                      <span className="sm:hidden">{displayAddress(padAddress(entry.address))}</span>
                     </span>
-                    <span className="text-sm font-semibold">{entry.count}</span>
+                    <span className="font-medium tabular-nums shrink-0">{entry.count}</span>
                     <Button
                       size="icon"
                       variant="ghost"
+                      className="h-6 w-6 shrink-0"
                       onClick={() => handleRemoveEntry(index)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
@@ -367,7 +358,7 @@ export function CreateMerkleTree() {
                 when configuring contexts with the Merkle Validator.
               </p>
               <p className="text-xs text-green-700 dark:text-green-300">
-                Proofs: {getMerkleApiUrl(chainConfig.chainId)}/trees/{result.treeId}/proof/ADDRESS
+                Proofs: {metagameClient.merkle.apiUrl}/trees/{result.treeId}/proof/ADDRESS
               </p>
             </div>
           </CardContent>

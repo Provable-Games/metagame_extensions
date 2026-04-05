@@ -12,7 +12,7 @@
   "dependencies": {
     "@cartridge/connector": "^0.10.7",
     "@cartridge/controller": "^0.10.7",
-    "@ericnordelo/strk-merkle-tree": "^1.0.1",
+    "@provable-games/metagame-sdk": "^0.1.4",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.8",
@@ -22,6 +22,7 @@
     "@starknet-react/core": "^5.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cookie": "^1.1.1",
     "lucide-react": "^0.552.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
