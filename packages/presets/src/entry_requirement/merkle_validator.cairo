@@ -111,8 +111,10 @@ pub mod MerkleValidator {
             .update(address.into())
             .update(count.into())
             .finalize();
-        // Then apply the StandardMerkleTree leaf hashing: H(0, value, 1)
-        PedersenTrait::new(0).update(leaf_value).update(1).finalize()
+        // computeHashOnElements([leaf_value]) = H(H(0, leaf_value), 1)
+        let inner = PedersenTrait::new(0).update(leaf_value).update(1).finalize();
+        // standardLeafHash wraps with H(0, inner)
+        PedersenTrait::new(0).update(inner).finalize()
     }
 
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
