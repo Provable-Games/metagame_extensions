@@ -175,7 +175,6 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
-        \
         2>&1) || true
 
     # Extract contract address from output
