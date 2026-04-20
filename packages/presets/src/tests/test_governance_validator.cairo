@@ -38,7 +38,7 @@ fn configure_governance_validator(
         } else {
             0
         }, votes_threshold.low.into(),
-        votes_per_entry.low.into(),
+        votes_per_entry.low.into(), 1 // bannable
     ];
     // Set caller to owner address to pass assert_only_owner check
     start_cheat_caller_address(validator_address, owner_address());

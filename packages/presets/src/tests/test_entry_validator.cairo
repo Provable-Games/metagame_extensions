@@ -33,7 +33,7 @@ fn configure_entry_validator(
     erc721_addr: ContractAddress,
 ) {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let mut config = array![erc721_addr.into()];
+    let mut config = array![erc721_addr.into(), 1]; // bannable
     // Set caller to owner address to pass assert_only_owner check
     start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(tournament_id, entry_limit, config.span());

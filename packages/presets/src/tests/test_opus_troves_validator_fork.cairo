@@ -165,7 +165,8 @@ fn test_opus_validator_debt_based() {
             asset_count.into(), // Asset count (0 = wildcard)
             threshold.into(), // Threshold (wad units)
             value_per_entry.into(), // Value per entry (wad units)
-            max_entries.into() // Max entries
+            max_entries.into(), // Max entries
+            1 // bannable
         ]
             .span(),
     };
@@ -306,6 +307,7 @@ fn test_opus_validator_debt_threshold_and_banning() {
         address: validator_address,
         config: array![
             asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into(),
+            1 // bannable
         ]
             .span(),
     };
@@ -408,7 +410,8 @@ fn test_opus_validator_asset_filtering() {
             strk_token_address().into(), // STRK address
             threshold.into(), // Threshold (wad)
             value_per_entry.into(), // Value per entry (wad)
-            max_entries.into() // Max entries
+            max_entries.into(), // Max entries
+            1 // bannable
         ]
             .span(),
     };
@@ -497,6 +500,7 @@ fn test_opus_validator_config_zero_threshold() {
         address: validator_address,
         config: array![
             asset_count.into(), threshold.into(), value_per_entry.into(), max_entries.into(),
+            1 // bannable
         ]
             .span(),
     };

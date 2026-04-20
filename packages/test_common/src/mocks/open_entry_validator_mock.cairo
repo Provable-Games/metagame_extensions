@@ -43,8 +43,7 @@ pub mod open_entry_validator_mock {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Open validator: once registered, entry is always valid (registration_only = true)
-        self.entry_validator.initializer(true);
+        self.entry_validator.initializer();
     }
 
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {

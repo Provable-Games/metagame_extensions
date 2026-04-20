@@ -70,8 +70,7 @@ pub mod ERC20BalanceValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // ERC20 balance can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(true);
+        self.entry_validator.initializer();
     }
 
     // Implement the EntryValidator trait for the contract
@@ -230,7 +229,7 @@ pub mod ERC20BalanceValidator {
         ) {
             // Config format: [token_address, min_threshold_low, min_threshold_high,
             // max_threshold_low, max_threshold_high, value_per_entry_low, value_per_entry_high,
-            // max_entries]
+            // max_entries, bannable]
             let token_address: ContractAddress = (*config.at(0)).try_into().unwrap();
 
             // Reconstruct min_threshold from low and high parts
@@ -272,12 +271,19 @@ pub mod ERC20BalanceValidator {
                 0 // Default to no cap if not provided
             };
 
+            let bannable: bool = if config.len() > 8 {
+                (*config.at(8)) != 0
+            } else {
+                false
+            };
+
             self.context_token_address.write(context_id, token_address);
             self.context_min_threshold.write(context_id, min_threshold);
             self.context_max_threshold.write(context_id, max_threshold);
             self.context_entry_limit.write(context_id, entry_limit);
             self.context_value_per_entry.write(context_id, value_per_entry);
             self.context_max_entries.write(context_id, max_entries);
+            self.entry_validator.set_bannable(context_id, bannable);
         }
 
         fn on_entry_added(

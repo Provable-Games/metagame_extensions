@@ -213,7 +213,6 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Snapshot-based entry validator with tournament-specific snapshot management",
-    "registration_only": false
   }
 }
 EOF

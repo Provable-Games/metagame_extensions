@@ -108,9 +108,7 @@ pub mod SnapshotValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Snapshot data is immutable once locked and entries are tracked via used counts,
-        // so players can safely enter at any time — no registration period required
-        self.entry_validator.initializer(false);
+        self.entry_validator.initializer();
     }
 
     // Implement the EntryValidator trait for the contract

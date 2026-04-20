@@ -115,7 +115,7 @@ fn create_and_finalize_tournament(
 fn test_tournament_validator_any_mode_participants() {
     let owner = tournament_address_sepolia();
 
-    // Deploy tournament validator in registration_only mode
+    // Deploy tournament validator
     let validator_address = deploy_tournament_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let tournament_validator = ITournamentValidatorDispatcher {

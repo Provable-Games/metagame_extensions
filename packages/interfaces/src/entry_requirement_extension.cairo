@@ -1,18 +1,18 @@
 use starknet::ContractAddress;
 
 /// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
-/// - context_owner, registration_only, valid_entry, should_ban,
+/// - context_owner, bannable, valid_entry, should_ban,
 ///   entries_left, add_config, add_entry, remove_entry
 pub const IENTRY_REQUIREMENT_EXTENSION_ID: felt252 =
-    0x14b9d09eb1e1cc70379a716ec48881b23799f24e8652eeec720a46c6c076618;
+    0x3ea6fd42387b3e499064d9d583d9a60e40bdcbb2e4db3ce82bd980e4e6c7605;
 
 #[starknet::interface]
 pub trait IEntryRequirementExtension<TState> {
     /// Get the owner contract address for a specific context
     fn context_owner(self: @TState, context_id: u64) -> ContractAddress;
 
-    /// Returns true if this validator only validates during registration period
-    fn registration_only(self: @TState) -> bool;
+    /// Returns true if entries in this context can be banned mid-tournament
+    fn bannable(self: @TState, context_id: u64) -> bool;
 
     /// Check if a player's entry is valid for a context (used at registration time)
     fn valid_entry(

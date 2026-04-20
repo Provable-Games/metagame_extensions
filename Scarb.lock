@@ -3,7 +3,7 @@ version = 1
 
 [[package]]
 name = "metagame_extensions_entry_fee"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "metagame_extensions_interfaces",
  "openzeppelin_introspection",
@@ -11,7 +11,7 @@ dependencies = [
 
 [[package]]
 name = "metagame_extensions_entry_requirement"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "metagame_extensions_interfaces",
  "openzeppelin_introspection",
@@ -19,11 +19,11 @@ dependencies = [
 
 [[package]]
 name = "metagame_extensions_interfaces"
-version = "0.1.1"
+version = "0.1.2"
 
 [[package]]
 name = "metagame_extensions_presets"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "metagame_extensions_entry_requirement",
  "metagame_extensions_interfaces",
@@ -36,7 +36,7 @@ dependencies = [
 
 [[package]]
 name = "metagame_extensions_prize"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "metagame_extensions_interfaces",
  "openzeppelin_introspection",
@@ -44,7 +44,7 @@ dependencies = [
 
 [[package]]
 name = "metagame_extensions_test_common"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "metagame_extensions_entry_requirement",
  "metagame_extensions_interfaces",
