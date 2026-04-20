@@ -35,7 +35,6 @@ print_warning() {
 
 # Check deployment environment
 STARKNET_NETWORK="${STARKNET_NETWORK:-default}"
-REGISTRATION_ONLY="${REGISTRATION_ONLY:-false}"
 
 # Map network to sncast profile
 case "$STARKNET_NETWORK" in
@@ -55,7 +54,6 @@ print_info "Environment variables loaded:"
 echo "  STARKNET_NETWORK: $STARKNET_NETWORK"
 echo "  SNCAST_PROFILE: $SNCAST_PROFILE"
 echo "  STARKNET_RPC: ${STARKNET_RPC:-<from profile>}"
-echo "  REGISTRATION_ONLY: $REGISTRATION_ONLY"
 
 # Build URL flag if STARKNET_RPC is provided
 URL_FLAG=""
@@ -71,7 +69,6 @@ print_info "Deployment Configuration:"
 echo "  Network: $STARKNET_NETWORK"
 echo "  Profile: $SNCAST_PROFILE"
 echo "  RPC: ${STARKNET_RPC:-<from profile>}"
-echo "  Registration Only: $REGISTRATION_ONLY"
 echo ""
 
 # Confirm deployment
@@ -162,16 +159,6 @@ print_info "ZkPassportValidator class hash: $CLASS_HASH"
 
 print_info "Deploying ZkPassportValidator contract..."
 
-# Constructor parameter: registration_only (bool)
-# Convert REGISTRATION_ONLY to felt252 (0 or 1)
-if [ "$REGISTRATION_ONLY" = "true" ]; then
-    REGISTRATION_ONLY_FELT="1"
-else
-    REGISTRATION_ONLY_FELT="0"
-fi
-
-print_info "Using REGISTRATION_ONLY: $REGISTRATION_ONLY (felt: $REGISTRATION_ONLY_FELT)"
-
 # Retry deployment up to 3 times
 MAX_RETRIES=3
 RETRY_COUNT=0
@@ -188,7 +175,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$CONTRACT_ADDRESS" ]; do
     DEPLOY_OUTPUT=$(sncast --profile $SNCAST_PROFILE deploy \
         $URL_FLAG \
         --class-hash "$CLASS_HASH" \
-        --constructor-calldata "$REGISTRATION_ONLY_FELT" \
+        \
         2>&1) || true
 
     # Extract contract address from output
@@ -224,8 +211,7 @@ cat > "$DEPLOYMENT_FILE" << EOF
   "zkpassport_validator": {
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
-    "description": "ZK passport-based entry validator using Garaga Honk verifier for sybil prevention",
-    "registration_only": $REGISTRATION_ONLY
+    "description": "ZK passport-based entry validator using Garaga Honk verifier for sybil prevention"
   }
 }
 EOF
@@ -242,7 +228,7 @@ echo
 echo "ZkPassport Validator Contract:"
 echo "  Address: $CONTRACT_ADDRESS"
 echo "  Class Hash: $CLASS_HASH"
-echo "  Registration Only: $REGISTRATION_ONLY"
+echo "  Bannable: configured per-context via add_config"
 echo ""
 
 echo "Next steps:"

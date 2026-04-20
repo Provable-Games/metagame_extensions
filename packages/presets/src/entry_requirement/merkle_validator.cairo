@@ -83,7 +83,7 @@ pub mod MerkleValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        self.entry_validator.initializer(false);
+        self.entry_validator.initializer();
     }
 
     /// Compute the leaf hash matching OZ StandardMerkleTree / @ericnordelo/strk-merkle-tree.

@@ -97,7 +97,7 @@ fn test_governance_validator_fork_create_tournament() {
         config: array![
             governor_address().into(), governance_token_address().into(),
             balance_threshold.try_into().unwrap(), proposal_id, check_voted,
-            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
+            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(), 1 // bannable
         ]
             .span(),
     };
@@ -154,7 +154,7 @@ fn test_governance_validator_fork_with_voting_requirement() {
         config: array![
             governor_address().into(), governance_token_address().into(),
             balance_threshold.try_into().unwrap(), proposal_id, check_voted,
-            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
+            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(), 1 // bannable
         ]
             .span(),
     };
@@ -209,7 +209,7 @@ fn test_governance_validator_entries_based_on_voting_power() {
         config: array![
             governor_address().into(), governance_token_address().into(),
             balance_threshold.try_into().unwrap(), proposal_id, check_voted,
-            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
+            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(), 1 // bannable
         ]
             .span(),
     };
@@ -265,7 +265,7 @@ fn test_governance_validator_validate_entries_ban() {
         config: array![
             governor_address().into(), governance_token_address().into(),
             balance_threshold.try_into().unwrap(), proposal_id, check_voted,
-            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
+            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(), 1 // bannable
         ]
             .span(),
     };
@@ -374,7 +374,7 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
         config: array![
             governor_address().into(), governance_token_address().into(),
             balance_threshold.try_into().unwrap(), proposal_id, check_voted,
-            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(),
+            votes_threshold.try_into().unwrap(), votes_per_entry.try_into().unwrap(), 1 // bannable
         ]
             .span(),
     };

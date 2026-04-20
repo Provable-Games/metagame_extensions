@@ -153,8 +153,7 @@ pub mod OpusTrovesValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Trove collateral/debt can change, so registration_only = true (allow banning)
-        self.entry_validator.initializer(true);
+        self.entry_validator.initializer();
     }
 
     // Implement the EntryValidator trait for the contract
@@ -246,6 +245,7 @@ pub mod OpusTrovesValidator {
             // [N+1]: threshold (u128) - minimum yin debt to qualify
             // [N+2]: value_per_entry (u128) - yin required per entry
             // [N+3]: max_entries (u8) - maximum entries cap (0 = no cap)
+            // [N+4]: bannable (bool) - whether entries can be banned mid-tournament
 
             let asset_count: u8 = (*config.at(0)).try_into().unwrap();
             self.context_asset_count.write(context_id, asset_count);
@@ -277,10 +277,17 @@ pub mod OpusTrovesValidator {
                 0
             };
 
+            let bannable: bool = if config.len() > offset + 3 {
+                (*config.at(offset + 3)) != 0
+            } else {
+                false
+            };
+
             self.context_debt_threshold.write(context_id, threshold);
             self.context_entry_limit.write(context_id, entry_limit);
             self.context_value_per_entry.write(context_id, value_per_entry);
             self.context_max_entries.write(context_id, max_entries);
+            self.entry_validator.set_bannable(context_id, bannable);
         }
 
         fn on_entry_added(

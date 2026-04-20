@@ -232,7 +232,6 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Opus Troves Validator - debt-based tournament entries with optional asset filtering",
-    "registration_only": false,
     "features": [
       "Debt-based entries using borrowed yin from Opus Protocol",
       "Asset filtering: wildcard (all troves) or filtered by specific collateral types",

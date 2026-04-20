@@ -213,7 +213,6 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Tournament-based entry validator - validates based on participation/winning in qualifying tournaments",
-    "registration_only": false
   }
 }
 EOF

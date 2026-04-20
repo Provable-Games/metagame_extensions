@@ -9,16 +9,13 @@ pub mod EntryRequirementExtensionComponent {
     };
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_introspection::src5::SRC5Component::InternalTrait as SRC5InternalTrait;
-    use starknet::storage::{
-        Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
-        StoragePointerWriteAccess,
-    };
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_caller_address};
 
     #[storage]
     pub struct Storage {
         context_owner: Map<u64, ContractAddress>,
-        registration_only: bool,
+        bannable: Map<u64, bool>,
     }
 
     #[event]
@@ -92,8 +89,8 @@ pub mod EntryRequirementExtensionComponent {
             self.context_owner.read(context_id)
         }
 
-        fn registration_only(self: @ComponentState<TContractState>) -> bool {
-            self.registration_only.read()
+        fn bannable(self: @ComponentState<TContractState>, context_id: u64) -> bool {
+            self.bannable.read(context_id)
         }
 
         fn valid_entry(
@@ -115,6 +112,9 @@ pub mod EntryRequirementExtensionComponent {
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
+            if !self.bannable.read(context_id) {
+                return false;
+            }
             let contract = self.get_contract();
             EntryRequirementExtension::should_ban_entry(
                 contract, context_id, game_token_id, current_owner, qualification,
@@ -180,9 +180,7 @@ pub mod EntryRequirementExtensionComponent {
         impl SRC5: SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>,
     > of InternalTrait<TContractState> {
-        fn initializer(ref self: ComponentState<TContractState>, registration_only: bool) {
-            self.registration_only.write(registration_only);
-
+        fn initializer(ref self: ComponentState<TContractState>) {
             let mut src5_component = get_dep_component_mut!(ref self, SRC5);
             src5_component.register_interface(IENTRY_REQUIREMENT_EXTENSION_ID);
         }
@@ -193,8 +191,12 @@ pub mod EntryRequirementExtensionComponent {
             self.context_owner.read(context_id)
         }
 
-        fn is_registration_only(self: @ComponentState<TContractState>) -> bool {
-            self.registration_only.read()
+        fn is_bannable(self: @ComponentState<TContractState>, context_id: u64) -> bool {
+            self.bannable.read(context_id)
+        }
+
+        fn set_bannable(ref self: ComponentState<TContractState>, context_id: u64, bannable: bool) {
+            self.bannable.write(context_id, bannable);
         }
 
         fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {

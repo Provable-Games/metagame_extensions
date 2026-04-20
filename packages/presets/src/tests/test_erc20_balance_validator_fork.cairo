@@ -65,7 +65,7 @@ fn create_erc20_config(
     array![
         token_address.into(), min_threshold.low.into(), min_threshold.high.into(),
         max_threshold.low.into(), max_threshold.high.into(), value_per_entry.low.into(),
-        value_per_entry.high.into(), max_entries.into(),
+        value_per_entry.high.into(), max_entries.into(), 1 // bannable
     ]
         .span()
 }

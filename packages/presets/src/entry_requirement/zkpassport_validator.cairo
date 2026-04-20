@@ -103,8 +103,8 @@ pub mod ZkPassportValidator {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, registration_only: bool) {
-        self.entry_validator.initializer(registration_only);
+    fn constructor(ref self: ContractState) {
+        self.entry_validator.initializer();
     }
 
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {

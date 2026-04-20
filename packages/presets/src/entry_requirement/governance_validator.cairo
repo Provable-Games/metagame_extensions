@@ -54,8 +54,7 @@ pub mod GovernanceValidator {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // Governance requirements can change, so registration_only = false (allow banning)
-        self.entry_validator.initializer(false);
+        self.entry_validator.initializer();
     }
 
     // Implement the EntryValidator trait for the contract
@@ -151,6 +150,8 @@ pub mod GovernanceValidator {
         fn add_config(
             ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
+            // Config format: [governor_address, governance_token_address, balance_threshold,
+            // proposal_id, check_voted, votes_threshold, votes_per_entry, bannable]
             let governor_address: ContractAddress = (*config.at(0)).try_into().unwrap();
             let governance_token_address: ContractAddress = (*config.at(1)).try_into().unwrap();
             let balance_threshold: u256 = (*config.at(2)).try_into().unwrap();
@@ -158,6 +159,11 @@ pub mod GovernanceValidator {
             let check_voted: bool = (*config.at(4)) != 0;
             let votes_threshold: u256 = (*config.at(5)).try_into().unwrap();
             let votes_per_entry: u256 = (*config.at(6)).try_into().unwrap();
+            let bannable: bool = if config.len() > 7 {
+                (*config.at(7)) != 0
+            } else {
+                false
+            };
 
             self.entry_limit.write(context_id, entry_limit);
             self.governor_address.write(context_id, governor_address);
@@ -167,6 +173,7 @@ pub mod GovernanceValidator {
             self.check_voted.write(context_id, check_voted);
             self.votes_threshold.write(context_id, votes_threshold);
             self.votes_per_entry.write(context_id, votes_per_entry);
+            self.entry_validator.set_bannable(context_id, bannable);
         }
 
         fn on_entry_added(

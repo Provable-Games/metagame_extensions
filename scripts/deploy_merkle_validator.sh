@@ -211,7 +211,6 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Merkle tree-based entry validator using Pedersen proofs for allowlist/weighted entries",
-    "registration_only": false
   }
 }
 EOF

@@ -51,8 +51,7 @@ pub mod entry_validator_mock {
 
     #[constructor]
     fn constructor(ref self: ContractState) {
-        // ERC721 ownership can change, so allow banning (registration_only = false)
-        self.entry_validator.initializer(false);
+        self.entry_validator.initializer();
     }
 
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
@@ -107,9 +106,16 @@ pub mod entry_validator_mock {
         fn add_config(
             ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
         ) {
-            // Extract ERC721 address from config (first element)
+            // Config format: [erc721_address, bannable]
             let erc721_address: ContractAddress = (*config.at(0)).try_into().unwrap();
             self.context_erc721_address.write(context_id, erc721_address);
+
+            let bannable: bool = if config.len() > 1 {
+                (*config.at(1)) != 0
+            } else {
+                false
+            };
+            self.entry_validator.set_bannable(context_id, bannable);
         }
 
         fn on_entry_added(

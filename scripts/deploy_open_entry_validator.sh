@@ -233,7 +233,6 @@ cat > "$DEPLOYMENT_FILE" << EOF
     "address": "$CONTRACT_ADDRESS",
     "class_hash": "$CLASS_HASH",
     "description": "Open entry validator that allows all players to enter without token requirements",
-    "registration_only": false
   }
 }
 EOF
