@@ -50,9 +50,7 @@ pub trait ITournamentValidator<TState> {
     fn get_qualifying_tournament_ids(
         self: @TState, context_owner: ContractAddress, tournament_id: u64,
     ) -> Array<u64>;
-    fn get_top_positions(
-        self: @TState, context_owner: ContractAddress, tournament_id: u64,
-    ) -> u32;
+    fn get_top_positions(self: @TState, context_owner: ContractAddress, tournament_id: u64) -> u32;
 }
 
 #[starknet::contract]
@@ -187,9 +185,7 @@ pub mod TournamentValidator {
         ) -> Option<u32> {
             // First, validate that the qualification is actually valid
             let is_valid = self
-                .validate_entry_internal(
-                    context_owner, context_id, player_address, qualification,
-                );
+                .validate_entry_internal(context_owner, context_id, player_address, qualification);
             if !is_valid {
                 return Option::Some(0); // Invalid qualification = 0 entries
             }

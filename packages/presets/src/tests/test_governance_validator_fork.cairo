@@ -310,7 +310,8 @@ fn test_governance_validator_validate_entries_ban() {
     assert(entry_number_1 == 1, 'First entry should be 1');
 
     // Verify entry is valid before transfer
-    let is_valid_before = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
+    let is_valid_before = validator
+        .valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(is_valid_before, 'Entry should be valid');
 
     // Get balance before transfer
@@ -329,7 +330,8 @@ fn test_governance_validator_validate_entries_ban() {
     assert(player_balance_after == 0, 'Balance should be 0');
 
     // Verify player no longer meets requirements
-    let is_valid_after_transfer = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
+    let is_valid_after_transfer = validator
+        .valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(!is_valid_after_transfer, 'Should no longer be valid');
 
     // This demonstrates the ban validation flow:
@@ -427,11 +429,13 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     stop_cheat_caller_address(governance_token_address());
 
     // KEY TEST: Player1's existing entry is no longer valid (would be banned)
-    let player1_still_valid = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
+    let player1_still_valid = validator
+        .valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(!player1_still_valid, 'Player1 no longer valid');
 
     // KEY TEST: Player2 can still enter NEW entries (has governance tokens)
-    let player2_can_enter = validator.valid_entry(owner_addr, tournament.id, player2, array![].span());
+    let player2_can_enter = validator
+        .valid_entry(owner_addr, tournament.id, player2, array![].span());
 
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
@@ -529,7 +533,8 @@ fn test_governance_validator_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries after first entry
-    let entries_after_1 = validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_1 = validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_1.is_some(), 'Should have entries');
     // In a real scenario with valid governance setup, this would show 4 entries left
 
@@ -540,7 +545,8 @@ fn test_governance_validator_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries after 3 total
-    let entries_after_3 = validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_3 = validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_3.is_some(), 'Should have entries');
     // Would show 2 entries left
 }

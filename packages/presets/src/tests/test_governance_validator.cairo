@@ -319,7 +319,8 @@ fn test_entries_left_unlimited() {
     );
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
 
     assert(entries_left.is_none(), 'Should be unlimited entries');
 }
@@ -358,7 +359,8 @@ fn test_entries_left_based_on_votes() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // First call - should have 4 entries left
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 4, 'Should have 4 entries left');
 }
@@ -388,7 +390,8 @@ fn test_entries_left_with_fixed_limit() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Should have 3 entries left initially
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 3, 'Should have 3 entries left');
 
@@ -398,7 +401,8 @@ fn test_entries_left_with_fixed_limit() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 2 entries left
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.unwrap() == 2, 'Should have 2 entries left');
 
     // Simulate another entry used
@@ -407,7 +411,8 @@ fn test_entries_left_with_fixed_limit() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 1 entry left
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.unwrap() == 1, 'Should have 1 entry left');
 }
 
@@ -542,7 +547,8 @@ fn test_should_ban_when_requirements_not_met() {
     start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let should_ban = validator.should_ban(owner_address(), tournament_id, 1, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(should_ban, 'ban req');
 }
 
@@ -575,7 +581,8 @@ fn test_should_ban_when_votes_quota_exceeded() {
     validator.add_entry(tournament_id, 5, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let should_ban = validator.should_ban(owner_address(), tournament_id, 9, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 9, player, array![].span());
     assert(should_ban, 'ban quota');
 }
 
@@ -595,7 +602,8 @@ fn test_should_ban_false_for_fixed_limit_when_requirements_met() {
     start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let should_ban = validator.should_ban(owner_address(), tournament_id, 1, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(!should_ban, 'no ban');
 }
 
@@ -617,7 +625,8 @@ fn test_on_entry_removed_noop_when_zero_entries() {
     validator.remove_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left == Option::Some(3), 'rm noop');
 }
 
@@ -641,7 +650,8 @@ fn test_on_entry_removed_decrements_entry_count() {
     validator.remove_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_left = validator.entries_left(owner_address(), tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left == Option::Some(2), 'rm dec');
 }
 
@@ -666,7 +676,8 @@ fn test_valid_entry_votes_per_entry_with_used_entries() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // used_entries == 0 path in has_entries_available
-    let first_valid = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
+    let first_valid = validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(first_valid, 'valid0');
 
     // used_entries > 0 path in has_entries_available
@@ -674,6 +685,7 @@ fn test_valid_entry_votes_per_entry_with_used_entries() {
     validator.add_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let second_valid = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
+    let second_valid = validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(second_valid, 'valid1');
 }

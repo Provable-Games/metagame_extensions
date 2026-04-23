@@ -338,8 +338,7 @@ fn test_merkle_entry_tracking() {
     let qual_check = build_qualification(
         s0_count, get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23).span(),
     );
-    let after_add = validator
-        .entries_left(owner_address(), context_id, s0_addr, qual_check.span());
+    let after_add = validator.entries_left(owner_address(), context_id, s0_addr, qual_check.span());
     assert!(after_add.unwrap() == s0_count - 1, "Should decrement after add_entry");
 
     // Remove the entry
@@ -437,8 +436,7 @@ fn test_merkle_should_ban_returns_false() {
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(s0_count, proof.span());
 
-    let should_ban = validator
-        .should_ban(owner_address(), context_id, 1, s0_addr, qual.span());
+    let should_ban = validator.should_ban(owner_address(), context_id, 1, s0_addr, qual.span());
     assert!(!should_ban, "MerkleValidator should never ban");
 
     let random_addr: ContractAddress = 0xBEEF_felt252.try_into().unwrap();

@@ -13,15 +13,9 @@ pub trait IEntryRequirementExtensionMock<TState> {
     fn get_token_address(
         self: @TState, context_owner: ContractAddress, context_id: u64,
     ) -> ContractAddress;
-    fn get_min_threshold(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u256;
-    fn get_max_threshold(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u256;
-    fn get_value_per_entry(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u256;
+    fn get_min_threshold(self: @TState, context_owner: ContractAddress, context_id: u64) -> u256;
+    fn get_max_threshold(self: @TState, context_owner: ContractAddress, context_id: u64) -> u256;
+    fn get_value_per_entry(self: @TState, context_owner: ContractAddress, context_id: u64) -> u256;
     fn get_max_entries(self: @TState, context_owner: ContractAddress, context_id: u64) -> u32;
 }
 

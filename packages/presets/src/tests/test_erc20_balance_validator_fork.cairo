@@ -105,14 +105,26 @@ fn test_erc20_validator_config_storage() {
     stop_cheat_caller_address(validator_address);
 
     // Verify stored values
-    assert(validator_mock.get_token_address(owner_addr, tournament_id) == token_addr, 'Wrong token address');
-    assert(validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold, 'Wrong min threshold');
-    assert(validator_mock.get_max_threshold(owner_addr, tournament_id) == max_threshold, 'Wrong max threshold');
+    assert(
+        validator_mock.get_token_address(owner_addr, tournament_id) == token_addr,
+        'Wrong token address',
+    );
+    assert(
+        validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold,
+        'Wrong min threshold',
+    );
+    assert(
+        validator_mock.get_max_threshold(owner_addr, tournament_id) == max_threshold,
+        'Wrong max threshold',
+    );
     assert(
         validator_mock.get_value_per_entry(owner_addr, tournament_id) == value_per_entry,
         'Wrong value per entry',
     );
-    assert(validator_mock.get_max_entries(owner_addr, tournament_id) == max_entries, 'Wrong max entries');
+    assert(
+        validator_mock.get_max_entries(owner_addr, tournament_id) == max_entries,
+        'Wrong max entries',
+    );
 }
 
 #[test]
@@ -138,10 +150,19 @@ fn test_erc20_validator_config_minimal() {
     stop_cheat_caller_address(validator_address);
 
     // Verify stored values (max and value_per_entry should default to 0)
-    assert(validator_mock.get_token_address(owner_addr, tournament_id) == token_addr, 'Wrong token address');
-    assert(validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold, 'Wrong min threshold');
+    assert(
+        validator_mock.get_token_address(owner_addr, tournament_id) == token_addr,
+        'Wrong token address',
+    );
+    assert(
+        validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold,
+        'Wrong min threshold',
+    );
     assert(validator_mock.get_max_threshold(owner_addr, tournament_id) == 0, 'Max should be 0');
-    assert(validator_mock.get_value_per_entry(owner_addr, tournament_id) == 0, 'Value per entry should be 0');
+    assert(
+        validator_mock.get_value_per_entry(owner_addr, tournament_id) == 0,
+        'Value per entry should be 0',
+    );
 }
 
 #[test]
@@ -238,7 +259,8 @@ fn test_erc20_validator_add_and_remove_entry() {
     validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_add = validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_add = validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_add.unwrap() == 3, 'Should have 3 entries left');
 
     // Remove an entry
@@ -246,7 +268,8 @@ fn test_erc20_validator_add_and_remove_entry() {
     validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_remove = validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_remove = validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_remove.unwrap() == 4, 'Should have 4 after remove');
 }
 
@@ -316,8 +339,12 @@ fn test_erc20_validator_multiple_tournaments() {
     // Verify independent configs
     assert(validator_mock.get_token_address(owner_addr, tournament_1) == token_1, 'T1 wrong token');
     assert(validator_mock.get_token_address(owner_addr, tournament_2) == token_2, 'T2 wrong token');
-    assert(validator_mock.get_min_threshold(owner_addr, tournament_1) == 1000, 'T1 wrong threshold');
-    assert(validator_mock.get_min_threshold(owner_addr, tournament_2) == 5000, 'T2 wrong threshold');
+    assert(
+        validator_mock.get_min_threshold(owner_addr, tournament_1) == 1000, 'T1 wrong threshold',
+    );
+    assert(
+        validator_mock.get_min_threshold(owner_addr, tournament_2) == 5000, 'T2 wrong threshold',
+    );
 
     // Verify independent entry tracking
     let t1_entries = validator.entries_left(owner_addr, tournament_1, player, array![].span());
@@ -598,7 +625,8 @@ fn test_erc20_validator_fork_enter_tournament() {
     let entry_validator = IEntryRequirementExtensionDispatcher {
         contract_address: validator_address,
     };
-    let entries_left = entry_validator.entries_left(owner_addr, tournament.id, account, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament.id, account, array![].span());
     assert(entries_left.is_some(), 'Should have entries info');
     assert(entries_left.unwrap() == 4, 'Should have 4 entries left');
 }
@@ -676,7 +704,8 @@ fn test_erc20_validator_fork_multiple_entries() {
     let entry_validator = IEntryRequirementExtensionDispatcher {
         contract_address: validator_address,
     };
-    let entries_left = entry_validator.entries_left(owner_addr, tournament.id, account, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament.id, account, array![].span());
     assert(entries_left.unwrap() == 0, 'Should have 0 entries left');
 }
 
@@ -735,8 +764,12 @@ fn test_erc20_validator_with_max_threshold() {
     stop_cheat_caller_address(validator_address);
 
     // Verify config
-    assert(validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold, 'Wrong min');
-    assert(validator_mock.get_max_threshold(owner_addr, tournament_id) == max_threshold, 'Wrong max');
+    assert(
+        validator_mock.get_min_threshold(owner_addr, tournament_id) == min_threshold, 'Wrong min',
+    );
+    assert(
+        validator_mock.get_max_threshold(owner_addr, tournament_id) == max_threshold, 'Wrong max',
+    );
     // Note: In a real scenario, validation would check:
 // - balance >= min_threshold: true
 // - balance <= max_threshold (if > 0): true
@@ -772,7 +805,10 @@ fn test_erc20_validator_entries_based_on_balance() {
         validator_mock.get_value_per_entry(owner_addr, tournament_id) == value_per_entry,
         'Wrong value per entry',
     );
-    assert(validator_mock.get_max_entries(owner_addr, tournament_id) == max_entries, 'Wrong max entries');
+    assert(
+        validator_mock.get_max_entries(owner_addr, tournament_id) == max_entries,
+        'Wrong max entries',
+    );
 
     // Check entries based on balance
     // entries = (balance - min_threshold) / value_per_entry
@@ -1026,8 +1062,13 @@ fn test_erc20_validator_max_entries_cap() {
     validator.add_config(tournament_id, 0, config);
     stop_cheat_caller_address(validator_address);
 
-    assert(validator_mock.get_max_entries(owner_addr, tournament_id) == 5, 'Max entries should be 5');
-    assert(validator_mock.get_value_per_entry(owner_addr, tournament_id) == 10, 'Value per entry should be 10');
+    assert(
+        validator_mock.get_max_entries(owner_addr, tournament_id) == 5, 'Max entries should be 5',
+    );
+    assert(
+        validator_mock.get_value_per_entry(owner_addr, tournament_id) == 10,
+        'Value per entry should be 10',
+    );
 }
 
 #[test]

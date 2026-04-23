@@ -125,7 +125,8 @@ fn test_fork_e2e_valid_proof() {
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
     let qualification = real_qualification_span();
-    let result = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
     assert!(result, "Real proof against Sepolia verifier should be accepted");
 }
 
@@ -191,7 +192,8 @@ fn test_fork_wrong_scope_config_rejected() {
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, wrong_config);
 
     let qualification = real_qualification_span();
-    let result = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
     assert!(!result, "Wrong scope config should cause rejection even with valid proof");
 }
 
@@ -210,7 +212,8 @@ fn test_fork_duplicate_nullifier_blocked() {
     let qualification = real_qualification_span();
 
     // First entry should succeed
-    let result1 = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
+    let result1 = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
     assert!(result1, "First entry with real proof should succeed");
 
     // Record the entry (marks nullifier as used)
@@ -244,7 +247,8 @@ fn test_fork_stale_proof_rejected() {
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, real_config_span());
 
     let qualification = real_qualification_span();
-    let result = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
     assert!(!result, "Proof older than max_proof_age should be rejected");
 }
 
@@ -261,8 +265,7 @@ fn test_fork_config_inspection() {
 
     // Verify all config was stored correctly
     assert!(
-        zkp_validator
-            .get_verifier_address(OWNER_ADDRESS(), TOURNAMENT_ID) == verifier_address(),
+        zkp_validator.get_verifier_address(OWNER_ADDRESS(), TOURNAMENT_ID) == verifier_address(),
         "Verifier address mismatch",
     );
     assert!(
@@ -306,14 +309,16 @@ fn test_fork_entry_removal_and_reentry() {
     let qualification = real_qualification_span();
 
     // Enter
-    let result1 = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
+    let result1 = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification);
     assert!(result1, "Initial entry should succeed");
     entry_validator.add_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification);
 
     // Verify nullifier is used
     let nullifier_hash = poseidon_hash_span(array![REAL_NULLIFIER_LOW, REAL_NULLIFIER_HIGH].span());
     assert!(
-        zkp_validator.is_nullifier_used(OWNER_ADDRESS(), TOURNAMENT_ID, nullifier_hash), "Nullifier should be used",
+        zkp_validator.is_nullifier_used(OWNER_ADDRESS(), TOURNAMENT_ID, nullifier_hash),
+        "Nullifier should be used",
     );
 
     // Remove entry (simulates ban)
@@ -327,6 +332,7 @@ fn test_fork_entry_removal_and_reentry() {
 
     // Re-entry should succeed
     let qualification2 = real_qualification_span();
-    let result2 = entry_validator.valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification2);
+    let result2 = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification2);
     assert!(result2, "Re-entry after removal should succeed with real verifier");
 }

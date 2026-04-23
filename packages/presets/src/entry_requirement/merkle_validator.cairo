@@ -5,9 +5,7 @@ pub trait IMerkleValidator<TState> {
     fn create_tree(ref self: TState, root: felt252) -> u64;
     fn get_tree_root(self: @TState, tree_id: u64) -> felt252;
     fn get_tree_owner(self: @TState, tree_id: u64) -> ContractAddress;
-    fn get_context_tree(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u64;
+    fn get_context_tree(self: @TState, context_owner: ContractAddress, context_id: u64) -> u64;
     fn verify_proof(
         self: @TState,
         tree_id: u64,
@@ -222,9 +220,7 @@ pub mod MerkleValidator {
             qualification: Span<felt252>,
         ) {
             let used = self.merkle_entry_count.read((context_owner, context_id, player_address));
-            self
-                .merkle_entry_count
-                .write((context_owner, context_id, player_address), used + 1);
+            self.merkle_entry_count.write((context_owner, context_id, player_address), used + 1);
         }
 
         fn on_entry_removed(

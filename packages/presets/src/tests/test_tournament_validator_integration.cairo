@@ -138,7 +138,8 @@ fn test_tournament_validator_any_mode_full_flow() {
 
     // Verify validator config
     assert(
-        tournament_validator.get_qualifier_type(owner_addr, gated_id) == QUALIFIER_TYPE_PARTICIPANTS,
+        tournament_validator
+            .get_qualifier_type(owner_addr, gated_id) == QUALIFIER_TYPE_PARTICIPANTS,
         'Wrong qualifier type',
     );
     assert(
@@ -248,7 +249,8 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
         .span();
 
     // Check initial entries left
-    let entries_left = validator.entries_left(owner_addr, gated_tournament.id, player, qualification_data);
+    let entries_left = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qualification_data);
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 2, 'Should have 2 entries');
 
@@ -361,8 +363,10 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     let qual_data_1: Span<felt252> = array![qualifier_1.id.into(), token_id_1.into()].span();
     let qual_data_2: Span<felt252> = array![qualifier_2.id.into(), token_id_2.into()].span();
 
-    let entries_left_1 = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
-    let entries_left_2 = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
+    let entries_left_1 = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
+    let entries_left_2 = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
 
     assert(entries_left_1.unwrap() == 1, 'Should have 1 for qual1');
     assert(entries_left_2.unwrap() == 1, 'Should have 1 for qual2');
@@ -376,8 +380,10 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     assert(entry_1 == 1, 'Should be entry 1');
 
     // Check entries left - qualifier 1 should be 0, qualifier 2 should still be 1
-    let entries_left_1_after = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
-    let entries_left_2_after = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
+    let entries_left_1_after = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
+    let entries_left_2_after = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
 
     assert(entries_left_1_after.unwrap() == 0, 'Qual1 should be 0');
     assert(entries_left_2_after.unwrap() == 1, 'Qual2 should still be 1');
@@ -391,7 +397,8 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     assert(entry_2 == 2, 'Should be entry 2');
 
     // Now both qualifications should have 0 entries left
-    let entries_left_2_final = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
+    let entries_left_2_final = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
     assert(entries_left_2_final.unwrap() == 0, 'Qual2 should be 0 now');
 }
 
@@ -729,7 +736,8 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     let qualification: Span<felt252> = array![qualifier.id.into(), player_token.into(), 1].span();
 
     // Test 1: entries_left should return Some(0) when tournament not finalized
-    let entries_before = validator.entries_left(owner_addr, gated_tournament.id, player, qualification);
+    let entries_before = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qualification);
     assert(entries_before.is_some(), 'Should return Some');
     assert(entries_before.unwrap() == 0, 'Should be 0 before finalized');
 
@@ -738,7 +746,8 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     start_cheat_block_timestamp_global(finalized_time);
 
     // Now entries_left should return Some(3) since qualification is valid
-    let entries_after = validator.entries_left(owner_addr, gated_tournament.id, player, qualification);
+    let entries_after = validator
+        .entries_left(owner_addr, gated_tournament.id, player, qualification);
     assert(entries_after.is_some(), 'Should return Some after');
     assert(entries_after.unwrap() == 3, 'Should be 3 after finalized');
 }

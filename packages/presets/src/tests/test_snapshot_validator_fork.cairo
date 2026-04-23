@@ -176,7 +176,8 @@ fn test_snapshot_validator_fork_create_tournament() {
     let entry_validator = IEntryRequirementExtensionDispatcher {
         contract_address: validator_address,
     };
-    let entries_left = entry_validator.entries_left(owner_addr, tournament.id, player1, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament.id, player1, array![].span());
     assert(entries_left.is_some(), 'Should have entries left');
     assert(entries_left.unwrap() == 2, 'Should have 2 left'); // Started with 3, used 1
 
@@ -245,7 +246,8 @@ fn test_snapshot_validator_fork_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries available
-    let entries_left = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Has entries');
     assert(entries_left.unwrap() == 3, '3 entries left');
 
@@ -255,7 +257,8 @@ fn test_snapshot_validator_fork_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Verify one entry was used
-    let entries_after = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after.unwrap() == 2, '2 entries left');
 
     // Remove entry and verify restoration; second remove is a no-op
@@ -264,7 +267,8 @@ fn test_snapshot_validator_fork_multiple_entries() {
     entry_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_final = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_final = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_final.unwrap() == 3, 'rm rest');
 
     assert(true, 'Multiple entries test');
@@ -597,7 +601,8 @@ fn test_snapshot_validator_exceed_entry_limit() {
     let entry_validator = IEntryRequirementExtensionDispatcher {
         contract_address: validator_address,
     };
-    let entries_left = entry_validator.entries_left(owner_addr, tournament.id, player, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament.id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries info');
     assert(entries_left.unwrap() == 0, 'Should have 0 entries left');
 
@@ -640,7 +645,8 @@ fn test_snapshot_validator_zero_entries() {
     let is_valid = entry_validator.valid_entry(owner_addr, tournament_id, player, array![].span());
     assert(!is_valid, 'Player with 0 entries invalid');
 
-    let entries_left = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Should return entries info');
     assert(entries_left.unwrap() == 0, '0 entries left');
 }
@@ -810,7 +816,8 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     stop_cheat_caller_address(validator_address);
 
     // Initial check - 5 entries
-    let entries_left = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_left = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_left.unwrap() == 5, 'Start with 5 entries');
 
     // Use 1 entry
@@ -818,7 +825,8 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_1 = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_1 = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_1.unwrap() == 4, '4 entries left after 1');
 
     // Use 2 more entries
@@ -827,7 +835,8 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_after_3 = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_after_3 = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_3.unwrap() == 2, '2 entries left after 3');
 
     // Use remaining 2 entries
@@ -836,7 +845,8 @@ fn test_snapshot_validator_entries_tracking_across_uses() {
     entry_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_final = entry_validator.entries_left(owner_addr, tournament_id, player, array![].span());
+    let entries_final = entry_validator
+        .entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_final.unwrap() == 0, '0 entries left after all used');
 
     // Verify player is still "valid" (has entries in snapshot) but has 0 entries left
@@ -883,11 +893,13 @@ fn test_snapshot_validator_independent_tournament_tracking() {
     stop_cheat_caller_address(validator_address);
 
     // Check tournament 1 - should have 1 left
-    let t1_entries = entry_validator.entries_left(owner_addr, tournament_1, player, array![].span());
+    let t1_entries = entry_validator
+        .entries_left(owner_addr, tournament_1, player, array![].span());
     assert(t1_entries.unwrap() == 1, 'T1: 1 entry left');
 
     // Check tournament 2 - should still have 3 (independent tracking)
-    let t2_entries = entry_validator.entries_left(owner_addr, tournament_2, player, array![].span());
+    let t2_entries = entry_validator
+        .entries_left(owner_addr, tournament_2, player, array![].span());
     assert(t2_entries.unwrap() == 3, 'T2: 3 entries left');
 
     // Use 1 entry in tournament 2

@@ -344,8 +344,7 @@ fn test_open_validator_should_never_ban() {
     };
     let player: ContractAddress = 0xDDD.try_into().unwrap();
 
-    let should_ban = open_validator
-        .should_ban(owner_address(), 0, 1, player, array![].span());
+    let should_ban = open_validator.should_ban(owner_address(), 0, 1, player, array![].span());
     assert(!should_ban, 'Open validator should never ban');
 }
 
@@ -414,12 +413,8 @@ fn test_multi_tenant_isolation() {
     stop_cheat_caller_address(validator_address);
 
     // Verify context owners
-    assert!(
-        validator.is_context_registered(owner_a, context_a), "Owner A should own context A",
-    );
-    assert!(
-        validator.is_context_registered(owner_b, context_b), "Owner B should own context B",
-    );
+    assert!(validator.is_context_registered(owner_a, context_a), "Owner A should own context A");
+    assert!(validator.is_context_registered(owner_b, context_b), "Owner B should own context B");
 
     // Owner A can add entry on their own context
     start_cheat_caller_address(validator_address, owner_a);

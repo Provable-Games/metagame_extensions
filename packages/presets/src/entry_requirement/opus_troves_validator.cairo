@@ -73,12 +73,8 @@ pub struct Health {
 
 #[starknet::interface]
 pub trait IOpusTrovesValidator<TState> {
-    fn get_debt_threshold(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u128;
-    fn get_value_per_entry(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u128;
+    fn get_debt_threshold(self: @TState, context_owner: ContractAddress, context_id: u64) -> u128;
+    fn get_value_per_entry(self: @TState, context_owner: ContractAddress, context_id: u64) -> u128;
     fn get_max_entries(self: @TState, context_owner: ContractAddress, context_id: u64) -> u32;
 }
 
@@ -256,7 +252,8 @@ pub mod OpusTrovesValidator {
             // [N+1]: threshold (u128) - minimum yin debt to qualify
             // [N+2]: value_per_entry (u128) - yin required per entry
             // [N+3]: max_entries (u8) - maximum entries cap (0 = no cap)
-            // [N+4]: bannable (bool) - whether entries support banning if debt drops below threshold or exceeds quota
+            // [N+4]: bannable (bool) - whether entries support banning if debt drops below
+            // threshold or exceeds quota
 
             let asset_count: u8 = (*config.at(0)).try_into().unwrap();
             self.context_asset_count.write((context_owner, context_id), asset_count);
@@ -335,10 +332,7 @@ pub mod OpusTrovesValidator {
         /// Check if a trove matches the asset filter for a context
         /// Returns true if asset_count=0 (wildcard) or trove contains at least one specified asset
         fn trove_matches_asset_filter(
-            self: @ContractState,
-            context_owner: ContractAddress,
-            context_id: u64,
-            trove_id: u64,
+            self: @ContractState, context_owner: ContractAddress, context_id: u64, trove_id: u64,
         ) -> bool {
             let asset_count = self.context_asset_count.read((context_owner, context_id));
 
@@ -394,8 +388,7 @@ pub mod OpusTrovesValidator {
                 match user_troves.pop_front() {
                     Option::Some(trove_id) => {
                         // Check if trove matches asset filter
-                        if !self
-                            .trove_matches_asset_filter(context_owner, context_id, *trove_id) {
+                        if !self.trove_matches_asset_filter(context_owner, context_id, *trove_id) {
                             continue;
                         }
 
@@ -470,8 +463,7 @@ pub mod OpusTrovesValidator {
                 match user_troves.pop_front() {
                     Option::Some(trove_id) => {
                         // Check if trove matches asset filter
-                        if !self
-                            .trove_matches_asset_filter(context_owner, context_id, *trove_id) {
+                        if !self.trove_matches_asset_filter(context_owner, context_id, *trove_id) {
                             continue;
                         }
 

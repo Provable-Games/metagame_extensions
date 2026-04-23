@@ -44,17 +44,12 @@ pub trait IZkPassportValidator<TState> {
     fn get_expected_param_commitment(
         self: @TState, context_owner: ContractAddress, context_id: u64,
     ) -> felt252;
-    fn get_max_proof_age(
-        self: @TState, context_owner: ContractAddress, context_id: u64,
-    ) -> u64;
+    fn get_max_proof_age(self: @TState, context_owner: ContractAddress, context_id: u64) -> u64;
     fn get_expected_nullifier_type(
         self: @TState, context_owner: ContractAddress, context_id: u64,
     ) -> felt252;
     fn is_nullifier_used(
-        self: @TState,
-        context_owner: ContractAddress,
-        context_id: u64,
-        nullifier_hash: felt252,
+        self: @TState, context_owner: ContractAddress, context_id: u64, nullifier_hash: felt252,
     ) -> bool;
 }
 

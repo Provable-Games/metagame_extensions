@@ -54,9 +54,7 @@ pub mod PrizeExtensionComponent {
         +Drop<TContractState>,
     > of IPrizeExtension<ComponentState<TContractState>> {
         fn is_context_registered(
-            self: @ComponentState<TContractState>,
-            context_owner: ContractAddress,
-            context_id: u64,
+            self: @ComponentState<TContractState>, context_owner: ContractAddress, context_id: u64,
         ) -> bool {
             self.context_registered.read((context_owner, context_id))
         }
@@ -96,9 +94,7 @@ pub mod PrizeExtensionComponent {
         }
 
         fn is_registered(
-            self: @ComponentState<TContractState>,
-            context_owner: ContractAddress,
-            context_id: u64,
+            self: @ComponentState<TContractState>, context_owner: ContractAddress, context_id: u64,
         ) -> bool {
             self.context_registered.read((context_owner, context_id))
         }
@@ -117,9 +113,7 @@ pub mod PrizeExtensionComponent {
 
         /// Assert `(context_owner, context_id)` has been registered.
         fn assert_registered(
-            self: @ComponentState<TContractState>,
-            context_owner: ContractAddress,
-            context_id: u64,
+            self: @ComponentState<TContractState>, context_owner: ContractAddress, context_id: u64,
         ) {
             assert!(
                 self.context_registered.read((context_owner, context_id)),
