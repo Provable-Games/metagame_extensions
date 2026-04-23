@@ -1,44 +1,6 @@
 use starknet::ContractAddress;
 
 // ==============================================
-// MAINNET CONTRACT ADDRESSES
-// ==============================================
-
-// Tournament platform (Budokan) contract address on mainnet
-pub fn tournament_address_mainnet() -> ContractAddress {
-    0x079b2d43a88db9d5111797edf45dda7d2a51e3aa5b6ed3e5c6a5410e88f50433.try_into().unwrap()
-}
-
-// Minigame contract address on mainnet
-pub fn minigame_address_mainnet() -> ContractAddress {
-    0x5e2dfbdc3c193de629e5beb116083b06bd944c1608c9c793351d5792ba29863.try_into().unwrap()
-}
-
-// Test account address on mainnet
-pub fn test_account_mainnet() -> ContractAddress {
-    0x077b8Ed8356a7C1F0903Fc4bA6E15F9b09CF437ce04f21B2cBf32dC2790183d0.try_into().unwrap()
-}
-
-// ==============================================
-// SEPOLIA CONTRACT ADDRESSES
-// ==============================================
-
-// Tournament platform (Budokan) contract address on sepolia
-pub fn tournament_address_sepolia() -> ContractAddress {
-    0x027649a648ce25712cf90a3b32b9f15f86edb21293227d0b3cc689987c77a02b.try_into().unwrap()
-}
-
-// Minigame contract address on sepolia
-pub fn minigame_address_sepolia() -> ContractAddress {
-    0x07ba8a9d724cc37b79663030693cfb876faced7d8abce2c6cf34c0b887a2614d.try_into().unwrap()
-}
-
-// Test account address on sepolia
-pub fn test_account_sepolia() -> ContractAddress {
-    0x077b8Ed8356a7C1F0903Fc4bA6E15F9b09CF437ce04f21B2cBf32dC2790183d0.try_into().unwrap()
-}
-
-// ==============================================
 // GOVERNANCE CONTRACT ADDRESSES
 // ==============================================
 

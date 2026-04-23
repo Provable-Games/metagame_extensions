@@ -41,10 +41,14 @@ fn compute_leaf_value(address: ContractAddress, count: u32) -> felt252 {
     PedersenTrait::new(0).update(address.into()).update(count.into()).finalize()
 }
 
-/// Compute the StandardMerkleTree leaf hash: H(0, value, 1)
+/// Compute the StandardMerkleTree leaf hash. Matches the on-chain derivation in
+/// MerkleValidator::compute_leaf_hash, which follows @ericnordelo/strk-merkle-tree's
+/// `standardLeafHash([leaf_value])` = `pedersen(0, computeHashOnElements([leaf_value]))`
+/// where `computeHashOnElements([x]) = pedersen(pedersen(0, x), 1)`.
 fn compute_leaf_hash(address: ContractAddress, count: u32) -> felt252 {
     let value = compute_leaf_value(address, count);
-    PedersenTrait::new(0).update(value).update(1).finalize()
+    let inner = PedersenTrait::new(0).update(value).update(1).finalize();
+    PedersenTrait::new(0).update(inner).finalize()
 }
 
 /// OZ PedersenCHasher commutative hash: H(0, sorted_a, sorted_b, 2)
