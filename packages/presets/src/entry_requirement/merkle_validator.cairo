@@ -5,7 +5,7 @@ pub trait IMerkleValidator<TState> {
     fn create_tree(ref self: TState, root: felt252) -> u64;
     fn get_tree_root(self: @TState, tree_id: u64) -> felt252;
     fn get_tree_owner(self: @TState, tree_id: u64) -> ContractAddress;
-    fn get_context_tree(self: @TState, context_id: u64) -> u64;
+    fn get_context_tree(self: @TState, context_owner: ContractAddress, context_id: u64) -> u64;
     fn verify_proof(
         self: @TState,
         tree_id: u64,
@@ -51,15 +51,15 @@ pub mod MerkleValidator {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        // Tree registry
+        // Tree registry (not per-context — global)
         tree_id_counter: u64,
         tree_roots: Map<u64, felt252>,
         tree_owner: Map<u64, ContractAddress>,
         // Context -> tree mapping
-        context_tree: Map<u64, u64>,
+        context_tree: Map<(ContractAddress, u64), u64>,
         // Entry tracking
-        merkle_entry_limit: Map<u64, u32>,
-        merkle_entry_count: Map<(u64, ContractAddress), u32>,
+        merkle_entry_limit: Map<(ContractAddress, u64), u32>,
+        merkle_entry_count: Map<(ContractAddress, u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -120,6 +120,7 @@ pub mod MerkleValidator {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -130,7 +131,7 @@ pub mod MerkleValidator {
             let count: u32 = count_felt.try_into().unwrap();
             let proof = qualification.slice(1, qualification.len() - 1);
 
-            let tree_id = self.context_tree.read(context_id);
+            let tree_id = self.context_tree.read((context_owner, context_id));
             let root = self.tree_roots.read(tree_id);
 
             if root == 0 {
@@ -143,6 +144,7 @@ pub mod MerkleValidator {
 
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
@@ -153,6 +155,7 @@ pub mod MerkleValidator {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -165,7 +168,7 @@ pub mod MerkleValidator {
             let count: u32 = count_felt.try_into().unwrap();
             let proof = qualification.slice(1, qualification.len() - 1);
 
-            let tree_id = self.context_tree.read(context_id);
+            let tree_id = self.context_tree.read((context_owner, context_id));
             let root = self.tree_roots.read(tree_id);
 
             if root == 0 {
@@ -177,14 +180,14 @@ pub mod MerkleValidator {
                 return Option::Some(0);
             }
 
-            let entry_limit = self.merkle_entry_limit.read(context_id);
+            let entry_limit = self.merkle_entry_limit.read((context_owner, context_id));
             let effective_count = if entry_limit > 0 && count > entry_limit {
                 entry_limit
             } else {
                 count
             };
 
-            let used = self.merkle_entry_count.read((context_id, player_address));
+            let used = self.merkle_entry_count.read((context_owner, context_id, player_address));
             if effective_count > used {
                 Option::Some(effective_count - used)
             } else {
@@ -193,38 +196,46 @@ pub mod MerkleValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             assert!(config.len() >= 1, "MerkleValidator: config must contain tree ID");
             let tree_id_felt: felt252 = *config.at(0);
             let tree_id: u64 = tree_id_felt.try_into().unwrap();
             let root = self.tree_roots.read(tree_id);
             assert!(root != 0, "MerkleValidator: tree does not exist");
-            self.context_tree.write(context_id, tree_id);
-            self.merkle_entry_limit.write(context_id, entry_limit);
+            self.context_tree.write((context_owner, context_id), tree_id);
+            self.merkle_entry_limit.write((context_owner, context_id), entry_limit);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used = self.merkle_entry_count.read((context_id, player_address));
-            self.merkle_entry_count.write((context_id, player_address), used + 1);
+            let used = self.merkle_entry_count.read((context_owner, context_id, player_address));
+            self.merkle_entry_count.write((context_owner, context_id, player_address), used + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used = self.merkle_entry_count.read((context_id, player_address));
+            let used = self.merkle_entry_count.read((context_owner, context_id, player_address));
             if used > 0 {
-                self.merkle_entry_count.write((context_id, player_address), used - 1);
+                self
+                    .merkle_entry_count
+                    .write((context_owner, context_id, player_address), used - 1);
             }
         }
     }
@@ -254,8 +265,10 @@ pub mod MerkleValidator {
             self.tree_owner.read(tree_id)
         }
 
-        fn get_context_tree(self: @ContractState, context_id: u64) -> u64 {
-            self.context_tree.read(context_id)
+        fn get_context_tree(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> u64 {
+            self.context_tree.read((context_owner, context_id))
         }
 
         fn verify_proof(

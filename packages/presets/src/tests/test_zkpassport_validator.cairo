@@ -115,7 +115,8 @@ fn test_happy_path_valid_proof() {
     let (contract_address, entry_validator, _) = deploy_validator();
     setup_valid_scenario(contract_address, entry_validator);
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(result, "Valid proof should be accepted");
 }
 
@@ -136,7 +137,8 @@ fn test_proof_verification_fails() {
         Result::<Array<u256>, felt252>::Err('proof_invalid'),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Failed proof should be rejected");
 }
 
@@ -167,7 +169,8 @@ fn test_scope_mismatch() {
         Result::<Array<u256>, felt252>::Ok(tampered),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Scope mismatch should be rejected");
 }
 
@@ -197,7 +200,8 @@ fn test_subscope_mismatch() {
         Result::<Array<u256>, felt252>::Ok(tampered),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Subscope mismatch should be rejected");
 }
 
@@ -227,7 +231,8 @@ fn test_param_commitment_mismatch() {
         Result::<Array<u256>, felt252>::Ok(tampered),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Param commitment mismatch should be rejected");
 }
 
@@ -257,7 +262,8 @@ fn test_nullifier_type_mismatch() {
         Result::<Array<u256>, felt252>::Ok(tampered),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Nullifier type mismatch should be rejected");
 }
 
@@ -287,7 +293,8 @@ fn test_nullifier_consistency_mismatch() {
         Result::<Array<u256>, felt252>::Ok(tampered),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Nullifier mismatch should be rejected");
 }
 
@@ -308,7 +315,8 @@ fn test_stale_proof() {
         Result::<Array<u256>, felt252>::Ok(mock_public_inputs()),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Stale proof should be rejected");
 }
 
@@ -329,7 +337,8 @@ fn test_future_proof() {
         Result::<Array<u256>, felt252>::Ok(mock_public_inputs()),
     );
 
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "Future proof should be rejected");
 }
 
@@ -342,7 +351,8 @@ fn test_duplicate_nullifier_same_tournament() {
     setup_valid_scenario(contract_address, entry_validator);
 
     // First entry should succeed
-    let result = entry_validator.valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let result = entry_validator
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(result, "First entry should be valid");
 
     // Record the entry
@@ -357,7 +367,7 @@ fn test_duplicate_nullifier_same_tournament() {
 
     // Second entry with same nullifier should fail
     let result2 = entry_validator
-        .valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS_2(), qualification_span());
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS_2(), qualification_span());
     assert!(!result2, "Duplicate nullifier should be rejected");
 }
 
@@ -382,7 +392,7 @@ fn test_cross_tournament_same_nullifier() {
 
     // Enter tournament 1
     let result1 = entry_validator
-        .valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(result1, "Tournament 1 entry should be valid");
 
     entry_validator.add_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
@@ -396,7 +406,7 @@ fn test_cross_tournament_same_nullifier() {
 
     // Enter tournament 2 with same nullifier should succeed
     let result2 = entry_validator
-        .valid_entry(TOURNAMENT_ID_2, PLAYER_ADDRESS(), qualification_span());
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID_2, PLAYER_ADDRESS(), qualification_span());
     assert!(result2, "Same nullifier in different tournament should be valid");
 }
 
@@ -410,14 +420,15 @@ fn test_entry_removal_releases_nullifier() {
 
     // First entry
     let result1 = entry_validator
-        .valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(result1, "First entry should be valid");
     entry_validator.add_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
 
     // Nullifier should be used
     let nullifier_hash = poseidon_hash_span(array![NULLIFIER_LOW, NULLIFIER_HIGH].span());
     assert!(
-        zkp_validator.is_nullifier_used(TOURNAMENT_ID, nullifier_hash), "Nullifier should be used",
+        zkp_validator.is_nullifier_used(OWNER_ADDRESS(), TOURNAMENT_ID, nullifier_hash),
+        "Nullifier should be used",
     );
 
     // Remove entry (ban)
@@ -425,7 +436,7 @@ fn test_entry_removal_releases_nullifier() {
 
     // Nullifier should be released
     assert!(
-        !zkp_validator.is_nullifier_used(TOURNAMENT_ID, nullifier_hash),
+        !zkp_validator.is_nullifier_used(OWNER_ADDRESS(), TOURNAMENT_ID, nullifier_hash),
         "Nullifier should be released after removal",
     );
 
@@ -438,7 +449,7 @@ fn test_entry_removal_releases_nullifier() {
 
     // Re-entry should now work
     let result2 = entry_validator
-        .valid_entry(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+        .valid_entry(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(result2, "Re-entry after removal should be valid");
 }
 
@@ -473,15 +484,16 @@ fn test_config_extended_elements() {
 
     // Core config should be stored correctly
     assert!(
-        zkp_validator.get_verifier_address(TOURNAMENT_ID) == VERIFIER_ADDRESS(),
+        zkp_validator.get_verifier_address(OWNER_ADDRESS(), TOURNAMENT_ID) == VERIFIER_ADDRESS(),
         "Verifier address should be set",
     );
     assert!(
-        zkp_validator.get_expected_service_scope(TOURNAMENT_ID) == SERVICE_SCOPE,
+        zkp_validator.get_expected_service_scope(OWNER_ADDRESS(), TOURNAMENT_ID) == SERVICE_SCOPE,
         "Service scope should be set",
     );
     assert!(
-        zkp_validator.get_expected_param_commitment(TOURNAMENT_ID) == PARAM_COMMITMENT,
+        zkp_validator
+            .get_expected_param_commitment(OWNER_ADDRESS(), TOURNAMENT_ID) == PARAM_COMMITMENT,
         "Param commitment should be set",
     );
 }
@@ -516,7 +528,7 @@ fn test_should_ban_always_false() {
     start_cheat_caller_address(contract_address, OWNER_ADDRESS());
 
     let result = entry_validator
-        .should_ban(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
+        .should_ban(OWNER_ADDRESS(), TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
     assert!(!result, "should_ban should always return false");
 }
 
@@ -530,25 +542,29 @@ fn test_entries_left_tracking() {
     entry_validator.add_config(TOURNAMENT_ID, ENTRY_LIMIT, config_span());
 
     // Initially should have full entries left
-    let left = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let left = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(left == Option::Some(ENTRY_LIMIT), "Should start with full entries");
 
     // After adding one entry, the nullifier is used so entries_left with same
     // qualification returns 0 (nullifier already used)
     entry_validator.add_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
-    let left2 = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let left2 = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(left2 == Option::Some(0), "Used nullifier should report 0 entries");
 
     // With a different nullifier qualification, count-based tracking shows 1 used
     let different_qual = array![0xAAAA, 0xBBBB, 'proof1', 'proof2'].span();
-    let left2b = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), different_qual);
+    let left2b = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), different_qual);
     assert!(
         left2b == Option::Some(ENTRY_LIMIT - 1), "Should have one less entry with unused nullifier",
     );
 
     // After removing entry, nullifier is released
     entry_validator.remove_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
-    let left3 = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let left3 = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(left3 == Option::Some(ENTRY_LIMIT), "Should restore entry after removal");
 }
 
@@ -561,18 +577,21 @@ fn test_entries_left_nullifier_check() {
     setup_valid_scenario(contract_address, entry_validator);
 
     // Before entry, entries_left should report available
-    let left = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let left = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(left == Option::Some(ENTRY_LIMIT), "Should have entries before use");
 
     // Add entry (marks nullifier as used)
     entry_validator.add_entry(TOURNAMENT_ID, 1, PLAYER_ADDRESS(), qualification_span());
 
     // entries_left with same nullifier should now return 0
-    let left2 = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
+    let left2 = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), qualification_span());
     assert!(left2 == Option::Some(0), "Used nullifier should block entries_left");
 
     // entries_left with no qualification should skip nullifier check and show count
-    let left3 = entry_validator.entries_left(TOURNAMENT_ID, PLAYER_ADDRESS(), array![].span());
+    let left3 = entry_validator
+        .entries_left(OWNER_ADDRESS(), TOURNAMENT_ID, PLAYER_ADDRESS(), array![].span());
     assert!(
         left3 == Option::Some(ENTRY_LIMIT - 1),
         "Empty qualification should show count-based entries",

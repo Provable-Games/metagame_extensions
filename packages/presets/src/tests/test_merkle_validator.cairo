@@ -41,10 +41,14 @@ fn compute_leaf_value(address: ContractAddress, count: u32) -> felt252 {
     PedersenTrait::new(0).update(address.into()).update(count.into()).finalize()
 }
 
-/// Compute the StandardMerkleTree leaf hash: H(0, value, 1)
+/// Compute the StandardMerkleTree leaf hash. Matches the on-chain derivation in
+/// MerkleValidator::compute_leaf_hash, which follows @ericnordelo/strk-merkle-tree's
+/// `standardLeafHash([leaf_value])` = `pedersen(0, computeHashOnElements([leaf_value]))`
+/// where `computeHashOnElements([x]) = pedersen(pedersen(0, x), 1)`.
 fn compute_leaf_hash(address: ContractAddress, count: u32) -> felt252 {
     let value = compute_leaf_value(address, count);
-    PedersenTrait::new(0).update(value).update(1).finalize()
+    let inner = PedersenTrait::new(0).update(value).update(1).finalize();
+    PedersenTrait::new(0).update(inner).finalize()
 }
 
 /// OZ PedersenCHasher commutative hash: H(0, sorted_a, sorted_b, 2)
@@ -192,7 +196,7 @@ fn test_merkle_valid_proof() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     let merkle = IMerkleValidatorDispatcher { contract_address: validator_address };
 
-    let tree_id = merkle.get_context_tree(context_id);
+    let tree_id = merkle.get_context_tree(owner_address(), context_id);
     assert!(merkle.get_tree_root(tree_id) == root, "Root should match");
 
     let (s0_leaf, _, _) = s0;
@@ -206,7 +210,7 @@ fn test_merkle_valid_proof() {
         let (_, addr, count) = *leaves.at(i);
         let proof = get_proof_for_index(i, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
         let qual = build_qualification(count, proof.span());
-        let valid = validator.valid_entry(context_id, addr, qual.span());
+        let valid = validator.valid_entry(owner_address(), context_id, addr, qual.span());
         assert!(valid, "Leaf should be valid");
 
         let proof2 = get_proof_for_index(i, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
@@ -235,7 +239,7 @@ fn test_merkle_invalid_proof() {
     let bad_proof: Array<felt252> = array![tampered_elem, *proof.at(1)];
 
     let qual = build_qualification(s0_count, bad_proof.span());
-    let valid = validator.valid_entry(context_id, s0_addr, qual.span());
+    let valid = validator.valid_entry(owner_address(), context_id, s0_addr, qual.span());
     assert!(!valid, "Tampered proof should be invalid");
 }
 
@@ -256,7 +260,7 @@ fn test_merkle_wrong_address() {
     let wrong_addr: ContractAddress = 0xDEAD_felt252.try_into().unwrap();
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(s0_count, proof.span());
-    let valid = validator.valid_entry(context_id, wrong_addr, qual.span());
+    let valid = validator.valid_entry(owner_address(), context_id, wrong_addr, qual.span());
     assert!(!valid, "Wrong address should fail verification");
 }
 
@@ -277,7 +281,7 @@ fn test_merkle_wrong_count() {
     let wrong_count: u32 = s0_count + 1;
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(wrong_count, proof.span());
-    let valid = validator.valid_entry(context_id, s0_addr, qual.span());
+    let valid = validator.valid_entry(owner_address(), context_id, s0_addr, qual.span());
     assert!(!valid, "Wrong count should fail verification");
 }
 
@@ -301,7 +305,7 @@ fn test_merkle_entries_left() {
         let (_, addr, count) = *leaves.at(i);
         let proof = get_proof_for_index(i, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
         let qual = build_qualification(count, proof.span());
-        let left = validator.entries_left(context_id, addr, qual.span());
+        let left = validator.entries_left(owner_address(), context_id, addr, qual.span());
         assert!(left.is_some(), "Should have limited entries");
         assert!(left.unwrap() == count, "entries_left should equal count from tree");
         i += 1;
@@ -324,7 +328,7 @@ fn test_merkle_entry_tracking() {
 
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(s0_count, proof.span());
-    let initial = validator.entries_left(context_id, s0_addr, qual.span());
+    let initial = validator.entries_left(owner_address(), context_id, s0_addr, qual.span());
     assert!(initial.unwrap() == s0_count, "Should start with full count");
 
     // Add an entry
@@ -338,7 +342,7 @@ fn test_merkle_entry_tracking() {
     let qual_check = build_qualification(
         s0_count, get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23).span(),
     );
-    let after_add = validator.entries_left(context_id, s0_addr, qual_check.span());
+    let after_add = validator.entries_left(owner_address(), context_id, s0_addr, qual_check.span());
     assert!(after_add.unwrap() == s0_count - 1, "Should decrement after add_entry");
 
     // Remove the entry
@@ -352,7 +356,8 @@ fn test_merkle_entry_tracking() {
     let qual_final = build_qualification(
         s0_count, get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23).span(),
     );
-    let after_remove = validator.entries_left(context_id, s0_addr, qual_final.span());
+    let after_remove = validator
+        .entries_left(owner_address(), context_id, s0_addr, qual_final.span());
     assert!(after_remove.unwrap() == s0_count, "Should increment after remove_entry");
 }
 
@@ -379,7 +384,7 @@ fn test_merkle_entry_limit_cap() {
         if addr == address2() {
             let proof = get_proof_for_index(i, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
             let qual = build_qualification(count, proof.span());
-            let left = validator.entries_left(context_id, addr, qual.span());
+            let left = validator.entries_left(owner_address(), context_id, addr, qual.span());
             assert!(left.is_some(), "Should have limited entries");
             assert!(left.unwrap() == entry_limit, "entries_left should be capped by entry_limit");
             found = true;
@@ -405,15 +410,16 @@ fn test_merkle_single_leaf() {
     let merkle = IMerkleValidatorDispatcher { contract_address: validator_address };
 
     let qual = build_qualification(count, array![].span());
-    let valid = validator.valid_entry(context_id, addr, qual.span());
+    let valid = validator.valid_entry(owner_address(), context_id, addr, qual.span());
     assert!(valid, "Single leaf should be valid with empty proof");
 
-    let tree_id = merkle.get_context_tree(context_id);
+    let tree_id = merkle.get_context_tree(owner_address(), context_id);
     let vp = merkle.verify_proof(tree_id, addr, count, array![].span());
     assert!(vp, "verify_proof should work for single leaf");
 
     let wrong_qual = build_qualification(count, array![].span());
-    let wrong_valid = validator.valid_entry(context_id, address2(), wrong_qual.span());
+    let wrong_valid = validator
+        .valid_entry(owner_address(), context_id, address2(), wrong_qual.span());
     assert!(!wrong_valid, "Wrong address should fail for single leaf tree");
 }
 
@@ -434,10 +440,11 @@ fn test_merkle_should_ban_returns_false() {
     let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
     let qual = build_qualification(s0_count, proof.span());
 
-    let should_ban = validator.should_ban(context_id, 1, s0_addr, qual.span());
+    let should_ban = validator.should_ban(owner_address(), context_id, 1, s0_addr, qual.span());
     assert!(!should_ban, "MerkleValidator should never ban");
 
     let random_addr: ContractAddress = 0xBEEF_felt252.try_into().unwrap();
-    let should_ban_random = validator.should_ban(context_id, 99, random_addr, array![].span());
+    let should_ban_random = validator
+        .should_ban(owner_address(), context_id, 99, random_addr, array![].span());
     assert!(!should_ban_random, "should_ban should always return false");
 }

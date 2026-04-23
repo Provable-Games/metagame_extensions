@@ -87,7 +87,7 @@ fn test_valid_entry_with_balance_above_threshold() {
     start_mock_call(governance_token, delegates_selector, delegate);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(can_enter, 'Should enter with high balance');
 }
@@ -123,7 +123,7 @@ fn test_invalid_entry_with_balance_below_threshold_no_delegate() {
     start_mock_call(governance_token, delegates_selector, 0);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(!can_enter, 'Should reject low balance');
 }
@@ -151,7 +151,7 @@ fn test_valid_entry_with_delegation() {
     start_mock_call(governance_token, delegates_selector, delegate);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(can_enter, 'Should enter with delegation');
 }
@@ -205,7 +205,7 @@ fn test_valid_entry_with_voting_requirement_met() {
     start_mock_call(governor, get_votes_selector, 600_u256);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(can_enter, 'Should enter: voted & votes ok');
 }
@@ -243,7 +243,7 @@ fn test_invalid_entry_has_not_voted() {
     start_mock_call(governor, selector!("has_voted"), false);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(!can_enter, 'Should reject: has not voted');
 }
@@ -287,7 +287,7 @@ fn test_invalid_entry_votes_below_threshold() {
     start_mock_call(governor, selector!("get_votes"), 400_u256);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(!can_enter, 'Should reject: votes too low');
 }
@@ -319,7 +319,8 @@ fn test_entries_left_unlimited() {
     );
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
 
     assert(entries_left.is_none(), 'Should be unlimited entries');
 }
@@ -358,7 +359,8 @@ fn test_entries_left_based_on_votes() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // First call - should have 4 entries left
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 4, 'Should have 4 entries left');
 }
@@ -388,7 +390,8 @@ fn test_entries_left_with_fixed_limit() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // Should have 3 entries left initially
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 3, 'Should have 3 entries left');
 
@@ -398,7 +401,8 @@ fn test_entries_left_with_fixed_limit() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 2 entries left
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.unwrap() == 2, 'Should have 2 entries left');
 
     // Simulate another entry used
@@ -407,7 +411,8 @@ fn test_entries_left_with_fixed_limit() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 1 entry left
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left.unwrap() == 1, 'Should have 1 entry left');
 }
 
@@ -441,11 +446,11 @@ fn test_multiple_tournaments_independent_configs() {
     start_mock_call(governance_token, selector!("delegates"), delegate);
 
     // Should pass tournament 1
-    let can_enter_t1 = validator.valid_entry(1, player, array![].span());
+    let can_enter_t1 = validator.valid_entry(owner_address(), 1, player, array![].span());
     assert(can_enter_t1, 'Should enter tournament 1');
 
     // Should fail tournament 2
-    let can_enter_t2 = validator.valid_entry(2, player, array![].span());
+    let can_enter_t2 = validator.valid_entry(owner_address(), 2, player, array![].span());
     assert(!can_enter_t2, 'Should not enter tournament 2');
 }
 
@@ -473,7 +478,7 @@ fn test_zero_balance_with_delegation() {
     start_mock_call(governance_token, selector!("delegates"), delegate);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     // Should fail because balance is below threshold, even with delegation
     assert(!can_enter, 'Zero bal should fail');
@@ -496,7 +501,7 @@ fn test_exact_threshold_balance() {
     start_mock_call(governance_token, selector!("delegates"), 0);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(!can_enter, 'Exact threshold should fail');
 }
@@ -520,7 +525,7 @@ fn test_just_above_threshold_balance() {
     start_mock_call(governance_token, selector!("delegates"), delegate);
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let can_enter = validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = validator.valid_entry(owner_address(), tournament_id, player, array![].span());
 
     assert(can_enter, 'Just above threshold passes');
 }
@@ -542,7 +547,8 @@ fn test_should_ban_when_requirements_not_met() {
     start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let should_ban = validator.should_ban(tournament_id, 1, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(should_ban, 'ban req');
 }
 
@@ -575,7 +581,8 @@ fn test_should_ban_when_votes_quota_exceeded() {
     validator.add_entry(tournament_id, 5, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let should_ban = validator.should_ban(tournament_id, 9, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 9, player, array![].span());
     assert(should_ban, 'ban quota');
 }
 
@@ -595,7 +602,8 @@ fn test_should_ban_false_for_fixed_limit_when_requirements_met() {
     start_mock_call(governance_token, selector!("delegates"), mock_address(0x456));
 
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
-    let should_ban = validator.should_ban(tournament_id, 1, player, array![].span());
+    let should_ban = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(!should_ban, 'no ban');
 }
 
@@ -617,7 +625,8 @@ fn test_on_entry_removed_noop_when_zero_entries() {
     validator.remove_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left == Option::Some(3), 'rm noop');
 }
 
@@ -641,7 +650,8 @@ fn test_on_entry_removed_decrements_entry_count() {
     validator.remove_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let entries_left = validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(entries_left == Option::Some(2), 'rm dec');
 }
 
@@ -666,7 +676,8 @@ fn test_valid_entry_votes_per_entry_with_used_entries() {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     // used_entries == 0 path in has_entries_available
-    let first_valid = validator.valid_entry(tournament_id, player, array![].span());
+    let first_valid = validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(first_valid, 'valid0');
 
     // used_entries > 0 path in has_entries_available
@@ -674,6 +685,7 @@ fn test_valid_entry_votes_per_entry_with_used_entries() {
     validator.add_entry(tournament_id, 1, player, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    let second_valid = validator.valid_entry(tournament_id, player, array![].span());
+    let second_valid = validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(second_valid, 'valid1');
 }

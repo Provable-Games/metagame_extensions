@@ -2,7 +2,9 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IEntryRequirementExtensionMock<TState> {
-    fn get_context_erc721_address(self: @TState, context_id: u64) -> ContractAddress;
+    fn get_context_erc721_address(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> ContractAddress;
 }
 
 #[starknet::contract]
@@ -37,7 +39,7 @@ pub mod entry_validator_mock {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        context_erc721_address: Map<u64, ContractAddress>,
+        context_erc721_address: Map<(ContractAddress, u64), ContractAddress>,
     }
 
     #[event]
@@ -57,11 +59,12 @@ pub mod entry_validator_mock {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let erc721_address = self.context_erc721_address.read(context_id);
+            let erc721_address = self.context_erc721_address.read((context_owner, context_id));
 
             // Check if ERC721 address is set for this context
             if erc721_address.is_zero() {
@@ -77,13 +80,14 @@ pub mod entry_validator_mock {
 
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
             // Ban if player no longer owns the ERC721 token
-            let erc721_address = self.context_erc721_address.read(context_id);
+            let erc721_address = self.context_erc721_address.read((context_owner, context_id));
             if erc721_address.is_zero() {
                 return false;
             }
@@ -95,6 +99,7 @@ pub mod entry_validator_mock {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -104,22 +109,27 @@ pub mod entry_validator_mock {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             // Config format: [erc721_address, bannable]
             let erc721_address: ContractAddress = (*config.at(0)).try_into().unwrap();
-            self.context_erc721_address.write(context_id, erc721_address);
+            self.context_erc721_address.write((context_owner, context_id), erc721_address);
 
             let bannable: bool = if config.len() > 1 {
                 (*config.at(1)) != 0
             } else {
                 false
             };
-            self.entry_validator.set_bannable(context_id, bannable);
+            self.entry_validator.set_bannable(context_owner, context_id, bannable);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
@@ -129,6 +139,7 @@ pub mod entry_validator_mock {
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
@@ -141,8 +152,10 @@ pub mod entry_validator_mock {
     use super::IEntryRequirementExtensionMock;
     #[abi(embed_v0)]
     impl EntryValidatorMockImpl of IEntryRequirementExtensionMock<ContractState> {
-        fn get_context_erc721_address(self: @ContractState, context_id: u64) -> ContractAddress {
-            self.context_erc721_address.read(context_id)
+        fn get_context_erc721_address(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> ContractAddress {
+            self.context_erc721_address.read((context_owner, context_id))
         }
     }
 }
