@@ -138,11 +138,11 @@ fn test_tournament_validator_any_mode_full_flow() {
 
     // Verify validator config
     assert(
-        tournament_validator.get_qualifier_type(gated_id) == QUALIFIER_TYPE_PARTICIPANTS,
+        tournament_validator.get_qualifier_type(owner_addr, gated_id) == QUALIFIER_TYPE_PARTICIPANTS,
         'Wrong qualifier type',
     );
     assert(
-        tournament_validator.get_qualifying_mode(gated_id) == QUALIFYING_MODE_PER_TOKEN,
+        tournament_validator.get_qualifying_mode(owner_addr, gated_id) == QUALIFYING_MODE_PER_TOKEN,
         'Wrong qualifying mode',
     );
 
@@ -167,7 +167,7 @@ fn test_tournament_validator_any_mode_full_flow() {
     // qualification)
     let qualification_data: Span<felt252> = array![qualifying_id.into(), player1_token_id.into()]
         .span();
-    let entries_left = validator.entries_left(gated_id, player1, qualification_data);
+    let entries_left = validator.entries_left(owner_addr, gated_id, player1, qualification_data);
     assert(entries_left.is_none(), 'Should have unlimited entries');
 
     // Player can enter again with same qualification
@@ -248,7 +248,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
         .span();
 
     // Check initial entries left
-    let entries_left = validator.entries_left(gated_tournament.id, player, qualification_data);
+    let entries_left = validator.entries_left(owner_addr, gated_tournament.id, player, qualification_data);
     assert(entries_left.is_some(), 'Should have entries');
     assert(entries_left.unwrap() == 2, 'Should have 2 entries');
 
@@ -262,7 +262,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
 
     // Check entries left after first entry
     let entries_left_after_1 = validator
-        .entries_left(gated_tournament.id, player, qualification_data);
+        .entries_left(owner_addr, gated_tournament.id, player, qualification_data);
     assert(entries_left_after_1.unwrap() == 1, 'Should have 1 left');
 
     // Second entry
@@ -274,7 +274,7 @@ fn test_tournament_validator_any_mode_with_entry_limits() {
 
     // Check entries left after second entry
     let entries_left_after_2 = validator
-        .entries_left(gated_tournament.id, player, qualification_data);
+        .entries_left(owner_addr, gated_tournament.id, player, qualification_data);
     assert(entries_left_after_2.unwrap() == 0, 'Should have 0 left');
     // Third entry should fail (no entries left)
 // Note: This would panic in actual execution, but demonstrates the limit
@@ -361,8 +361,8 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     let qual_data_1: Span<felt252> = array![qualifier_1.id.into(), token_id_1.into()].span();
     let qual_data_2: Span<felt252> = array![qualifier_2.id.into(), token_id_2.into()].span();
 
-    let entries_left_1 = validator.entries_left(gated_tournament.id, player, qual_data_1);
-    let entries_left_2 = validator.entries_left(gated_tournament.id, player, qual_data_2);
+    let entries_left_1 = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
+    let entries_left_2 = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
 
     assert(entries_left_1.unwrap() == 1, 'Should have 1 for qual1');
     assert(entries_left_2.unwrap() == 1, 'Should have 1 for qual2');
@@ -376,8 +376,8 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     assert(entry_1 == 1, 'Should be entry 1');
 
     // Check entries left - qualifier 1 should be 0, qualifier 2 should still be 1
-    let entries_left_1_after = validator.entries_left(gated_tournament.id, player, qual_data_1);
-    let entries_left_2_after = validator.entries_left(gated_tournament.id, player, qual_data_2);
+    let entries_left_1_after = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_1);
+    let entries_left_2_after = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
 
     assert(entries_left_1_after.unwrap() == 0, 'Qual1 should be 0');
     assert(entries_left_2_after.unwrap() == 1, 'Qual2 should still be 1');
@@ -391,7 +391,7 @@ fn test_tournament_validator_any_per_tournament_mode_full_flow() {
     assert(entry_2 == 2, 'Should be entry 2');
 
     // Now both qualifications should have 0 entries left
-    let entries_left_2_final = validator.entries_left(gated_tournament.id, player, qual_data_2);
+    let entries_left_2_final = validator.entries_left(owner_addr, gated_tournament.id, player, qual_data_2);
     assert(entries_left_2_final.unwrap() == 0, 'Qual2 should be 0 now');
 }
 
@@ -480,7 +480,7 @@ fn test_tournament_validator_all_mode_participants_flow() {
     // Player1 can enter (has both qualifications)
     // For ALL mode with PARTICIPANTS: provide token IDs in order
     let p1_qual_data: Span<felt252> = array![p1_token_1.into(), p1_token_2.into()].span();
-    let p1_valid = validator.valid_entry(gated_tournament.id, player1, p1_qual_data);
+    let p1_valid = validator.valid_entry(owner_addr, gated_tournament.id, player1, p1_qual_data);
     assert(p1_valid, 'Player1 should be valid');
 
     let p1_qual_proof = QualificationProof::Extension(p1_qual_data);
@@ -494,7 +494,7 @@ fn test_tournament_validator_all_mode_participants_flow() {
     let p2_qual_data: Span<felt252> = array![p2_token_1.into(), 0 // No token for qualifier 2
     ]
         .span();
-    let p2_valid = validator.valid_entry(gated_tournament.id, player2, p2_qual_data);
+    let p2_valid = validator.valid_entry(owner_addr, gated_tournament.id, player2, p2_qual_data);
     assert(!p2_valid, 'Player2 should be invalid');
 }
 
@@ -561,13 +561,14 @@ fn test_tournament_validator_invalid_qualifications() {
     // Test 1: Wrong tournament ID
     let wrong_tournament_qual: Span<felt252> = array![999, player1_token.into()].span();
     let valid_wrong_tournament = validator
-        .valid_entry(gated_tournament.id, player1, wrong_tournament_qual);
+        .valid_entry(owner_addr, gated_tournament.id, player1, wrong_tournament_qual);
     assert(!valid_wrong_tournament, 'Wrong tournament should fail');
 
     // Test 2: Wrong token ID (player2 doesn't own this token)
     let player2: ContractAddress = 0x222.try_into().unwrap();
     let wrong_owner_qual: Span<felt252> = array![qualifier.id.into(), player1_token.into()].span();
-    let valid_wrong_owner = validator.valid_entry(gated_tournament.id, player2, wrong_owner_qual);
+    let valid_wrong_owner = validator
+        .valid_entry(owner_addr, gated_tournament.id, player2, wrong_owner_qual);
     assert(!valid_wrong_owner, 'Wrong owner should fail');
 }
 
@@ -645,7 +646,7 @@ fn test_tournament_validator_position_requires_finalization() {
     ]
         .span();
     let valid_during_submission = validator
-        .valid_entry(gated_tournament.id, player, qualification_submission);
+        .valid_entry(owner_addr, gated_tournament.id, player, qualification_submission);
     assert(!valid_during_submission, 'Should fail before finalized');
 
     // Test 2: Advance time to finalized period (after submission period ends)
@@ -658,7 +659,7 @@ fn test_tournament_validator_position_requires_finalization() {
     ]
         .span();
     let valid_after_finalized = validator
-        .valid_entry(gated_tournament.id, player, qualification_finalized);
+        .valid_entry(owner_addr, gated_tournament.id, player, qualification_finalized);
     assert(valid_after_finalized, 'Should succeed after finalized');
 }
 
@@ -728,7 +729,7 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     let qualification: Span<felt252> = array![qualifier.id.into(), player_token.into(), 1].span();
 
     // Test 1: entries_left should return Some(0) when tournament not finalized
-    let entries_before = validator.entries_left(gated_tournament.id, player, qualification);
+    let entries_before = validator.entries_left(owner_addr, gated_tournament.id, player, qualification);
     assert(entries_before.is_some(), 'Should return Some');
     assert(entries_before.unwrap() == 0, 'Should be 0 before finalized');
 
@@ -737,7 +738,7 @@ fn test_tournament_validator_entries_left_requires_finalization() {
     start_cheat_block_timestamp_global(finalized_time);
 
     // Now entries_left should return Some(3) since qualification is valid
-    let entries_after = validator.entries_left(gated_tournament.id, player, qualification);
+    let entries_after = validator.entries_left(owner_addr, gated_tournament.id, player, qualification);
     assert(entries_after.is_some(), 'Should return Some after');
     assert(entries_after.unwrap() == 3, 'Should be 3 after finalized');
 }
@@ -824,18 +825,18 @@ fn test_entries_left_at_least_one_mode_partial_qualification() {
 
     // Test 1: Qualify via tournament 1 (valid) → should get 5 entries
     let qual1: Span<felt252> = array![qualifier1.id.into(), token1.into()].span();
-    let entries1 = validator.entries_left(gated.id, player, qual1);
+    let entries1 = validator.entries_left(owner_addr, gated.id, player, qual1);
     assert(entries1.unwrap() == 5, 'Should have 5 entries via q1');
 
     // Test 2: Qualify via tournament 2 (valid) → should get 5 entries
     let qual2: Span<felt252> = array![qualifier2.id.into(), token2.into()].span();
-    let entries2 = validator.entries_left(gated.id, player, qual2);
+    let entries2 = validator.entries_left(owner_addr, gated.id, player, qual2);
     assert(entries2.unwrap() == 5, 'Should have 5 entries via q2');
 
     // Test 3: Try to qualify via tournament 3 (not entered) → should get 0 entries
     let fake_token: u64 = 999;
     let qual3: Span<felt252> = array![qualifier3.id.into(), fake_token.into()].span();
-    let entries3 = validator.entries_left(gated.id, player, qual3);
+    let entries3 = validator.entries_left(owner_addr, gated.id, player, qual3);
     assert(entries3.unwrap() == 0, 'Should have 0 entries via q3');
 }
 
@@ -909,11 +910,11 @@ fn test_entries_left_cumulative_per_tournament_mode() {
 
     // Test: Each qualifying tournament gives separate pool of 3 entries
     let qual1: Span<felt252> = array![qualifier1.id.into(), token1.into()].span();
-    let entries1 = validator.entries_left(gated.id, player, qual1);
+    let entries1 = validator.entries_left(owner_addr, gated.id, player, qual1);
     assert(entries1.unwrap() == 3, 'Should have 3 entries from q1');
 
     let qual2: Span<felt252> = array![qualifier2.id.into(), token2.into()].span();
-    let entries2 = validator.entries_left(gated.id, player, qual2);
+    let entries2 = validator.entries_left(owner_addr, gated.id, player, qual2);
     assert(entries2.unwrap() == 3, 'Should have 3 entries from q2');
 }
 
@@ -986,7 +987,7 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
     // Test: Partial qualification (only 1 of 2 tournaments) → should get 0 entries
     let fake_token2: u64 = 999;
     let partial_qual: Span<felt252> = array![token1.into(), fake_token2.into()].span();
-    let entries_partial = validator.entries_left(gated.id, player, partial_qual);
+    let entries_partial = validator.entries_left(owner_addr, gated.id, player, partial_qual);
     assert(entries_partial.unwrap() == 0, 'Should have 0 with partial');
 
     // Now player enters qualifier2
@@ -996,7 +997,7 @@ fn test_entries_left_all_mode_requires_all_tournaments() {
 
     // Test: Full qualification (both tournaments) → should get 4 entries
     let full_qual: Span<felt252> = array![token1.into(), token2.into()].span();
-    let entries_full = validator.entries_left(gated.id, player, full_qual);
+    let entries_full = validator.entries_left(owner_addr, gated.id, player, full_qual);
     assert(entries_full.unwrap() == 4, 'Should have 4 with all');
 }
 

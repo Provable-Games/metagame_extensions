@@ -310,7 +310,7 @@ fn test_governance_validator_validate_entries_ban() {
     assert(entry_number_1 == 1, 'First entry should be 1');
 
     // Verify entry is valid before transfer
-    let is_valid_before = validator.valid_entry(tournament.id, player1, array![].span());
+    let is_valid_before = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(is_valid_before, 'Entry should be valid');
 
     // Get balance before transfer
@@ -329,7 +329,7 @@ fn test_governance_validator_validate_entries_ban() {
     assert(player_balance_after == 0, 'Balance should be 0');
 
     // Verify player no longer meets requirements
-    let is_valid_after_transfer = validator.valid_entry(tournament.id, player1, array![].span());
+    let is_valid_after_transfer = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(!is_valid_after_transfer, 'Should no longer be valid');
 
     // This demonstrates the ban validation flow:
@@ -427,11 +427,11 @@ fn test_governance_validator_ban_existing_allow_new_entries() {
     stop_cheat_caller_address(governance_token_address());
 
     // KEY TEST: Player1's existing entry is no longer valid (would be banned)
-    let player1_still_valid = validator.valid_entry(tournament.id, player1, array![].span());
+    let player1_still_valid = validator.valid_entry(owner_addr, tournament.id, player1, array![].span());
     assert(!player1_still_valid, 'Player1 no longer valid');
 
     // KEY TEST: Player2 can still enter NEW entries (has governance tokens)
-    let player2_can_enter = validator.valid_entry(tournament.id, player2, array![].span());
+    let player2_can_enter = validator.valid_entry(owner_addr, tournament.id, player2, array![].span());
 
     // If player2 has tokens, they should be able to enter
     if player2_can_enter {
@@ -490,10 +490,10 @@ fn test_governance_validator_direct_validation() {
     let player: ContractAddress = 0x111.try_into().unwrap();
 
     // Check if player is valid
-    let _is_valid = validator.valid_entry(tournament_id, player, array![].span());
+    let _is_valid = validator.valid_entry(owner_addr, tournament_id, player, array![].span());
 
     // Check entries left
-    let _entries_left = validator.entries_left(tournament_id, player, array![].span());
+    let _entries_left = validator.entries_left(owner_addr, tournament_id, player, array![].span());
     // Note: These would return actual values on a mainnet fork with real governance contracts
 }
 
@@ -529,7 +529,7 @@ fn test_governance_validator_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries after first entry
-    let entries_after_1 = validator.entries_left(tournament_id, player, array![].span());
+    let entries_after_1 = validator.entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_1.is_some(), 'Should have entries');
     // In a real scenario with valid governance setup, this would show 4 entries left
 
@@ -540,7 +540,7 @@ fn test_governance_validator_multiple_entries() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries after 3 total
-    let entries_after_3 = validator.entries_left(tournament_id, player, array![].span());
+    let entries_after_3 = validator.entries_left(owner_addr, tournament_id, player, array![].span());
     assert(entries_after_3.is_some(), 'Should have entries');
     // Would show 2 entries left
 }
@@ -572,7 +572,8 @@ fn test_governance_validator_no_delegation() {
     // In validate_entry, if delegates().is_zero(), return false
     let player_no_delegation: ContractAddress = 0x999.try_into().unwrap();
 
-    let _is_valid = validator.valid_entry(tournament_id, player_no_delegation, array![].span());
+    let _is_valid = validator
+        .valid_entry(owner_addr, tournament_id, player_no_delegation, array![].span());
     // In a real fork with actual governance contracts, this would be false
 // because the player hasn't delegated their voting power
 }
@@ -606,7 +607,8 @@ fn test_governance_validator_insufficient_balance() {
     // Player with insufficient balance
     let player_low_balance: ContractAddress = 0x888.try_into().unwrap();
 
-    let _is_valid = validator.valid_entry(tournament_id, player_low_balance, array![].span());
+    let _is_valid = validator
+        .valid_entry(owner_addr, tournament_id, player_low_balance, array![].span());
     // In a real fork, if player's balance < 10000, this returns false
 }
 
@@ -643,11 +645,11 @@ fn test_governance_validator_cross_tournament_independence() {
     stop_cheat_caller_address(validator_address);
 
     // Check tournament 1 - should have 1 entry left (used 2 of 3)
-    let t1_entries = validator.entries_left(tournament_1, player, array![].span());
+    let t1_entries = validator.entries_left(owner_addr, tournament_1, player, array![].span());
     assert(t1_entries.is_some(), 'T1 should have entries');
 
     // Check tournament 2 - should still have 5 entries (independent tracking)
-    let t2_entries = validator.entries_left(tournament_2, player, array![].span());
+    let t2_entries = validator.entries_left(owner_addr, tournament_2, player, array![].span());
     assert(t2_entries.is_some(), 'T2 should have entries');
 
     // Add entry to tournament 2
@@ -656,8 +658,8 @@ fn test_governance_validator_cross_tournament_independence() {
     stop_cheat_caller_address(validator_address);
 
     // Verify independence maintained
-    let t1_final = validator.entries_left(tournament_1, player, array![].span());
-    let t2_final = validator.entries_left(tournament_2, player, array![].span());
+    let t1_final = validator.entries_left(owner_addr, tournament_1, player, array![].span());
+    let t2_final = validator.entries_left(owner_addr, tournament_2, player, array![].span());
 
     assert(t1_final.is_some(), 'T1 entries unchanged');
     assert(t2_final.is_some(), 'T2 entries decreased');

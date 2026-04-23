@@ -139,15 +139,15 @@ fn test_tournament_validator_any_mode_participants() {
 
     // Verify config was set correctly
     assert!(
-        tournament_validator.get_qualifier_type(100) == QUALIFIER_TYPE_PARTICIPANTS,
+        tournament_validator.get_qualifier_type(owner, 100) == QUALIFIER_TYPE_PARTICIPANTS,
         "Qualifier type should be PARTICIPANTS",
     );
     assert!(
-        tournament_validator.get_qualifying_mode(100) == QUALIFYING_MODE_PER_TOKEN,
+        tournament_validator.get_qualifying_mode(owner, 100) == QUALIFYING_MODE_PER_TOKEN,
         "Qualifying mode should be ANY",
     );
 
-    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(100);
+    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(owner, 100);
     assert!(qualifying_ids.len() == 1, "Should have 1 qualifying tournament");
     assert!(*qualifying_ids.at(0) == qualifying_tournament_id, "Qualifying tournament ID mismatch");
 }
@@ -176,11 +176,11 @@ fn test_tournament_validator_any_mode_winners() {
     stop_cheat_caller_address(validator_address);
 
     assert!(
-        tournament_validator.get_qualifier_type(200) == QUALIFIER_TYPE_TOP_POSITION,
+        tournament_validator.get_qualifier_type(owner, 200) == QUALIFIER_TYPE_TOP_POSITION,
         "Qualifier type should be WINNERS",
     );
     assert!(
-        tournament_validator.get_qualifying_mode(200) == QUALIFYING_MODE_PER_TOKEN,
+        tournament_validator.get_qualifying_mode(owner, 200) == QUALIFYING_MODE_PER_TOKEN,
         "Qualifying mode should be ANY",
     );
 }
@@ -210,7 +210,7 @@ fn test_tournament_validator_any_mode_multiple_qualifying_tournaments() {
     validator.add_config(300, 0, extension_config);
     stop_cheat_caller_address(validator_address);
 
-    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(300);
+    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(owner, 300);
     assert!(qualifying_ids.len() == 3, "Should have 3 qualifying tournaments");
     assert!(*qualifying_ids.at(0) == qualifying_tournament_1, "Tournament 1 mismatch");
     assert!(*qualifying_ids.at(1) == qualifying_tournament_2, "Tournament 2 mismatch");
@@ -258,7 +258,7 @@ fn test_tournament_validator_any_per_tournament_mode() {
     stop_cheat_caller_address(validator_address);
 
     assert!(
-        tournament_validator.get_qualifying_mode(400) == QUALIFYING_MODE_PER_TOKEN,
+        tournament_validator.get_qualifying_mode(owner, 400) == QUALIFYING_MODE_PER_TOKEN,
         "Qualifying mode should be AT_LEAST_ONE",
     );
 
@@ -269,8 +269,8 @@ fn test_tournament_validator_any_per_tournament_mode() {
     let qualification_2 = array![qualifying_tournament_2.into(), token_id_2.into()].span();
 
     // Each token should have separate entry limits (per-token tracking)
-    let entries_left_1 = validator.entries_left(400, player, qualification_1);
-    let entries_left_2 = validator.entries_left(400, player, qualification_2);
+    let entries_left_1 = validator.entries_left(owner, 400, player, qualification_1);
+    let entries_left_2 = validator.entries_left(owner, 400, player, qualification_2);
 
     assert!(entries_left_1.is_some(), "Should have entries left for token 1");
     assert!(entries_left_2.is_some(), "Should have entries left for token 2");
@@ -315,12 +315,12 @@ fn test_tournament_validator_any_per_tournament_entry_tracking() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries left for token 1 - should be 0
-    let entries_left_1 = validator.entries_left(500, player, qualification_1);
+    let entries_left_1 = validator.entries_left(owner, 500, player, qualification_1);
     assert!(entries_left_1.unwrap() == 0, "Should have 0 entries left for token 1");
 
     // Check entries left for token 2 - should still be 1 (separate token)
     let qualification_2 = array![qualifying_tournament_2.into(), token_id_2.into()].span();
-    let entries_left_2 = validator.entries_left(500, player, qualification_2);
+    let entries_left_2 = validator.entries_left(owner, 500, player, qualification_2);
     assert!(entries_left_2.unwrap() == 1, "Should still have 1 entry for token 2");
 }
 
@@ -355,11 +355,11 @@ fn test_tournament_validator_all_mode_participants() {
     stop_cheat_caller_address(validator_address);
 
     assert!(
-        tournament_validator.get_qualifying_mode(600) == QUALIFYING_MODE_ALL,
+        tournament_validator.get_qualifying_mode(owner, 600) == QUALIFYING_MODE_ALL,
         "Qualifying mode should be ALL",
     );
 
-    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(600);
+    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(owner, 600);
     assert!(qualifying_ids.len() == 3, "Should have 3 qualifying tournaments");
 
     // For ALL mode with PARTICIPANTS:
@@ -404,11 +404,11 @@ fn test_tournament_validator_all_mode_winners() {
     stop_cheat_caller_address(validator_address);
 
     assert!(
-        tournament_validator.get_qualifier_type(700) == QUALIFIER_TYPE_TOP_POSITION,
+        tournament_validator.get_qualifier_type(owner, 700) == QUALIFIER_TYPE_TOP_POSITION,
         "Qualifier type should be WINNERS",
     );
     assert!(
-        tournament_validator.get_qualifying_mode(700) == QUALIFYING_MODE_ALL,
+        tournament_validator.get_qualifying_mode(owner, 700) == QUALIFYING_MODE_ALL,
         "Qualifying mode should be ALL",
     );
 
@@ -465,7 +465,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
     let qualification = array![token_id_1.into(), token_id_2.into()].span();
 
     // Check initial entries left
-    let entries_left = validator.entries_left(800, player, qualification);
+    let entries_left = validator.entries_left(owner, 800, player, qualification);
     assert!(entries_left.unwrap() == 1, "Should have 1 entry left initially");
 
     // Simulate adding an entry
@@ -474,7 +474,7 @@ fn test_tournament_validator_all_mode_entry_tracking() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries left after adding - should be 0
-    let entries_left_after = validator.entries_left(800, player, qualification);
+    let entries_left_after = validator.entries_left(owner, 800, player, qualification);
     assert!(entries_left_after.unwrap() == 0, "Should have 0 entries left after adding");
 }
 
@@ -562,7 +562,7 @@ fn test_tournament_validator_unlimited_entries() {
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
 
     // Check entries left - should be None for unlimited
-    let entries_left = validator.entries_left(1200, player, qualification);
+    let entries_left = validator.entries_left(owner, 1200, player, qualification);
     assert!(entries_left.is_none(), "Unlimited entries should return None");
 }
 
@@ -601,13 +601,13 @@ fn test_tournament_validator_per_entry_mode_basic() {
     stop_cheat_caller_address(validator_address);
 
     assert!(
-        tournament_validator.get_qualifying_mode(1300) == QUALIFYING_MODE_PER_TOKEN,
+        tournament_validator.get_qualifying_mode(owner, 1300) == QUALIFYING_MODE_PER_TOKEN,
         "Qualifying mode should be AT_LEAST_ONE",
     );
 
     // Player with their qualifying token should have 2 entries left
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
-    let entries_left = validator.entries_left(1300, player, qualification);
+    let entries_left = validator.entries_left(owner, 1300, player, qualification);
     assert!(entries_left.is_some(), "Should have limited entries");
     assert!(entries_left.unwrap() == 2, "Should have 2 entries for token");
 
@@ -617,7 +617,7 @@ fn test_tournament_validator_per_entry_mode_basic() {
     stop_cheat_caller_address(validator_address);
 
     // Token should now have 1 entry left
-    let entries_left = validator.entries_left(1300, player, qualification);
+    let entries_left = validator.entries_left(owner, 1300, player, qualification);
     assert!(entries_left.unwrap() == 1, "Should have 1 entry left");
 }
 
@@ -650,7 +650,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
 
     // Verify player has 3 entries initially
-    let entries_left = validator.entries_left(1400, player, qualification);
+    let entries_left = validator.entries_left(owner, 1400, player, qualification);
     assert!(entries_left.unwrap() == 3, "Should have 3 entries initially");
 
     // Use up all 3 entries
@@ -661,7 +661,7 @@ fn test_tournament_validator_per_entry_mode_multiple_tokens() {
     stop_cheat_caller_address(validator_address);
 
     // Token should have 0 entries left
-    let entries_left = validator.entries_left(1400, player, qualification);
+    let entries_left = validator.entries_left(owner, 1400, player, qualification);
     assert!(entries_left.unwrap() == 0, "Should have 0 entries left");
 }
 
@@ -691,7 +691,7 @@ fn test_tournament_validator_top_positions_configuration() {
     stop_cheat_caller_address(validator_address);
 
     // Verify top_positions is set
-    let top_positions = tournament_validator.get_top_positions(1500);
+    let top_positions = tournament_validator.get_top_positions(owner, 1500);
     assert!(top_positions == 3, "Top positions should be 3");
 }
 
@@ -717,7 +717,7 @@ fn test_tournament_validator_top_positions_zero_means_unlimited() {
     stop_cheat_caller_address(validator_address);
 
     // Verify top_positions is 0
-    let top_positions = tournament_validator.get_top_positions(1600);
+    let top_positions = tournament_validator.get_top_positions(owner, 1600);
     assert!(top_positions == 0, "Top positions should be 0 (unlimited)");
 }
 
@@ -746,10 +746,10 @@ fn test_tournament_validator_top_positions_all_mode() {
     stop_cheat_caller_address(validator_address);
 
     // Verify configuration
-    let top_positions = tournament_validator.get_top_positions(1700);
+    let top_positions = tournament_validator.get_top_positions(owner, 1700);
     assert!(top_positions == 5, "Top positions should be 5");
 
-    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(1700);
+    let qualifying_ids = tournament_validator.get_qualifying_tournament_ids(owner, 1700);
     assert!(qualifying_ids.len() == 2, "Should have 2 qualifying tournaments");
 }
 
@@ -792,7 +792,7 @@ fn test_tournament_validator_all_mode_ban_tech_marks_tokens_as_used() {
     let qualification = array![token_id_1.into(), token_id_2.into()].span();
 
     // Check initial entries - should have 2
-    let entries_left = validator.entries_left(2000, player, qualification);
+    let entries_left = validator.entries_left(owner, 2000, player, qualification);
     assert!(entries_left.is_some(), "Should have limited entries");
     assert!(entries_left.unwrap() == 2, "Should have 2 entries initially");
 
@@ -802,7 +802,7 @@ fn test_tournament_validator_all_mode_ban_tech_marks_tokens_as_used() {
     stop_cheat_caller_address(validator_address);
 
     // Check entries after first entry
-    let entries_after = validator.entries_left(2000, player, qualification);
+    let entries_after = validator.entries_left(owner, 2000, player, qualification);
     assert!(entries_after.unwrap() == 1, "Should have 1 entry left");
 
     // Add second entry
@@ -811,7 +811,7 @@ fn test_tournament_validator_all_mode_ban_tech_marks_tokens_as_used() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 0 entries left
-    let entries_final = validator.entries_left(2000, player, qualification);
+    let entries_final = validator.entries_left(owner, 2000, player, qualification);
     assert!(entries_final.unwrap() == 0, "Should have 0 entries left");
 }
 
@@ -857,12 +857,12 @@ fn test_tournament_validator_all_mode_tokens_blocked_after_transfer() {
     stop_cheat_caller_address(validator_address);
 
     // Player 1 should have 0 entries left (used their limit)
-    let entries_player1 = validator.entries_left(2100, player1, qualification);
+    let entries_player1 = validator.entries_left(owner, 2100, player1, qualification);
     assert!(entries_player1.unwrap() == 0, "Player 1 should have 0 entries left");
 
     // Player 2 tries to use the same tokens (simulating transfer)
     // Should get 0 entries because tokens are already marked as used
-    let entries_player2 = validator.entries_left(2100, player2, qualification);
+    let entries_player2 = validator.entries_left(owner, 2100, player2, qualification);
     assert!(entries_player2.unwrap() == 0, "Player 2 should get 0 entries - tokens are used");
 }
 
@@ -899,7 +899,7 @@ fn test_tournament_validator_per_token_mode_entry_tracking() {
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
 
     // Initial entries: player1 should have 2 entries
-    let entries_initial = validator.entries_left(2200, player1, qualification);
+    let entries_initial = validator.entries_left(owner, 2200, player1, qualification);
     assert!(entries_initial.unwrap() == 2, "Should have 2 entries initially");
 
     // Player 1 uses one entry
@@ -908,7 +908,7 @@ fn test_tournament_validator_per_token_mode_entry_tracking() {
     stop_cheat_caller_address(validator_address);
 
     // Token should have 1 entry left (tracked per token)
-    let entries_after = validator.entries_left(2200, player1, qualification);
+    let entries_after = validator.entries_left(owner, 2200, player1, qualification);
     assert!(entries_after.unwrap() == 1, "Token should have 1 entry left");
 
     // Player 1 uses second entry
@@ -917,7 +917,7 @@ fn test_tournament_validator_per_token_mode_entry_tracking() {
     stop_cheat_caller_address(validator_address);
 
     // Token should have 0 entries left
-    let entries_final = validator.entries_left(2200, player1, qualification);
+    let entries_final = validator.entries_left(owner, 2200, player1, qualification);
     assert!(entries_final.unwrap() == 0, "Token should have 0 entries left");
 }
 
@@ -951,7 +951,7 @@ fn test_tournament_validator_all_mode_multiple_qualifying_tournaments() {
     let qualification = array![tok1.into(), tok2.into(), tok3.into()].span();
 
     // Check initial entries
-    let entries_left = validator.entries_left(2300, player, qualification);
+    let entries_left = validator.entries_left(owner, 2300, player, qualification);
     assert!(entries_left.unwrap() == 3, "Should have 3 entries initially");
 
     // Use all entries
@@ -962,7 +962,7 @@ fn test_tournament_validator_all_mode_multiple_qualifying_tournaments() {
     stop_cheat_caller_address(validator_address);
 
     // Should have 0 entries left
-    let entries_final = validator.entries_left(2300, player, qualification);
+    let entries_final = validator.entries_left(owner, 2300, player, qualification);
     assert!(entries_final.unwrap() == 0, "Should have 0 entries left");
 }
 
@@ -990,7 +990,7 @@ fn test_tournament_validator_direct_valid_entry_call() {
     stop_cheat_caller_address(validator_address);
 
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
-    let is_valid = validator.valid_entry(2400, player, qualification);
+    let is_valid = validator.valid_entry(owner, 2400, player, qualification);
     assert!(is_valid, "direct valid");
 }
 
@@ -1018,7 +1018,7 @@ fn test_tournament_validator_on_entry_removed_per_token_mode() {
     stop_cheat_caller_address(validator_address);
 
     let qualification = array![qualifying_tournament_id.into(), token_id.into()].span();
-    let before = validator.entries_left(2401, player, qualification);
+    let before = validator.entries_left(owner, 2401, player, qualification);
     assert!(before.unwrap() == 2, "start with 2");
 
     start_cheat_caller_address(validator_address, owner);
@@ -1027,7 +1027,7 @@ fn test_tournament_validator_on_entry_removed_per_token_mode() {
     validator.remove_entry(2401, 1, player, qualification); // no-op at zero
     stop_cheat_caller_address(validator_address);
 
-    let after = validator.entries_left(2401, player, qualification);
+    let after = validator.entries_left(owner, 2401, player, qualification);
     assert!(after.unwrap() == 2, "rm rest");
 }
 
@@ -1059,7 +1059,7 @@ fn test_tournament_validator_on_entry_removed_all_mode() {
     stop_cheat_caller_address(validator_address);
 
     let qualification = array![token_id_1.into(), token_id_2.into()].span();
-    let before = validator.entries_left(2402, player, qualification);
+    let before = validator.entries_left(owner, 2402, player, qualification);
     assert!(before.unwrap() == 2, "start with 2");
 
     start_cheat_caller_address(validator_address, owner);
@@ -1068,6 +1068,6 @@ fn test_tournament_validator_on_entry_removed_all_mode() {
     validator.remove_entry(2402, 2, player, qualification);
     stop_cheat_caller_address(validator_address);
 
-    let after = validator.entries_left(2402, player, qualification);
+    let after = validator.entries_left(owner, 2402, player, qualification);
     assert!(after.unwrap() == 1, "rm all");
 }

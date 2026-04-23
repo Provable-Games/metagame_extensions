@@ -28,8 +28,8 @@ pub mod open_entry_validator_mock {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        context_entry_limit: Map<u64, u32>,
-        context_entries: Map<(u64, ContractAddress), u32>,
+        context_entry_limit: Map<(ContractAddress, u64), u32>,
+        context_entries: Map<(ContractAddress, u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -49,6 +49,7 @@ pub mod open_entry_validator_mock {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -59,6 +60,7 @@ pub mod open_entry_validator_mock {
 
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
@@ -70,46 +72,53 @@ pub mod open_entry_validator_mock {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u32> {
-            let entry_limit = self.context_entry_limit.read(context_id);
+            let entry_limit = self.context_entry_limit.read((context_owner, context_id));
             if entry_limit == 0 {
                 return Option::None; // Unlimited entries
             }
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             let remaining_entries = entry_limit - current_entries;
             return Option::Some(remaining_entries);
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
-            self.context_entry_limit.write(context_id, entry_limit);
+            self.context_entry_limit.write((context_owner, context_id), entry_limit);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             self.context_entries.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             if current_entries > 0 {
                 self.context_entries.write(key, current_entries - 1);

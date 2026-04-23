@@ -1,10 +1,13 @@
 /// EntryFeeExtensionComponent provides extensible entry fee logic for any context.
 /// This component allows external contracts to implement custom entry fee setup,
 /// payment, and claim hooks.
+///
+/// Storage is namespaced by `(context_owner, context_id)`. The `context_owner` is
+/// the contract address that first calls `set_entry_fee_config` for a given
+/// `context_id`. Re-registration from the same owner reverts.
 
 #[starknet::component]
 pub mod EntryFeeExtensionComponent {
-    use core::num::traits::Zero;
     use metagame_extensions_interfaces::entry_fee_extension::{
         IENTRY_FEE_EXTENSION_ID, IEntryFeeExtension,
     };
@@ -15,7 +18,7 @@ pub mod EntryFeeExtensionComponent {
 
     #[storage]
     pub struct Storage {
-        context_owner: Map<u64, ContractAddress>,
+        context_registered: Map<(ContractAddress, u64), bool>,
     }
 
     #[event]
@@ -23,16 +26,31 @@ pub mod EntryFeeExtensionComponent {
     pub enum Event {}
 
     /// Internal trait that implementors must provide.
-    /// This trait defines the fee logic that each extension implements.
+    /// `context_owner` is the namespace under which per-context state lives.
     pub trait EntryFeeExtension<TContractState> {
-        /// Set entry fee configuration for a context (called during setup)
-        fn set_entry_fee_config(ref self: TContractState, context_id: u64, config: Span<felt252>);
+        /// Set entry fee configuration under `(context_owner, context_id)` (called during setup)
+        fn set_entry_fee_config(
+            ref self: TContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            config: Span<felt252>,
+        );
 
         /// Pay entry fee for a context (called during deposit via extension)
-        fn pay_entry_fee(ref self: TContractState, context_id: u64, pay_params: Span<felt252>);
+        fn pay_entry_fee(
+            ref self: TContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            pay_params: Span<felt252>,
+        );
 
         /// Claim entry fee for a context
-        fn claim_entry_fee(ref self: TContractState, context_id: u64, claim_params: Span<felt252>);
+        fn claim_entry_fee(
+            ref self: TContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            claim_params: Span<felt252>,
+        );
     }
 
     #[embeddable_as(EntryFeeExtensionImpl)]
@@ -43,34 +61,39 @@ pub mod EntryFeeExtensionComponent {
         +SRC5Component::HasComponent<TContractState>,
         +Drop<TContractState>,
     > of IEntryFeeExtension<ComponentState<TContractState>> {
-        fn context_owner(
-            self: @ComponentState<TContractState>, context_id: u64,
-        ) -> ContractAddress {
-            self.context_owner.read(context_id)
+        fn is_context_registered(
+            self: @ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+        ) -> bool {
+            self.context_registered.read((context_owner, context_id))
         }
 
         fn set_entry_fee_config(
             ref self: ComponentState<TContractState>, context_id: u64, config: Span<felt252>,
         ) {
-            self.set_context_owner(context_id);
+            let caller = get_caller_address();
+            self.register_context(caller, context_id);
             let mut contract = self.get_contract_mut();
-            EntryFeeExtension::set_entry_fee_config(ref contract, context_id, config);
+            EntryFeeExtension::set_entry_fee_config(ref contract, caller, context_id, config);
         }
 
         fn pay_entry_fee(
             ref self: ComponentState<TContractState>, context_id: u64, pay_params: Span<felt252>,
         ) {
-            self.assert_context_owner(context_id);
+            let caller = get_caller_address();
+            self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
-            EntryFeeExtension::pay_entry_fee(ref contract, context_id, pay_params);
+            EntryFeeExtension::pay_entry_fee(ref contract, caller, context_id, pay_params);
         }
 
         fn claim_entry_fee(
             ref self: ComponentState<TContractState>, context_id: u64, claim_params: Span<felt252>,
         ) {
-            self.assert_context_owner(context_id);
+            let caller = get_caller_address();
+            self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
-            EntryFeeExtension::claim_entry_fee(ref contract, context_id, claim_params);
+            EntryFeeExtension::claim_entry_fee(ref contract, caller, context_id, claim_params);
         }
     }
 
@@ -86,23 +109,37 @@ pub mod EntryFeeExtensionComponent {
             src5_component.register_interface(IENTRY_FEE_EXTENSION_ID);
         }
 
-        fn set_context_owner(ref self: ComponentState<TContractState>, context_id: u64) {
-            let caller = get_caller_address();
-            let current_owner = self.context_owner.read(context_id);
-            if current_owner.is_zero() {
-                self.context_owner.write(context_id, caller);
-            } else {
-                assert!(
-                    caller == current_owner, "Entry Fee Extension: Only context owner can call",
-                );
-            }
+        fn is_registered(
+            self: @ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+        ) -> bool {
+            self.context_registered.read((context_owner, context_id))
         }
 
-        fn assert_context_owner(self: @ComponentState<TContractState>, context_id: u64) {
-            let caller = get_caller_address();
-            let current_owner = self.context_owner.read(context_id);
-            assert!(!current_owner.is_zero(), "Entry Fee Extension: Context has no owner");
-            assert!(caller == current_owner, "Entry Fee Extension: Only context owner can call");
+        /// Register `(context_owner, context_id)` — reverts if already registered.
+        fn register_context(
+            ref self: ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+        ) {
+            assert!(
+                !self.context_registered.read((context_owner, context_id)),
+                "Entry Fee Extension: Context already registered",
+            );
+            self.context_registered.write((context_owner, context_id), true);
+        }
+
+        /// Assert `(context_owner, context_id)` has been registered.
+        fn assert_registered(
+            self: @ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+        ) {
+            assert!(
+                self.context_registered.read((context_owner, context_id)),
+                "Entry Fee Extension: Context not registered",
+            );
         }
     }
 }

@@ -72,7 +72,8 @@ fn test_valid_entry_with_token_ownership() {
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
 
     // Test that the player can enter
-    let can_enter = entry_validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(can_enter, 'Player with token should enter');
 }
 
@@ -93,7 +94,8 @@ fn test_invalid_entry_without_token_ownership() {
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
 
     // Test that the player cannot enter
-    let can_enter = entry_validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(!can_enter, 'No token: cannot enter');
 }
 
@@ -114,7 +116,8 @@ fn test_valid_entry_with_multiple_tokens() {
     start_mock_call(erc721_address(), selector!("balance_of"), 3_u256);
 
     // Test that the player can enter
-    let can_enter = entry_validator.valid_entry(tournament_id, player, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player, array![].span());
     assert(can_enter, 'Player with tokens should enter');
 }
 
@@ -136,7 +139,8 @@ fn test_entry_status_changes_after_transfer() {
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
 
     // Verify player1 can enter
-    let can_enter = entry_validator.valid_entry(tournament_id, player1, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player1, array![].span());
     assert(can_enter, 'Player1 should enter initially');
 
     // Simulate transfer: player1's balance becomes 0
@@ -144,7 +148,8 @@ fn test_entry_status_changes_after_transfer() {
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
 
     // Verify player1 can no longer enter (simulating post-transfer)
-    let can_enter = entry_validator.valid_entry(tournament_id, player1, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player1, array![].span());
     assert(!can_enter, 'Player1 no token after xfer');
 
     // Now mock player2 having the token
@@ -152,7 +157,8 @@ fn test_entry_status_changes_after_transfer() {
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
 
     // Verify player2 can now enter
-    let can_enter = entry_validator.valid_entry(tournament_id, player2, array![].span());
+    let can_enter = entry_validator
+        .valid_entry(owner_address(), tournament_id, player2, array![].span());
     assert(can_enter, 'Player2 can enter after xfer');
 }
 
@@ -167,7 +173,8 @@ fn test_entry_validator_stores_correct_erc721_address() {
     };
 
     // Verify the entry validator stores the correct ERC721 address for this tournament
-    let stored_address = entry_validator_mock.get_context_erc721_address(tournament_id);
+    let stored_address = entry_validator_mock
+        .get_context_erc721_address(owner_address(), tournament_id);
     assert(stored_address == erc721_address(), 'Wrong ERC721 address stored');
 }
 
@@ -190,17 +197,20 @@ fn test_multiple_players_with_different_ownership() {
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
 
     // Test entry validation for player1 and player3 (who have tokens)
-    let can_enter_p1 = entry_validator.valid_entry(tournament_id, player1, array![].span());
+    let can_enter_p1 = entry_validator
+        .valid_entry(owner_address(), tournament_id, player1, array![].span());
     assert(can_enter_p1, 'Player1 should enter');
 
-    let can_enter_p3 = entry_validator.valid_entry(tournament_id, player3, array![].span());
+    let can_enter_p3 = entry_validator
+        .valid_entry(owner_address(), tournament_id, player3, array![].span());
     assert(can_enter_p3, 'Player3 should enter');
 
     // Mock balance_of to return 0 for player2 (no tokens)
     stop_mock_call(erc721_address(), selector!("balance_of"));
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
 
-    let can_enter_p2 = entry_validator.valid_entry(tournament_id, player2, array![].span());
+    let can_enter_p2 = entry_validator
+        .valid_entry(owner_address(), tournament_id, player2, array![].span());
     assert(!can_enter_p2, 'Player2 should not enter');
 }
 
@@ -220,7 +230,7 @@ fn test_open_validator_allows_entry_without_tokens() {
     let player: ContractAddress = 0x999.try_into().unwrap();
 
     // Test that the player can enter even without tokens
-    let can_enter = open_validator.valid_entry(0, player, array![].span());
+    let can_enter = open_validator.valid_entry(owner_address(), 0, player, array![].span());
     assert(can_enter, 'Open: player should enter');
 }
 
@@ -236,7 +246,7 @@ fn test_open_validator_allows_entry_with_tokens() {
     let player: ContractAddress = 0x888.try_into().unwrap();
 
     // Test that the player can still enter (tokens don't matter)
-    let can_enter = open_validator.valid_entry(0, player, array![].span());
+    let can_enter = open_validator.valid_entry(owner_address(), 0, player, array![].span());
     assert(can_enter, 'Open: player with token enters');
 }
 
@@ -254,13 +264,13 @@ fn test_open_validator_allows_multiple_players() {
     let player3: ContractAddress = 0xCCC.try_into().unwrap();
 
     // Test that all players can enter
-    let can_enter_p1 = open_validator.valid_entry(0, player1, array![].span());
+    let can_enter_p1 = open_validator.valid_entry(owner_address(), 0, player1, array![].span());
     assert(can_enter_p1, 'Open: player1 should enter');
 
-    let can_enter_p2 = open_validator.valid_entry(0, player2, array![].span());
+    let can_enter_p2 = open_validator.valid_entry(owner_address(), 0, player2, array![].span());
     assert(can_enter_p2, 'Open: player2 should enter');
 
-    let can_enter_p3 = open_validator.valid_entry(0, player3, array![].span());
+    let can_enter_p3 = open_validator.valid_entry(owner_address(), 0, player3, array![].span());
     assert(can_enter_p3, 'Open: player3 should enter');
 }
 
@@ -286,22 +296,23 @@ fn test_compare_open_vs_token_gated_validators() {
     // Test token-gated validator - player with token
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
     let can_enter_gated_with = token_gated
-        .valid_entry(tournament_id, player_with_token, array![].span());
+        .valid_entry(owner_address(), tournament_id, player_with_token, array![].span());
     assert(can_enter_gated_with, 'Gated: with token enters');
 
     // Test token-gated validator - player without token
     stop_mock_call(erc721_address(), selector!("balance_of"));
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
     let can_enter_gated_without = token_gated
-        .valid_entry(tournament_id, player_without_token, array![].span());
+        .valid_entry(owner_address(), tournament_id, player_without_token, array![].span());
     assert(!can_enter_gated_without, 'Gated: without token blocked');
 
     // Test open validator - both should enter
-    let can_enter_open_with = open_validator.valid_entry(0, player_with_token, array![].span());
+    let can_enter_open_with = open_validator
+        .valid_entry(owner_address(), 0, player_with_token, array![].span());
     assert(can_enter_open_with, 'Open: with token enters');
 
     let can_enter_open_without = open_validator
-        .valid_entry(0, player_without_token, array![].span());
+        .valid_entry(owner_address(), 0, player_without_token, array![].span());
     assert(can_enter_open_without, 'Open: without token enters');
 }
 
@@ -314,12 +325,14 @@ fn test_token_gated_should_ban_after_token_loss() {
     let player: ContractAddress = 0xABC.try_into().unwrap();
 
     start_mock_call(erc721_address(), selector!("balance_of"), 1_u256);
-    let should_ban_initial = validator.should_ban(tournament_id, 1, player, array![].span());
+    let should_ban_initial = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(!should_ban_initial, 'Owner should not be banned');
 
     stop_mock_call(erc721_address(), selector!("balance_of"));
     start_mock_call(erc721_address(), selector!("balance_of"), 0_u256);
-    let should_ban_after = validator.should_ban(tournament_id, 1, player, array![].span());
+    let should_ban_after = validator
+        .should_ban(owner_address(), tournament_id, 1, player, array![].span());
     assert(should_ban_after, 'Non-owner should be banned');
 }
 
@@ -331,7 +344,8 @@ fn test_open_validator_should_never_ban() {
     };
     let player: ContractAddress = 0xDDD.try_into().unwrap();
 
-    let should_ban = open_validator.should_ban(0, 1, player, array![].span());
+    let should_ban = open_validator
+        .should_ban(owner_address(), 0, 1, player, array![].span());
     assert(!should_ban, 'Open validator should never ban');
 }
 
@@ -346,7 +360,8 @@ fn test_open_validator_entries_left_and_remove_tracking() {
 
     configure_open_entry_validator(open_validator_address, tournament_id, 2);
 
-    let initial = open_validator.entries_left(tournament_id, player, array![].span());
+    let initial = open_validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(initial.is_some(), 'Should have limited entries');
     assert(initial.unwrap() == 2, 'Should start with 2 entries');
 
@@ -355,14 +370,16 @@ fn test_open_validator_entries_left_and_remove_tracking() {
     open_validator.add_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);
 
-    let after_add = open_validator.entries_left(tournament_id, player, array![].span());
+    let after_add = open_validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(after_add.unwrap() == 0, 'after add');
 
     start_cheat_caller_address(open_validator_address, owner_address());
     open_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);
 
-    let after_remove = open_validator.entries_left(tournament_id, player, array![].span());
+    let after_remove = open_validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(after_remove.unwrap() == 1, 'after rm');
 
     start_cheat_caller_address(open_validator_address, owner_address());
@@ -370,7 +387,8 @@ fn test_open_validator_entries_left_and_remove_tracking() {
     open_validator.remove_entry(tournament_id, 0, player, array![].span());
     stop_cheat_caller_address(open_validator_address);
 
-    let final_left = open_validator.entries_left(tournament_id, player, array![].span());
+    let final_left = open_validator
+        .entries_left(owner_address(), tournament_id, player, array![].span());
     assert(final_left.unwrap() == 2, 'rm noop');
 }
 
@@ -396,8 +414,12 @@ fn test_multi_tenant_isolation() {
     stop_cheat_caller_address(validator_address);
 
     // Verify context owners
-    assert!(validator.context_owner(context_a) == owner_a, "Owner A should own context A");
-    assert!(validator.context_owner(context_b) == owner_b, "Owner B should own context B");
+    assert!(
+        validator.is_context_registered(owner_a, context_a), "Owner A should own context A",
+    );
+    assert!(
+        validator.is_context_registered(owner_b, context_b), "Owner B should own context B",
+    );
 
     // Owner A can add entry on their own context
     start_cheat_caller_address(validator_address, owner_a);
@@ -411,28 +433,24 @@ fn test_multi_tenant_isolation() {
 }
 
 #[test]
-#[should_panic(expected: "Entry Requirement Extension: Only context owner can call")]
+#[should_panic(expected: "Entry Requirement Extension: Context not registered")]
 fn test_multi_tenant_cross_context_rejected() {
     let validator_address = deploy_open_entry_validator();
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
 
     let owner_a: ContractAddress = 0xA.try_into().unwrap();
     let owner_b: ContractAddress = 0xB.try_into().unwrap();
-    let context_a: u64 = 100;
     let context_b: u64 = 200;
     let player: ContractAddress = 0xC.try_into().unwrap();
 
-    // Owner A configures context A
-    start_cheat_caller_address(validator_address, owner_a);
-    validator.add_config(context_a, 3, array![].span());
-    stop_cheat_caller_address(validator_address);
-
-    // Owner B configures context B
+    // Owner B configures context B. (context_b, owner_b) is registered; (context_b, owner_a)
+    // is a completely separate namespace which has NOT been registered.
     start_cheat_caller_address(validator_address, owner_b);
     validator.add_config(context_b, 5, array![].span());
     stop_cheat_caller_address(validator_address);
 
-    // Owner A tries to add entry on context B - should panic
+    // Owner A tries to add an entry into context_b in THEIR OWN namespace.
+    // (owner_a, context_b) was never registered via add_config, so this reverts.
     start_cheat_caller_address(validator_address, owner_a);
     validator.add_entry(context_b, 1, player, array![].span());
 }

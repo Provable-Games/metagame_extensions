@@ -198,24 +198,24 @@ fn test_opus_validator_debt_based() {
 
     // Step 7: Verify configuration (wad units)
     assert(
-        validator_api.get_debt_threshold(tournament.id) == 5000000000000000000,
+        validator_api.get_debt_threshold(owner_addr, tournament.id) == 5000000000000000000,
         'Threshold mismatch',
     );
     assert(
-        validator_api.get_value_per_entry(tournament.id) == 2000000000000000000,
+        validator_api.get_value_per_entry(owner_addr, tournament.id) == 2000000000000000000,
         'Value per entry mismatch',
     );
-    assert(validator_api.get_max_entries(tournament.id) == max_entries, 'Max entries mismatch');
+    assert(validator_api.get_max_entries(owner_addr, tournament.id) == max_entries, 'Max entries mismatch');
 
     // Step 8: Debug - check if we can see the trove
     let abbot_check = IAbbotDispatcher { contract_address: abbot_address() };
     let _trove_ids = abbot_check.get_user_trove_ids(account);
 
     // Step 8: Validate entry and check entries based on initial debt
-    let is_valid = validator.valid_entry(tournament.id, account, array![].span());
+    let is_valid = validator.valid_entry(owner_addr, tournament.id, account, array![].span());
     assert(is_valid, 'Player should be valid');
 
-    let entries_left_initial = validator.entries_left(tournament.id, account, array![].span());
+    let entries_left_initial = validator.entries_left(owner_addr, tournament.id, account, array![].span());
     assert(entries_left_initial.is_some(), 'Should have entries');
     let initial_entries = entries_left_initial.unwrap();
     assert(initial_entries > 0, 'Should have initial entries');
@@ -229,7 +229,7 @@ fn test_opus_validator_debt_based() {
     stop_cheat_caller_address(validator_address);
 
     let entries_after_add = validator
-        .entries_left(tournament.id, account, array![].span())
+        .entries_left(owner_addr, tournament.id, account, array![].span())
         .unwrap();
     assert(entries_after_add < initial_entries, 'add dec');
 
@@ -239,7 +239,7 @@ fn test_opus_validator_debt_based() {
     stop_cheat_caller_address(validator_address);
 
     let entries_after_remove = validator
-        .entries_left(tournament.id, account, array![].span())
+        .entries_left(owner_addr, tournament.id, account, array![].span())
         .unwrap();
     assert(entries_after_remove == initial_entries, 'rm rest');
 
@@ -252,7 +252,7 @@ fn test_opus_validator_debt_based() {
     let health_after_forge: Health = shrine.get_trove_health(trove_id);
     let _new_debt_simple: u128 = health_after_forge.debt.val / 1000000000000000000;
 
-    let entries_left_after_forge = validator.entries_left(tournament.id, account, array![].span());
+    let entries_left_after_forge = validator.entries_left(owner_addr, tournament.id, account, array![].span());
     let new_entries = entries_left_after_forge.unwrap();
 
     // Entries should have increased!
@@ -335,10 +335,10 @@ fn test_opus_validator_debt_threshold_and_banning() {
     start_cheat_block_timestamp_global(current_time + 200); // Move into registration period
 
     // Step 5: Check initial state - should be valid
-    let is_valid_initial = validator.valid_entry(tournament.id, account, array![].span());
+    let is_valid_initial = validator.valid_entry(owner_addr, tournament.id, account, array![].span());
     assert(is_valid_initial, 'Should be valid initially');
 
-    let _initial_entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
+    let _initial_entries = validator.entries_left(owner_addr, tournament.id, account, array![].span()).unwrap();
     // Expected: (30-10)/5 = 4 entries
 
     // Step 6: Melt yin to drop below threshold
@@ -351,11 +351,11 @@ fn test_opus_validator_debt_threshold_and_banning() {
     stop_cheat_caller_address(abbot_address());
 
     // Step 7: Should now be invalid (below threshold)
-    let is_valid_after_melt = validator.valid_entry(tournament.id, account, array![].span());
+    let is_valid_after_melt = validator.valid_entry(owner_addr, tournament.id, account, array![].span());
     assert(!is_valid_after_melt, 'Should be invalid');
 
     // Existing entries should now be bannable
-    let should_ban = validator.should_ban(tournament.id, 1, account, array![].span());
+    let should_ban = validator.should_ban(owner_addr, tournament.id, 1, account, array![].span());
     assert(should_ban, 'should ban');
 }
 
@@ -439,10 +439,10 @@ fn test_opus_validator_asset_filtering() {
     start_cheat_block_timestamp_global(current_time + 200);
 
     // Step 5: Validate - should work because trove is backed by STRK
-    let is_valid = validator.valid_entry(tournament.id, account, array![].span());
+    let is_valid = validator.valid_entry(owner_addr, tournament.id, account, array![].span());
     assert(is_valid, 'Should be valid with STRK');
 
-    let entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
+    let entries = validator.entries_left(owner_addr, tournament.id, account, array![].span()).unwrap();
     assert(entries > 0, 'Should have entries');
 }
 
@@ -528,18 +528,18 @@ fn test_opus_validator_config_zero_threshold() {
     start_cheat_block_timestamp_global(current_time + 200);
 
     // Step 5: Verify config was stored correctly (wad units)
-    assert(validator_api.get_debt_threshold(tournament.id) == 0, 'Threshold should be 0');
+    assert(validator_api.get_debt_threshold(owner_addr, tournament.id) == 0, 'Threshold should be 0');
     assert(
-        validator_api.get_value_per_entry(tournament.id) == 1000000000000000000,
+        validator_api.get_value_per_entry(owner_addr, tournament.id) == 1000000000000000000,
         'Value per entry = 1e18',
     );
-    assert(validator_api.get_max_entries(tournament.id) == 0, 'Max entries should be 0');
+    assert(validator_api.get_max_entries(owner_addr, tournament.id) == 0, 'Max entries should be 0');
 
     // Step 6: Check that config works (threshold=0 means any debt is valid)
-    let is_valid = validator.valid_entry(tournament.id, account, array![].span());
+    let is_valid = validator.valid_entry(owner_addr, tournament.id, account, array![].span());
     assert(is_valid, 'Should be valid');
 
-    let entries = validator.entries_left(tournament.id, account, array![].span()).unwrap();
+    let entries = validator.entries_left(owner_addr, tournament.id, account, array![].span()).unwrap();
 
     // With threshold=0 and value_per_entry=1e18, entries = total_debt_wad / 1e18
     // Should have at least 5 entries (may be more if account has existing debt)

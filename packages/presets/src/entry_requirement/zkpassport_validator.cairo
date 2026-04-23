@@ -32,13 +32,30 @@ pub trait IUltraKeccakZKHonkVerifier<TContractState> {
 
 #[starknet::interface]
 pub trait IZkPassportValidator<TState> {
-    fn get_verifier_address(self: @TState, context_id: u64) -> ContractAddress;
-    fn get_expected_service_scope(self: @TState, context_id: u64) -> felt252;
-    fn get_expected_service_subscope(self: @TState, context_id: u64) -> felt252;
-    fn get_expected_param_commitment(self: @TState, context_id: u64) -> felt252;
-    fn get_max_proof_age(self: @TState, context_id: u64) -> u64;
-    fn get_expected_nullifier_type(self: @TState, context_id: u64) -> felt252;
-    fn is_nullifier_used(self: @TState, context_id: u64, nullifier_hash: felt252) -> bool;
+    fn get_verifier_address(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> ContractAddress;
+    fn get_expected_service_scope(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> felt252;
+    fn get_expected_service_subscope(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> felt252;
+    fn get_expected_param_commitment(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> felt252;
+    fn get_max_proof_age(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> u64;
+    fn get_expected_nullifier_type(
+        self: @TState, context_owner: ContractAddress, context_id: u64,
+    ) -> felt252;
+    fn is_nullifier_used(
+        self: @TState,
+        context_owner: ContractAddress,
+        context_id: u64,
+        nullifier_hash: felt252,
+    ) -> bool;
 }
 
 #[starknet::contract]
@@ -80,17 +97,17 @@ pub mod ZkPassportValidator {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         // Per-tournament config
-        verifier_address: Map<u64, ContractAddress>,
-        expected_service_scope: Map<u64, felt252>,
-        expected_service_subscope: Map<u64, felt252>,
-        expected_param_commitment: Map<u64, felt252>,
-        max_proof_age: Map<u64, u64>,
-        expected_nullifier_type: Map<u64, felt252>,
+        verifier_address: Map<(ContractAddress, u64), ContractAddress>,
+        expected_service_scope: Map<(ContractAddress, u64), felt252>,
+        expected_service_subscope: Map<(ContractAddress, u64), felt252>,
+        expected_param_commitment: Map<(ContractAddress, u64), felt252>,
+        max_proof_age: Map<(ContractAddress, u64), u64>,
+        expected_nullifier_type: Map<(ContractAddress, u64), felt252>,
         // Entry tracking
-        context_entry_limit: Map<u64, u32>,
-        context_entries: Map<(u64, ContractAddress), u32>,
+        context_entry_limit: Map<(ContractAddress, u64), u32>,
+        context_entries: Map<(ContractAddress, u64, ContractAddress), u32>,
         // Sybil prevention (per-tournament)
-        used_nullifiers: Map<(u64, felt252), bool>,
+        used_nullifiers: Map<(ContractAddress, u64, felt252), bool>,
     }
 
     #[event]
@@ -110,6 +127,7 @@ pub mod ZkPassportValidator {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -119,7 +137,7 @@ pub mod ZkPassportValidator {
                 return false;
             }
 
-            let verifier_addr = self.verifier_address.read(context_id);
+            let verifier_addr = self.verifier_address.read((context_owner, context_id));
             if verifier_addr.is_zero() {
                 return false;
             }
@@ -145,28 +163,30 @@ pub mod ZkPassportValidator {
             }
 
             // 6. Validate service scope (public_inputs[2])
-            let expected_scope = self.expected_service_scope.read(context_id);
+            let expected_scope = self.expected_service_scope.read((context_owner, context_id));
             let proof_scope: felt252 = (*public_inputs.at(2)).try_into().unwrap();
             if proof_scope != expected_scope {
                 return false;
             }
 
             // 7. Validate service subscope (public_inputs[3])
-            let expected_subscope = self.expected_service_subscope.read(context_id);
+            let expected_subscope = self
+                .expected_service_subscope
+                .read((context_owner, context_id));
             let proof_subscope: felt252 = (*public_inputs.at(3)).try_into().unwrap();
             if proof_subscope != expected_subscope {
                 return false;
             }
 
             // 8. Validate param commitment (public_inputs[4])
-            let expected_param = self.expected_param_commitment.read(context_id);
+            let expected_param = self.expected_param_commitment.read((context_owner, context_id));
             let proof_param: felt252 = (*public_inputs.at(4)).try_into().unwrap();
             if proof_param != expected_param {
                 return false;
             }
 
             // 9. Validate nullifier type (public_inputs[5])
-            let expected_ntype = self.expected_nullifier_type.read(context_id);
+            let expected_ntype = self.expected_nullifier_type.read((context_owner, context_id));
             let proof_ntype: felt252 = (*public_inputs.at(5)).try_into().unwrap();
             if proof_ntype != expected_ntype {
                 return false;
@@ -193,7 +213,7 @@ pub mod ZkPassportValidator {
                 return false;
             }
 
-            let max_age = self.max_proof_age.read(context_id);
+            let max_age = self.max_proof_age.read((context_owner, context_id));
             if max_age > 0 && (block_timestamp - proof_timestamp) > max_age {
                 return false;
             }
@@ -202,7 +222,7 @@ pub mod ZkPassportValidator {
             let nullifier_hash = InternalImpl::hash_nullifier(
                 claimed_nullifier_low, claimed_nullifier_high,
             );
-            if self.used_nullifiers.read((context_id, nullifier_hash)) {
+            if self.used_nullifiers.read((context_owner, context_id, nullifier_hash)) {
                 return false;
             }
 
@@ -211,6 +231,7 @@ pub mod ZkPassportValidator {
 
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
@@ -222,6 +243,7 @@ pub mod ZkPassportValidator {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -231,22 +253,26 @@ pub mod ZkPassportValidator {
                 let nullifier_low: felt252 = *qualification.at(0);
                 let nullifier_high: felt252 = *qualification.at(1);
                 let nullifier_hash = InternalImpl::hash_nullifier(nullifier_low, nullifier_high);
-                if self.used_nullifiers.read((context_id, nullifier_hash)) {
+                if self.used_nullifiers.read((context_owner, context_id, nullifier_hash)) {
                     return Option::Some(0);
                 }
             }
 
-            let entry_limit = self.context_entry_limit.read(context_id);
+            let entry_limit = self.context_entry_limit.read((context_owner, context_id));
             if entry_limit == 0 {
                 return Option::None;
             }
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             Option::Some(entry_limit - current_entries)
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             assert!(config.len() >= 6, "ZkPassportValidator: config must have at least 6 elements");
 
@@ -255,20 +281,21 @@ pub mod ZkPassportValidator {
                 !verifier_addr.is_zero(), "ZkPassportValidator: verifier address cannot be zero",
             );
 
-            self.verifier_address.write(context_id, verifier_addr);
-            self.expected_service_scope.write(context_id, *config.at(1));
-            self.expected_service_subscope.write(context_id, *config.at(2));
-            self.expected_param_commitment.write(context_id, *config.at(3));
+            self.verifier_address.write((context_owner, context_id), verifier_addr);
+            self.expected_service_scope.write((context_owner, context_id), *config.at(1));
+            self.expected_service_subscope.write((context_owner, context_id), *config.at(2));
+            self.expected_param_commitment.write((context_owner, context_id), *config.at(3));
 
             let max_age: u64 = (*config.at(4)).try_into().unwrap();
-            self.max_proof_age.write(context_id, max_age);
+            self.max_proof_age.write((context_owner, context_id), max_age);
 
-            self.expected_nullifier_type.write(context_id, *config.at(5));
-            self.context_entry_limit.write(context_id, entry_limit);
+            self.expected_nullifier_type.write((context_owner, context_id), *config.at(5));
+            self.context_entry_limit.write((context_owner, context_id), entry_limit);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
@@ -278,16 +305,17 @@ pub mod ZkPassportValidator {
             let nullifier_low: felt252 = *qualification.at(0);
             let nullifier_high: felt252 = *qualification.at(1);
             let nullifier_hash = InternalImpl::hash_nullifier(nullifier_low, nullifier_high);
-            self.used_nullifiers.write((context_id, nullifier_hash), true);
+            self.used_nullifiers.write((context_owner, context_id, nullifier_hash), true);
 
             // Track entry count
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             self.context_entries.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
@@ -297,10 +325,10 @@ pub mod ZkPassportValidator {
             let nullifier_low: felt252 = *qualification.at(0);
             let nullifier_high: felt252 = *qualification.at(1);
             let nullifier_hash = InternalImpl::hash_nullifier(nullifier_low, nullifier_high);
-            self.used_nullifiers.write((context_id, nullifier_hash), false);
+            self.used_nullifiers.write((context_owner, context_id, nullifier_hash), false);
 
             // Decrement entry count
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries.read(key);
             if current_entries > 0 {
                 self.context_entries.write(key, current_entries - 1);
@@ -317,34 +345,49 @@ pub mod ZkPassportValidator {
 
     #[abi(embed_v0)]
     impl ZkPassportValidatorImpl of IZkPassportValidator<ContractState> {
-        fn get_verifier_address(self: @ContractState, context_id: u64) -> ContractAddress {
-            self.verifier_address.read(context_id)
+        fn get_verifier_address(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> ContractAddress {
+            self.verifier_address.read((context_owner, context_id))
         }
 
-        fn get_expected_service_scope(self: @ContractState, context_id: u64) -> felt252 {
-            self.expected_service_scope.read(context_id)
+        fn get_expected_service_scope(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> felt252 {
+            self.expected_service_scope.read((context_owner, context_id))
         }
 
-        fn get_expected_service_subscope(self: @ContractState, context_id: u64) -> felt252 {
-            self.expected_service_subscope.read(context_id)
+        fn get_expected_service_subscope(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> felt252 {
+            self.expected_service_subscope.read((context_owner, context_id))
         }
 
-        fn get_expected_param_commitment(self: @ContractState, context_id: u64) -> felt252 {
-            self.expected_param_commitment.read(context_id)
+        fn get_expected_param_commitment(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> felt252 {
+            self.expected_param_commitment.read((context_owner, context_id))
         }
 
-        fn get_max_proof_age(self: @ContractState, context_id: u64) -> u64 {
-            self.max_proof_age.read(context_id)
+        fn get_max_proof_age(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> u64 {
+            self.max_proof_age.read((context_owner, context_id))
         }
 
-        fn get_expected_nullifier_type(self: @ContractState, context_id: u64) -> felt252 {
-            self.expected_nullifier_type.read(context_id)
+        fn get_expected_nullifier_type(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> felt252 {
+            self.expected_nullifier_type.read((context_owner, context_id))
         }
 
         fn is_nullifier_used(
-            self: @ContractState, context_id: u64, nullifier_hash: felt252,
+            self: @ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            nullifier_hash: felt252,
         ) -> bool {
-            self.used_nullifiers.read((context_id, nullifier_hash))
+            self.used_nullifiers.read((context_owner, context_id, nullifier_hash))
         }
     }
 }

@@ -31,6 +31,8 @@
 //! For TOP_POSITION: pairs of (token_id, position) for each qualifying tournament
 //! - qualification[0]: token_id_1, qualification[1]: position_1, etc.
 
+use starknet::ContractAddress;
+
 pub const QUALIFIER_TYPE_PARTICIPANTS: felt252 = 0;
 pub const QUALIFIER_TYPE_TOP_POSITION: felt252 = 1;
 
@@ -39,10 +41,18 @@ pub const QUALIFYING_MODE_ALL: felt252 = 1;
 
 #[starknet::interface]
 pub trait ITournamentValidator<TState> {
-    fn get_qualifier_type(self: @TState, tournament_id: u64) -> felt252;
-    fn get_qualifying_mode(self: @TState, tournament_id: u64) -> felt252;
-    fn get_qualifying_tournament_ids(self: @TState, tournament_id: u64) -> Array<u64>;
-    fn get_top_positions(self: @TState, tournament_id: u64) -> u32;
+    fn get_qualifier_type(
+        self: @TState, context_owner: ContractAddress, tournament_id: u64,
+    ) -> felt252;
+    fn get_qualifying_mode(
+        self: @TState, context_owner: ContractAddress, tournament_id: u64,
+    ) -> felt252;
+    fn get_qualifying_tournament_ids(
+        self: @TState, context_owner: ContractAddress, tournament_id: u64,
+    ) -> Array<u64>;
+    fn get_top_positions(
+        self: @TState, context_owner: ContractAddress, tournament_id: u64,
+    ) -> u32;
 }
 
 #[starknet::contract]
@@ -94,21 +104,22 @@ pub mod TournamentValidator {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         /// Qualifier type per tournament (0 = participants, 1 = top_position)
-        qualifier_type: Map<u64, felt252>,
+        qualifier_type: Map<(ContractAddress, u64), felt252>,
         /// Qualifying mode per tournament (0 = PER_TOKEN, 1 = ALL)
-        qualifying_mode: Map<u64, felt252>,
+        qualifying_mode: Map<(ContractAddress, u64), felt252>,
         /// Qualifying tournament IDs per tournament
-        qualifying_tournament_ids: Map<u64, Vec<u64>>,
+        qualifying_tournament_ids: Map<(ContractAddress, u64), Vec<u64>>,
         /// Entry limit per tournament
-        tournament_entry_limit: Map<u64, u32>,
+        tournament_entry_limit: Map<(ContractAddress, u64), u32>,
         /// Top positions that count as winners (0 = all positions)
-        top_positions: Map<u64, u32>,
-        /// Entry count per (tournament_id, qualifying_token_id) - for PER_TOKEN mode
-        token_entries: Map<(u64, u64), u32>,
-        /// Entry count per (tournament_id, player_address) - for ALL mode
-        player_entries: Map<(u64, ContractAddress), u32>,
-        /// Used tokens per (tournament_id, qualifying_token_id) - for ALL mode ban tech
-        used_tokens: Map<(u64, u64), bool>,
+        top_positions: Map<(ContractAddress, u64), u32>,
+        /// Entry count per (context_owner, tournament_id, qualifying_token_id) - for PER_TOKEN mode
+        token_entries: Map<(ContractAddress, u64, u64), u32>,
+        /// Entry count per (context_owner, tournament_id, player_address) - for ALL mode
+        player_entries: Map<(ContractAddress, u64, ContractAddress), u32>,
+        /// Used tokens per (context_owner, tournament_id, qualifying_token_id) - for ALL mode ban
+        /// tech
+        used_tokens: Map<(ContractAddress, u64, u64), bool>,
     }
 
     #[event]
@@ -145,17 +156,19 @@ pub mod TournamentValidator {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            self.validate_entry_internal(context_id, player_address, qualification)
+            self.validate_entry_internal(context_owner, context_id, player_address, qualification)
         }
 
         /// Tournament entries should never be banned after registration
         /// The qualification (owning a token from previous tournament) was valid at registration
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
@@ -167,33 +180,38 @@ pub mod TournamentValidator {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u32> {
             // First, validate that the qualification is actually valid
-            let is_valid = self.validate_entry_internal(context_id, player_address, qualification);
+            let is_valid = self
+                .validate_entry_internal(
+                    context_owner, context_id, player_address, qualification,
+                );
             if !is_valid {
                 return Option::Some(0); // Invalid qualification = 0 entries
             }
 
-            let entry_limit = self.tournament_entry_limit.read(context_id);
+            let entry_limit = self.tournament_entry_limit.read((context_owner, context_id));
             if entry_limit == 0 {
                 return Option::None; // Unlimited entries
             }
 
-            let qualifying_mode = self.qualifying_mode.read(context_id);
+            let qualifying_mode = self.qualifying_mode.read((context_owner, context_id));
 
             if qualifying_mode == QUALIFYING_MODE_ALL {
                 // ALL mode: entries tracked per player
                 // Check if this player has any entries used (meaning they own these tokens)
-                let key = (context_id, player_address);
+                let key = (context_owner, context_id, player_address);
                 let current_entries = self.player_entries.read(key);
 
                 // If tokens are used but this player hasn't used any entries,
                 // it means someone else used these tokens (transfer exploit blocked)
                 if current_entries == 0 {
-                    let tokens_used = self.check_any_token_used(context_id, qualification);
+                    let tokens_used = self
+                        .check_any_token_used(context_owner, context_id, qualification);
                     if tokens_used {
                         return Option::Some(0); // Tokens used by someone else
                     }
@@ -205,7 +223,7 @@ pub mod TournamentValidator {
                 // PER_TOKEN mode: entries tracked per qualifying token
                 let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
 
-                let key = (context_id, qualifying_token_id);
+                let key = (context_owner, context_id, qualifying_token_id);
                 let current_entries = self.token_entries.read(key);
                 let remaining_entries = entry_limit - current_entries;
                 return Option::Some(remaining_entries);
@@ -213,7 +231,11 @@ pub mod TournamentValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             // config[0]: qualifier_type (0 = participants, 1 = top_position)
             // config[1]: qualifying_mode (0 = PER_TOKEN, 1 = ALL)
@@ -241,13 +263,13 @@ pub mod TournamentValidator {
 
             let top_positions: u32 = (*config.at(2)).try_into().unwrap();
 
-            self.qualifier_type.write(context_id, qualifier_type);
-            self.qualifying_mode.write(context_id, qualifying_mode);
-            self.tournament_entry_limit.write(context_id, entry_limit);
-            self.top_positions.write(context_id, top_positions);
+            self.qualifier_type.write((context_owner, context_id), qualifier_type);
+            self.qualifying_mode.write((context_owner, context_id), qualifying_mode);
+            self.tournament_entry_limit.write((context_owner, context_id), entry_limit);
+            self.top_positions.write((context_owner, context_id), top_positions);
 
             // Store qualifying tournament IDs
-            let mut vec = self.qualifying_tournament_ids.entry(context_id);
+            let mut vec = self.qualifying_tournament_ids.entry((context_owner, context_id));
             let mut i: u32 = 3;
             loop {
                 if i >= config.len() {
@@ -263,21 +285,22 @@ pub mod TournamentValidator {
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let qualifying_mode = self.qualifying_mode.read(context_id);
+            let qualifying_mode = self.qualifying_mode.read((context_owner, context_id));
 
             if qualifying_mode == QUALIFYING_MODE_ALL {
                 // ALL mode: track entries per player and mark all tokens as used
-                let key = (context_id, player_address);
+                let key = (context_owner, context_id, player_address);
                 let current_entries = self.player_entries.read(key);
                 self.player_entries.write(key, current_entries + 1);
 
                 // Mark all tokens in the proof as used
-                self.mark_tokens_as_used(context_id, qualification);
+                self.mark_tokens_as_used(context_owner, context_id, qualification);
 
                 // Emit with first token as the qualifying token for the event
                 let first_token: u64 = (*qualification.at(0)).try_into().unwrap();
@@ -293,7 +316,7 @@ pub mod TournamentValidator {
                 // PER_TOKEN mode: track entries per qualifying token
                 let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
 
-                let key = (context_id, qualifying_token_id);
+                let key = (context_owner, context_id, qualifying_token_id);
                 let current_entries = self.token_entries.read(key);
                 self.token_entries.write(key, current_entries + 1);
 
@@ -310,17 +333,18 @@ pub mod TournamentValidator {
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let qualifying_mode = self.qualifying_mode.read(context_id);
+            let qualifying_mode = self.qualifying_mode.read((context_owner, context_id));
 
             if qualifying_mode == QUALIFYING_MODE_ALL {
                 // ALL mode: decrement player entries
                 // Note: we don't unmark tokens as used - once used, always used
-                let key = (context_id, player_address);
+                let key = (context_owner, context_id, player_address);
                 let current_entries = self.player_entries.read(key);
                 if current_entries > 0 {
                     self.player_entries.write(key, current_entries - 1);
@@ -329,7 +353,7 @@ pub mod TournamentValidator {
                 // PER_TOKEN mode: decrement token entries
                 let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
 
-                let key = (context_id, qualifying_token_id);
+                let key = (context_owner, context_id, qualifying_token_id);
                 let current_entries = self.token_entries.read(key);
                 if current_entries > 0 {
                     self.token_entries.write(key, current_entries - 1);
@@ -342,23 +366,30 @@ pub mod TournamentValidator {
     impl InternalImpl of InternalTrait {
         fn validate_entry_internal(
             self: @ContractState,
+            context_owner: ContractAddress,
             tournament_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let qualifying_mode = self.qualifying_mode.read(tournament_id);
+            let qualifying_mode = self.qualifying_mode.read((context_owner, tournament_id));
 
             if qualifying_mode == QUALIFYING_MODE_ALL {
-                return self.validate_all_tournaments(tournament_id, player_address, qualification);
+                return self
+                    .validate_all_tournaments(
+                        context_owner, tournament_id, player_address, qualification,
+                    );
             } else {
                 return self
-                    .validate_single_tournament(tournament_id, player_address, qualification);
+                    .validate_single_tournament(
+                        context_owner, tournament_id, player_address, qualification,
+                    );
             }
         }
 
         /// Validate for PER_TOKEN mode: player qualifies from a single tournament
         fn validate_single_tournament(
             self: @ContractState,
+            context_owner: ContractAddress,
             tournament_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
@@ -374,12 +405,14 @@ pub mod TournamentValidator {
             let token_id: u64 = (*qualification.at(1)).try_into().unwrap();
 
             // Check if qualifying tournament is in the valid set
-            if !self.is_qualifying_tournament(tournament_id, qualifying_tournament_id) {
+            if !self
+                .is_qualifying_tournament(context_owner, tournament_id, qualifying_tournament_id) {
                 return false;
             }
 
             self
                 .validate_token_participation(
+                    context_owner,
                     tournament_id,
                     qualifying_tournament_id,
                     token_id,
@@ -392,18 +425,20 @@ pub mod TournamentValidator {
         /// Validate for ALL mode: player must qualify from ALL tournaments
         fn validate_all_tournaments(
             self: @ContractState,
+            context_owner: ContractAddress,
             tournament_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let qualifying_tournaments = self.get_qualifying_tournament_ids(tournament_id);
+            let qualifying_tournaments = self
+                .get_qualifying_tournament_ids_internal(context_owner, tournament_id);
             let num_tournaments: u32 = qualifying_tournaments.len();
 
             if num_tournaments == 0 {
                 return false;
             }
 
-            let qualifier_type = self.qualifier_type.read(tournament_id);
+            let qualifier_type = self.qualifier_type.read((context_owner, tournament_id));
 
             // Validate qualification proof length
             if qualifier_type == QUALIFIER_TYPE_TOP_POSITION {
@@ -435,6 +470,7 @@ pub mod TournamentValidator {
 
                     if !self
                         .validate_token_participation(
+                            context_owner,
                             tournament_id,
                             qualifying_tournament_id,
                             token_id,
@@ -449,6 +485,7 @@ pub mod TournamentValidator {
 
                     if !self
                         .validate_token_participation(
+                            context_owner,
                             tournament_id,
                             qualifying_tournament_id,
                             token_id,
@@ -467,6 +504,7 @@ pub mod TournamentValidator {
         /// Validate that a player owns a token and it's registered in a qualifying tournament
         fn validate_token_participation(
             self: @ContractState,
+            context_owner: ContractAddress,
             tournament_id: u64,
             qualifying_tournament_id: u64,
             token_id: u64,
@@ -474,7 +512,7 @@ pub mod TournamentValidator {
             qualification: Span<felt252>,
             position_index: u32,
         ) -> bool {
-            let tournament_address = self.entry_validator.get_context_owner(tournament_id);
+            let tournament_address = context_owner;
             if tournament_address.is_zero() {
                 return false;
             }
@@ -503,7 +541,7 @@ pub mod TournamentValidator {
                 return false;
             }
 
-            let qualifier_type = self.qualifier_type.read(tournament_id);
+            let qualifier_type = self.qualifier_type.read((context_owner, tournament_id));
 
             if qualifier_type == QUALIFIER_TYPE_TOP_POSITION {
                 // Tournament must be finalized
@@ -524,7 +562,7 @@ pub mod TournamentValidator {
                     return false;
                 }
 
-                let top_positions = self.top_positions.read(tournament_id);
+                let top_positions = self.top_positions.read((context_owner, tournament_id));
                 if top_positions > 0 && position.into() > top_positions {
                     return false;
                 }
@@ -546,9 +584,12 @@ pub mod TournamentValidator {
         }
 
         fn is_qualifying_tournament(
-            self: @ContractState, tournament_id: u64, qualifying_tournament_id: u64,
+            self: @ContractState,
+            context_owner: ContractAddress,
+            tournament_id: u64,
+            qualifying_tournament_id: u64,
         ) -> bool {
-            let vec = self.qualifying_tournament_ids.entry(tournament_id);
+            let vec = self.qualifying_tournament_ids.entry((context_owner, tournament_id));
             let len = vec.len();
             let mut i: u64 = 0;
             loop {
@@ -564,10 +605,14 @@ pub mod TournamentValidator {
 
         /// Check if any token in the qualification proof is already used (for ALL mode ban tech)
         fn check_any_token_used(
-            self: @ContractState, tournament_id: u64, qualification: Span<felt252>,
+            self: @ContractState,
+            context_owner: ContractAddress,
+            tournament_id: u64,
+            qualification: Span<felt252>,
         ) -> bool {
-            let qualifier_type = self.qualifier_type.read(tournament_id);
-            let qualifying_tournaments = self.get_qualifying_tournament_ids(tournament_id);
+            let qualifier_type = self.qualifier_type.read((context_owner, tournament_id));
+            let qualifying_tournaments = self
+                .get_qualifying_tournament_ids_internal(context_owner, tournament_id);
             let num_tournaments: u32 = qualifying_tournaments.len();
 
             let mut i: u32 = 0;
@@ -582,7 +627,7 @@ pub mod TournamentValidator {
                     (*qualification.at(i)).try_into().unwrap()
                 };
 
-                if self.used_tokens.read((tournament_id, token_id)) {
+                if self.used_tokens.read((context_owner, tournament_id, token_id)) {
                     break true;
                 }
 
@@ -592,10 +637,14 @@ pub mod TournamentValidator {
 
         /// Mark all tokens in the qualification proof as used (for ALL mode ban tech)
         fn mark_tokens_as_used(
-            ref self: ContractState, tournament_id: u64, qualification: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            tournament_id: u64,
+            qualification: Span<felt252>,
         ) {
-            let qualifier_type = self.qualifier_type.read(tournament_id);
-            let qualifying_tournaments = self.get_qualifying_tournament_ids(tournament_id);
+            let qualifier_type = self.qualifier_type.read((context_owner, tournament_id));
+            let qualifying_tournaments = self
+                .get_qualifying_tournament_ids_internal(context_owner, tournament_id);
             let num_tournaments: u32 = qualifying_tournaments.len();
 
             let mut i: u32 = 0;
@@ -610,10 +659,27 @@ pub mod TournamentValidator {
                     (*qualification.at(i)).try_into().unwrap()
                 };
 
-                self.used_tokens.write((tournament_id, token_id), true);
+                self.used_tokens.write((context_owner, tournament_id, token_id), true);
 
                 i += 1;
             }
+        }
+
+        fn get_qualifying_tournament_ids_internal(
+            self: @ContractState, context_owner: ContractAddress, tournament_id: u64,
+        ) -> Array<u64> {
+            let vec = self.qualifying_tournament_ids.entry((context_owner, tournament_id));
+            let len = vec.len();
+            let mut arr = ArrayTrait::new();
+            let mut i: u64 = 0;
+            loop {
+                if i >= len {
+                    break;
+                }
+                arr.append(vec.at(i).read());
+                i += 1;
+            }
+            arr
         }
     }
 
@@ -621,16 +687,22 @@ pub mod TournamentValidator {
     use super::ITournamentValidator;
     #[abi(embed_v0)]
     impl TournamentValidatorImpl of ITournamentValidator<ContractState> {
-        fn get_qualifier_type(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.qualifier_type.read(tournament_id)
+        fn get_qualifier_type(
+            self: @ContractState, context_owner: ContractAddress, tournament_id: u64,
+        ) -> felt252 {
+            self.qualifier_type.read((context_owner, tournament_id))
         }
 
-        fn get_qualifying_mode(self: @ContractState, tournament_id: u64) -> felt252 {
-            self.qualifying_mode.read(tournament_id)
+        fn get_qualifying_mode(
+            self: @ContractState, context_owner: ContractAddress, tournament_id: u64,
+        ) -> felt252 {
+            self.qualifying_mode.read((context_owner, tournament_id))
         }
 
-        fn get_qualifying_tournament_ids(self: @ContractState, tournament_id: u64) -> Array<u64> {
-            let vec = self.qualifying_tournament_ids.entry(tournament_id);
+        fn get_qualifying_tournament_ids(
+            self: @ContractState, context_owner: ContractAddress, tournament_id: u64,
+        ) -> Array<u64> {
+            let vec = self.qualifying_tournament_ids.entry((context_owner, tournament_id));
             let len = vec.len();
             let mut arr = ArrayTrait::new();
             let mut i: u64 = 0;
@@ -644,8 +716,10 @@ pub mod TournamentValidator {
             arr
         }
 
-        fn get_top_positions(self: @ContractState, tournament_id: u64) -> u32 {
-            self.top_positions.read(tournament_id)
+        fn get_top_positions(
+            self: @ContractState, context_owner: ContractAddress, tournament_id: u64,
+        ) -> u32 {
+            self.top_positions.read((context_owner, tournament_id))
         }
     }
 }

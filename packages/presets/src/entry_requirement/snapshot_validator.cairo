@@ -68,8 +68,8 @@ pub mod SnapshotValidator {
         snapshot_metadata: Map<u64, SnapshotMetadata>,
         snapshot_entries: Map<(u64, ContractAddress), u32>,
         snapshot_exists: Map<u64, bool>,
-        context_snapshot: Map<u64, u64>,
-        context_address_entries_used: Map<(u64, ContractAddress), u32>,
+        context_snapshot: Map<(ContractAddress, u64), u64>,
+        context_address_entries_used: Map<(ContractAddress, u64, ContractAddress), u32>,
         snapshot_id_counter: u64,
     }
 
@@ -115,11 +115,12 @@ pub mod SnapshotValidator {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            let snapshot_id = self.context_snapshot.read(context_id);
+            let snapshot_id = self.context_snapshot.read((context_owner, context_id));
             let address_entries = self.snapshot_entries.read((snapshot_id, player_address));
             address_entries > 0
         }
@@ -128,6 +129,7 @@ pub mod SnapshotValidator {
         /// The snapshot represents a point-in-time qualification that doesn't change
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
@@ -139,52 +141,65 @@ pub mod SnapshotValidator {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u32> {
-            let snapshot_id = self.context_snapshot.read(context_id);
+            let snapshot_id = self.context_snapshot.read((context_owner, context_id));
             let address_entries = self.snapshot_entries.read((snapshot_id, player_address));
             let context_used_entries = self
                 .context_address_entries_used
-                .read((context_id, player_address));
+                .read((context_owner, context_id, player_address));
             let remaining_entries = address_entries - context_used_entries;
             Option::Some(remaining_entries)
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             let snapshot_id_felt = *config.at(0);
             let snapshot_id: u64 = snapshot_id_felt.try_into().unwrap();
             assert!(self.snapshot_exists.read(snapshot_id), "Snapshot does not exist");
             assert!(self.is_snapshot_locked(snapshot_id), "Snapshot must be locked before use");
-            self.context_snapshot.write(context_id, snapshot_id);
+            self.context_snapshot.write((context_owner, context_id), snapshot_id);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used_entries = self.context_address_entries_used.read((context_id, player_address));
-            self.context_address_entries_used.write((context_id, player_address), used_entries + 1);
+            let used_entries = self
+                .context_address_entries_used
+                .read((context_owner, context_id, player_address));
+            self
+                .context_address_entries_used
+                .write((context_owner, context_id, player_address), used_entries + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let used_entries = self.context_address_entries_used.read((context_id, player_address));
+            let used_entries = self
+                .context_address_entries_used
+                .read((context_owner, context_id, player_address));
             if used_entries > 0 {
                 self
                     .context_address_entries_used
-                    .write((context_id, player_address), used_entries - 1);
+                    .write((context_owner, context_id, player_address), used_entries - 1);
             }
         }
     }

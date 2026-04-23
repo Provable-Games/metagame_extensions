@@ -32,15 +32,15 @@ pub mod GovernanceValidator {
         entry_validator: EntryRequirementExtensionComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
-        entry_limit: Map<u64, u32>,
-        governor_address: Map<u64, ContractAddress>,
-        governance_token_address: Map<u64, ContractAddress>,
-        balance_threshold: Map<u64, u256>,
-        proposal_id: Map<u64, felt252>,
-        check_voted: Map<u64, bool>,
-        votes_threshold: Map<u64, u256>,
-        votes_per_entry: Map<u64, u256>,
-        context_entries_per_address: Map<(u64, ContractAddress), u32>,
+        entry_limit: Map<(ContractAddress, u64), u32>,
+        governor_address: Map<(ContractAddress, u64), ContractAddress>,
+        governance_token_address: Map<(ContractAddress, u64), ContractAddress>,
+        balance_threshold: Map<(ContractAddress, u64), u256>,
+        proposal_id: Map<(ContractAddress, u64), felt252>,
+        check_voted: Map<(ContractAddress, u64), bool>,
+        votes_threshold: Map<(ContractAddress, u64), u256>,
+        votes_per_entry: Map<(ContractAddress, u64), u256>,
+        context_entries_per_address: Map<(ContractAddress, u64, ContractAddress), u32>,
     }
 
     #[event]
@@ -61,45 +61,47 @@ pub mod GovernanceValidator {
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
             // Must meet governance requirements AND have entries available
-            self.check_governance_requirements(context_id, player_address)
-                && self.has_entries_available(context_id, player_address)
+            self.check_governance_requirements(context_owner, context_id, player_address)
+                && self.has_entries_available(context_owner, context_id, player_address)
         }
 
         /// Check if an existing entry should be banned
         /// Returns true if the player no longer meets governance requirements OR is over quota
         fn should_ban_entry(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
             // Ban if player no longer meets basic governance requirements
-            if !self.check_governance_requirements(context_id, current_owner) {
+            if !self.check_governance_requirements(context_owner, context_id, current_owner) {
                 return true;
             }
 
             // Check if player is over their quota
-            let votes_per_entry = self.votes_per_entry.read(context_id);
+            let votes_per_entry = self.votes_per_entry.read((context_owner, context_id));
             if votes_per_entry > 0 {
                 // Calculate current allowed entries based on current votes
-                let proposal_id = self.proposal_id.read(context_id);
-                let governor_address = self.governor_address.read(context_id);
+                let proposal_id = self.proposal_id.read((context_owner, context_id));
+                let governor_address = self.governor_address.read((context_owner, context_id));
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(current_owner, proposal_snapshot);
-                let balance_threshold = self.balance_threshold.read(context_id);
+                let balance_threshold = self.balance_threshold.read((context_owner, context_id));
                 let total_allowed_entries = (vote_count - balance_threshold) / votes_per_entry;
                 let used_entries = self
                     .context_entries_per_address
-                    .read((context_id, current_owner));
+                    .read((context_owner, context_id, current_owner));
 
                 // Ban if player has more entries than currently allowed
                 let total_allowed_u32: u32 = total_allowed_entries.try_into().unwrap();
@@ -113,34 +115,35 @@ pub mod GovernanceValidator {
 
         fn entries_left(
             self: @ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> Option<u32> {
-            let votes_per_entry = self.votes_per_entry.read(context_id);
+            let votes_per_entry = self.votes_per_entry.read((context_owner, context_id));
             if votes_per_entry > 0 {
                 // calculate the number of entries based on the votes
-                let proposal_id = self.proposal_id.read(context_id);
-                let governor_address = self.governor_address.read(context_id);
+                let proposal_id = self.proposal_id.read((context_owner, context_id));
+                let governor_address = self.governor_address.read((context_owner, context_id));
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(player_address, proposal_snapshot);
-                let balance_threshold = self.balance_threshold.read(context_id);
+                let balance_threshold = self.balance_threshold.read((context_owner, context_id));
                 let total_entries = (vote_count - balance_threshold) / votes_per_entry;
                 let used_entries = self
                     .context_entries_per_address
-                    .read((context_id, player_address));
+                    .read((context_owner, context_id, player_address));
                 let total_entries_u32: u32 = total_entries.try_into().unwrap();
                 let remaining_entries = total_entries_u32 - used_entries;
                 return Option::Some(remaining_entries);
             } else {
-                let entry_limit = self.entry_limit.read(context_id);
+                let entry_limit = self.entry_limit.read((context_owner, context_id));
                 if entry_limit == 0 {
                     return Option::None; // Unlimited entries
                 }
-                let key = (context_id, player_address);
+                let key = (context_owner, context_id, player_address);
                 let current_entries = self.context_entries_per_address.read(key);
                 let remaining_entries = entry_limit - current_entries;
                 return Option::Some(remaining_entries);
@@ -148,7 +151,11 @@ pub mod GovernanceValidator {
         }
 
         fn add_config(
-            ref self: ContractState, context_id: u64, entry_limit: u32, config: Span<felt252>,
+            ref self: ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            entry_limit: u32,
+            config: Span<felt252>,
         ) {
             // Config format: [governor_address, governance_token_address, balance_threshold,
             // proposal_id, check_voted, votes_threshold, votes_per_entry, bannable]
@@ -165,37 +172,41 @@ pub mod GovernanceValidator {
                 false
             };
 
-            self.entry_limit.write(context_id, entry_limit);
-            self.governor_address.write(context_id, governor_address);
-            self.governance_token_address.write(context_id, governance_token_address);
-            self.balance_threshold.write(context_id, balance_threshold);
-            self.proposal_id.write(context_id, proposal_id);
-            self.check_voted.write(context_id, check_voted);
-            self.votes_threshold.write(context_id, votes_threshold);
-            self.votes_per_entry.write(context_id, votes_per_entry);
-            self.entry_validator.set_bannable(context_id, bannable);
+            self.entry_limit.write((context_owner, context_id), entry_limit);
+            self.governor_address.write((context_owner, context_id), governor_address);
+            self
+                .governance_token_address
+                .write((context_owner, context_id), governance_token_address);
+            self.balance_threshold.write((context_owner, context_id), balance_threshold);
+            self.proposal_id.write((context_owner, context_id), proposal_id);
+            self.check_voted.write((context_owner, context_id), check_voted);
+            self.votes_threshold.write((context_owner, context_id), votes_threshold);
+            self.votes_per_entry.write((context_owner, context_id), votes_per_entry);
+            self.entry_validator.set_bannable(context_owner, context_id, bannable);
         }
 
         fn on_entry_added(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries_per_address.read(key);
             self.context_entries_per_address.write(key, current_entries + 1);
         }
 
         fn on_entry_removed(
             ref self: ContractState,
+            context_owner: ContractAddress,
             context_id: u64,
             game_token_id: felt252,
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) {
-            let key = (context_id, player_address);
+            let key = (context_owner, context_id, player_address);
             let current_entries = self.context_entries_per_address.read(key);
             if current_entries > 0 {
                 self.context_entries_per_address.write(key, current_entries - 1);
@@ -207,31 +218,39 @@ pub mod GovernanceValidator {
     impl InternalImpl of InternalTrait {
         /// Check if a player meets the governance requirements for a context
         fn check_governance_requirements(
-            self: @ContractState, context_id: u64, player_address: ContractAddress,
+            self: @ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            player_address: ContractAddress,
         ) -> bool {
             // Check the delegate of the address
-            let governance_token_address = self.governance_token_address.read(context_id);
+            let governance_token_address = self
+                .governance_token_address
+                .read((context_owner, context_id));
             let erc20_dispatcher = IERC20Dispatcher { contract_address: governance_token_address };
             let balance = erc20_dispatcher.balance_of(player_address);
             let votes_dispatcher = IVotesDispatcher { contract_address: governance_token_address };
             let delegates = votes_dispatcher.delegates(player_address);
 
             // If no delegate, or balance below threshold, reject entry
-            if delegates.is_zero() || balance < self.balance_threshold.read(context_id) {
+            if delegates.is_zero()
+                || balance < self.balance_threshold.read((context_owner, context_id)) {
                 return false;
             }
 
-            let check_voted = self.check_voted.read(context_id);
+            let check_voted = self.check_voted.read((context_owner, context_id));
             if check_voted {
-                let proposal_id = self.proposal_id.read(context_id);
-                let governor_address = self.governor_address.read(context_id);
+                let proposal_id = self.proposal_id.read((context_owner, context_id));
+                let governor_address = self.governor_address.read((context_owner, context_id));
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let has_voted = governor_dispatcher.has_voted(proposal_id, player_address);
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(player_address, proposal_snapshot);
-                let votes_meet_threshold = vote_count >= self.votes_threshold.read(context_id);
+                let votes_meet_threshold = vote_count >= self
+                    .votes_threshold
+                    .read((context_owner, context_id));
                 has_voted && votes_meet_threshold
             } else {
                 true
@@ -240,14 +259,17 @@ pub mod GovernanceValidator {
 
         /// Check if player has entries available (quota not exhausted)
         fn has_entries_available(
-            self: @ContractState, context_id: u64, player_address: ContractAddress,
+            self: @ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            player_address: ContractAddress,
         ) -> bool {
-            let votes_per_entry = self.votes_per_entry.read(context_id);
+            let votes_per_entry = self.votes_per_entry.read((context_owner, context_id));
             if votes_per_entry > 0 {
                 // Check quota based on votes
                 let used_entries = self
                     .context_entries_per_address
-                    .read((context_id, player_address));
+                    .read((context_owner, context_id, player_address));
 
                 // If no entries used yet, they have entries available
                 if used_entries == 0 {
@@ -255,27 +277,27 @@ pub mod GovernanceValidator {
                 }
 
                 // Calculate current allowed entries
-                let proposal_id = self.proposal_id.read(context_id);
-                let governor_address = self.governor_address.read(context_id);
+                let proposal_id = self.proposal_id.read((context_owner, context_id));
+                let governor_address = self.governor_address.read((context_owner, context_id));
                 let governor_dispatcher = IGovernorDispatcher {
                     contract_address: governor_address,
                 };
                 let proposal_snapshot = governor_dispatcher.proposal_snapshot(proposal_id);
                 let vote_count = governor_dispatcher.get_votes(player_address, proposal_snapshot);
-                let balance_threshold = self.balance_threshold.read(context_id);
+                let balance_threshold = self.balance_threshold.read((context_owner, context_id));
                 let total_allowed_entries = (vote_count - balance_threshold) / votes_per_entry;
                 let total_allowed_u32: u32 = total_allowed_entries.try_into().unwrap();
 
                 return used_entries < total_allowed_u32;
             } else {
                 // Fixed entry limit mode
-                let entry_limit = self.entry_limit.read(context_id);
+                let entry_limit = self.entry_limit.read((context_owner, context_id));
                 if entry_limit == 0 {
                     return true; // Unlimited
                 }
                 let used_entries = self
                     .context_entries_per_address
-                    .read((context_id, player_address));
+                    .read((context_owner, context_id, player_address));
                 return used_entries < entry_limit;
             }
         }
