@@ -24,9 +24,7 @@ fn deploy_snapshot_validator() -> ContractAddress {
     contract_address
 }
 
-fn setup_snapshot_with_entries(
-    validator_address: ContractAddress, entries: Span<Entry>,
-) -> u64 {
+fn setup_snapshot_with_entries(validator_address: ContractAddress, entries: Span<Entry>) -> u64 {
     let snapshot = ISnapshotValidatorDispatcher { contract_address: validator_address };
     start_cheat_caller_address(validator_address, owner_address());
     let snapshot_id = snapshot.create_snapshot();
@@ -36,9 +34,7 @@ fn setup_snapshot_with_entries(
     snapshot_id
 }
 
-fn configure_context(
-    validator_address: ContractAddress, context_id: u64, snapshot_id: u64,
-) {
+fn configure_context(validator_address: ContractAddress, context_id: u64, snapshot_id: u64) {
     let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
     start_cheat_caller_address(validator_address, owner_address());
     validator.add_config(context_id, 0, array![snapshot_id.into()].span());
