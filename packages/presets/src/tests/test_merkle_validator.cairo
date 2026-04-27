@@ -424,6 +424,96 @@ fn test_merkle_single_leaf() {
 }
 
 #[test]
+fn test_merkle_validate_entry_rejects_when_quota_exhausted() {
+    // Verifies validate_entry now enforces quota directly (framework no longer cross-checks
+    // entries_left). A player whose merkle proof is valid but who has already used all their
+    // count should fail validate_entry.
+    let (root, n01, n23, s0, s1, s2, s3) = build_tree_parts();
+    let context_id: u64 = 1;
+    let validator_address = deploy_merkle_validator();
+    configure_merkle_validator(validator_address, context_id, 0, root);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    let (s0_leaf, s0_addr, s0_count) = s0;
+    let (s1_leaf, _, _) = s1;
+    let (s2_leaf, _, _) = s2;
+    let (s3_leaf, _, _) = s3;
+
+    let proof = get_proof_for_index(0, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
+    let qual = build_qualification(s0_count, proof.span());
+
+    // First entry while quota fresh is valid.
+    assert!(
+        validator.valid_entry(owner_address(), context_id, s0_addr, qual.span()),
+        "Initial entry should be valid",
+    );
+
+    // Burn through the player's full count.
+    let mut i: u32 = 0;
+    while i < s0_count {
+        start_cheat_caller_address(validator_address, owner_address());
+        validator.add_entry(context_id, i.into(), s0_addr, qual.span());
+        stop_cheat_caller_address(validator_address);
+        i += 1;
+    }
+
+    // Now validate_entry must reject — this is the new behavior we rely on.
+    assert!(
+        !validator.valid_entry(owner_address(), context_id, s0_addr, qual.span()),
+        "validate_entry should reject when quota is exhausted",
+    );
+}
+
+#[test]
+fn test_merkle_validate_entry_respects_entry_limit_cap() {
+    // entry_limit caps the per-player allowance below `count`. Once used == entry_limit,
+    // validate_entry must reject even though count > used.
+    let (root, n01, n23, s0, s1, s2, s3) = build_tree_parts();
+    let context_id: u64 = 1;
+    let validator_address = deploy_merkle_validator();
+    let entry_limit: u32 = 1;
+    configure_merkle_validator(validator_address, context_id, entry_limit, root);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    let (s0_leaf, _, _) = s0;
+    let (s1_leaf, _, _) = s1;
+    let (s2_leaf, _, _) = s2;
+    let (s3_leaf, _, _) = s3;
+
+    // address2 in sorted leaves has count=5, but entry_limit caps it at 1.
+    let leaves: Array<(felt252, ContractAddress, u32)> = array![s0, s1, s2, s3];
+    let mut idx: u32 = 0;
+    let mut found = false;
+    while idx < 4 {
+        let (_, addr, count) = *leaves.at(idx);
+        if addr == address2() {
+            let proof = get_proof_for_index(idx, s0_leaf, s1_leaf, s2_leaf, s3_leaf, n01, n23);
+            let qual = build_qualification(count, proof.span());
+
+            assert!(
+                validator.valid_entry(owner_address(), context_id, addr, qual.span()),
+                "Initial entry should be valid",
+            );
+
+            start_cheat_caller_address(validator_address, owner_address());
+            validator.add_entry(context_id, 1, addr, qual.span());
+            stop_cheat_caller_address(validator_address);
+
+            assert!(
+                !validator.valid_entry(owner_address(), context_id, addr, qual.span()),
+                "validate_entry should reject once entry_limit is reached",
+            );
+            found = true;
+            break;
+        }
+        idx += 1;
+    }
+    assert!(found, "address2 should be found in sorted leaves");
+}
+
+#[test]
 fn test_merkle_should_ban_returns_false() {
     let (root, n01, n23, s0, s1, s2, s3) = build_tree_parts();
     let context_id: u64 = 1;

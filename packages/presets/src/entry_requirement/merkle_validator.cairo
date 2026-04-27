@@ -139,7 +139,19 @@ pub mod MerkleValidator {
             }
 
             let leaf_hash = compute_leaf_hash(player_address, count);
-            merkle_proof::verify_pedersen(proof, root, leaf_hash)
+            if !merkle_proof::verify_pedersen(proof, root, leaf_hash) {
+                return false;
+            }
+
+            // Quota: framework no longer cross-checks entries_left, so enforce here.
+            let entry_limit = self.merkle_entry_limit.read((context_owner, context_id));
+            let effective_count = if entry_limit > 0 && count > entry_limit {
+                entry_limit
+            } else {
+                count
+            };
+            let used = self.merkle_entry_count.read((context_owner, context_id, player_address));
+            effective_count > used
         }
 
         fn should_ban_entry(

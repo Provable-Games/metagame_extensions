@@ -24,7 +24,15 @@ pub trait IEntryRequirementExtension<TState> {
     /// (e.g. tournament platform) decides when banning may occur.
     fn bannable(self: @TState, context_owner: ContractAddress, context_id: u64) -> bool;
 
-    /// Check if a player's entry is valid for a context (used at registration time)
+    /// Check if a player's entry is valid for a context (used at registration time).
+    ///
+    /// Implementors MUST enforce both:
+    /// 1. eligibility (the gating condition: token ownership, debt, snapshot membership, …)
+    /// 2. remaining-entry quota (the player has not already used all their allowed entries)
+    ///
+    /// The metagame framework treats `valid_entry == true` as the sole authority to admit a
+    /// new entry on the hot path — it does not cross-check `entries_left` afterwards. An
+    /// implementation that returns `true` for a quota-exhausted player is a quota bypass.
     fn valid_entry(
         self: @TState,
         context_owner: ContractAddress,
@@ -44,7 +52,10 @@ pub trait IEntryRequirementExtension<TState> {
         qualification: Span<felt252>,
     ) -> bool;
 
-    /// Check how many entries are left for a player
+    /// Check how many entries are left for a player.
+    ///
+    /// View-only: this is consumed by off-chain UIs and indexers. The framework does NOT
+    /// invoke it on the entry path — quota enforcement lives inside `valid_entry`.
     fn entries_left(
         self: @TState,
         context_owner: ContractAddress,
