@@ -159,7 +159,15 @@ pub mod TournamentValidator {
             player_address: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            self.validate_entry_internal(context_owner, context_id, player_address, qualification)
+            if !self
+                .validate_entry_internal(
+                    context_owner, context_id, player_address, qualification,
+                ) {
+                return false;
+            }
+
+            // Quota: framework no longer cross-checks entries_left, so enforce here.
+            self.has_entries_available(context_owner, context_id, player_address, qualification)
         }
 
         /// Tournament entries should never be banned after registration
@@ -360,6 +368,42 @@ pub mod TournamentValidator {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
+        /// Quota check for validate_entry — mirrors the per-mode logic in entries_left,
+        /// so callers don't need a second cross-contract round trip into entries_left.
+        fn has_entries_available(
+            self: @ContractState,
+            context_owner: ContractAddress,
+            context_id: u64,
+            player_address: ContractAddress,
+            qualification: Span<felt252>,
+        ) -> bool {
+            let entry_limit = self.tournament_entry_limit.read((context_owner, context_id));
+            if entry_limit == 0 {
+                return true;
+            }
+
+            let qualifying_mode = self.qualifying_mode.read((context_owner, context_id));
+
+            if qualifying_mode == QUALIFYING_MODE_ALL {
+                let key = (context_owner, context_id, player_address);
+                let current_entries = self.player_entries.read(key);
+
+                // Transfer exploit guard: if no entries yet but tokens are marked used,
+                // a different owner already burned through the quota.
+                if current_entries == 0
+                    && self.check_any_token_used(context_owner, context_id, qualification) {
+                    return false;
+                }
+
+                current_entries < entry_limit
+            } else {
+                let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+                let key = (context_owner, context_id, qualifying_token_id);
+                let current_entries = self.token_entries.read(key);
+                current_entries < entry_limit
+            }
+        }
+
         fn validate_entry_internal(
             self: @ContractState,
             context_owner: ContractAddress,

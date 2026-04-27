@@ -122,7 +122,11 @@ pub mod SnapshotValidator {
         ) -> bool {
             let snapshot_id = self.context_snapshot.read((context_owner, context_id));
             let address_entries = self.snapshot_entries.read((snapshot_id, player_address));
-            address_entries > 0
+            // Quota: framework no longer cross-checks entries_left, so enforce here.
+            let used_entries = self
+                .context_address_entries_used
+                .read((context_owner, context_id, player_address));
+            address_entries > used_entries
         }
 
         /// Snapshot entries should never be banned after registration
