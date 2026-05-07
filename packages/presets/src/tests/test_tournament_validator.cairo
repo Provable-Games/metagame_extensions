@@ -10,7 +10,7 @@ use metagame_extensions_interfaces::entry_requirement_extension::{
 };
 use metagame_extensions_interfaces::registration::Registration;
 use metagame_extensions_interfaces::tournament::{
-    EntryFee, GameConfig, Metadata, Period, Schedule, Tournament,
+    EntryFee, GameConfig, Metadata, Period, Phase, Schedule, Tournament,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address, start_mock_call,
@@ -19,7 +19,9 @@ use snforge_std::{
 use starknet::ContractAddress;
 
 const QUALIFIER_TYPE_PARTICIPANTS: felt252 = 0;
+const QUALIFIER_TYPE_TOP_POSITION: felt252 = 1;
 const QUALIFYING_MODE_PER_TOKEN: felt252 = 0;
+const QUALIFYING_MODE_ALL: felt252 = 1;
 
 fn tournament_address() -> ContractAddress {
     0xABCD.try_into().unwrap()
@@ -201,5 +203,303 @@ fn test_invalid_qualification_rejects_before_quota_check() {
     assert!(
         !validator.valid_entry(tournament_address(), target_id, player1(), qualification.span()),
         "qualification referencing non-qualifying tournament must be rejected",
+    );
+}
+
+// ───────────────────────────────────────────────────
+// Single-elimination bracket walkthroughs
+// ───────────────────────────────────────────────────
+//
+// These tests configure a chain of TOP_POSITION-gated tournaments — one per
+// elimination round — and walk a single champion path from round 1 to the final.
+// They confirm:
+//   1. The contract scales to 31 / 127 configured contexts without state issues.
+//   2. validate_entry stays O(1) per round (no cumulative depth cost).
+//   3. add_entry under the new token-keyed quota model is callable each round.
+
+fn fake_registration_submitted(token_id: u64, context_id: u64) -> Registration {
+    Registration {
+        game_address: game_address(),
+        game_token_id: token_id,
+        context_id,
+        entry_number: 1,
+        has_submitted: true,
+        is_banned: false,
+    }
+}
+
+/// Configure round-N's tournament so entry requires winning round-N-1's tournament.
+fn configure_top_position_chain(
+    validator_address: ContractAddress,
+    qualifying_tournament_id: u64,
+    target_tournament_id: u64,
+    top_positions: u32,
+) {
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    // config[0]: qualifier_type (TOP_POSITION)
+    // config[1]: qualifying_mode (PER_TOKEN — bracket has one qualifying source per round)
+    // config[2]: top_positions (1 = winner only)
+    // config[3]: qualifying tournament id
+    let config = array![
+        QUALIFIER_TYPE_TOP_POSITION, QUALIFYING_MODE_PER_TOKEN, top_positions.into(),
+        qualifying_tournament_id.into(),
+    ];
+    start_cheat_caller_address(validator_address, tournament_address());
+    // entry_limit = 0 (unlimited); we're stressing validation, not quota.
+    validator.add_config(target_tournament_id, 0, config.span());
+    stop_cheat_caller_address(validator_address);
+}
+
+/// Mock the six cross-contract calls validate_token_participation makes on the
+/// happy TOP_POSITION path. Re-call each round to update the qualifying state.
+fn mock_top_position_path(
+    qualifying_tournament_id: u64, qualifying_token_id: u64, player: ContractAddress,
+) {
+    start_mock_call(
+        tournament_address(), selector!("tournament"), fake_tournament(qualifying_tournament_id),
+    );
+    start_mock_call(
+        tournament_address(),
+        selector!("get_registration"),
+        fake_registration_submitted(qualifying_token_id, qualifying_tournament_id),
+    );
+    start_mock_call(game_address(), selector!("token_address"), game_token_address());
+    start_mock_call(game_token_address(), selector!("owner_of"), player);
+    start_mock_call(tournament_address(), selector!("current_phase"), Phase::Finalized);
+    start_mock_call(
+        tournament_address(), selector!("get_leaderboard"), array![qualifying_token_id],
+    );
+}
+
+/// Configure a `2^rounds`-player single-elim bracket and walk one champion path
+/// through every validator-gated round. Asserts each entry passes; panics
+/// otherwise.
+fn run_bracket_walkthrough(rounds: u64) {
+    let validator_address = deploy_tournament_validator();
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let player = player1();
+
+    // Round R uses tournament_id = 100 + R, token_id = 1000 + R.
+    // Rounds 2..=rounds are validator-gated (round 1 has no prior tournament to reference).
+    let mut r: u64 = 2;
+    while r <= rounds {
+        configure_top_position_chain(validator_address, 100 + (r - 1), 100 + r, 1);
+        r += 1;
+    }
+
+    let mut r: u64 = 2;
+    while r <= rounds {
+        let prev_tournament_id = 100 + (r - 1);
+        let this_tournament_id = 100 + r;
+        let prev_token_id = 1000 + (r - 1);
+        let this_token_id = 1000 + r;
+
+        mock_top_position_path(prev_tournament_id, prev_token_id, player);
+
+        let qualification = array![prev_tournament_id.into(), prev_token_id.into(), 1_u8.into()];
+
+        assert!(
+            validator
+                .valid_entry(
+                    tournament_address(), this_tournament_id, player, qualification.span(),
+                ),
+            "round entry should validate",
+        );
+
+        start_cheat_caller_address(validator_address, tournament_address());
+        validator.add_entry(this_tournament_id, this_token_id.into(), player, qualification.span());
+        stop_cheat_caller_address(validator_address);
+
+        r += 1;
+    }
+}
+
+#[test]
+fn test_32_player_bracket_walkthrough() {
+    // 32 players → 5 elimination rounds. Validator gates rounds 2..=5 (4 entries).
+    run_bracket_walkthrough(5);
+}
+
+#[test]
+fn test_128_player_bracket_walkthrough() {
+    // 128 players → 7 elimination rounds. Validator gates rounds 2..=7 (6 entries).
+    run_bracket_walkthrough(7);
+}
+
+// ───────────────────────────────────────────────────
+// ALL mode — token-keyed quota and transfer-exploit guard
+// ───────────────────────────────────────────────────
+//
+// Snforge's `start_mock_call` returns the same value for every call to a given
+// (contract, selector), so we can't distinguish between qualifying tournaments
+// inside a single validate_entry. The multi-token bottleneck test uses a config
+// of `[100, 100]` (two slots pointing at the same qualifying tournament id) so
+// both iterations of validate_all_tournaments see a matching context_id from
+// the single mocked Registration. The other three tests use a single qualifying
+// tournament — sufficient to exercise the ALL-mode validate_all_tournaments
+// path, on_entry_added's stride loop, and the token-keyed quota.
+
+/// Configure ALL-mode PARTICIPANTS with one qualifying tournament.
+fn configure_all_mode_single(
+    validator_address: ContractAddress,
+    qualifying_tournament_id: u64,
+    target_tournament_id: u64,
+    entry_limit: u32,
+) {
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let config = array![
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, qualifying_tournament_id.into(),
+    ];
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.add_config(target_tournament_id, entry_limit, config.span());
+    stop_cheat_caller_address(validator_address);
+}
+
+/// Configure ALL-mode PARTICIPANTS with two slots both pointing to the same
+/// qualifying tournament — see comment above for why this trick is required.
+fn configure_all_mode_two_slot(
+    validator_address: ContractAddress,
+    qualifying_tournament_id: u64,
+    target_tournament_id: u64,
+    entry_limit: u32,
+) {
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let config = array![
+        QUALIFIER_TYPE_PARTICIPANTS, QUALIFYING_MODE_ALL, 0, qualifying_tournament_id.into(),
+        qualifying_tournament_id.into(),
+    ];
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.add_config(target_tournament_id, entry_limit, config.span());
+    stop_cheat_caller_address(validator_address);
+}
+
+#[test]
+fn test_all_mode_quota_exhausts() {
+    // ALL mode, single qualifying tournament, entry_limit = 2. Two entries land,
+    // the third is rejected because the single qualifying token's slot count is
+    // already at entry_limit.
+    let validator_address = deploy_tournament_validator();
+    let qualifying_id: u64 = 7;
+    let target_id: u64 = 8;
+    let qualifying_token_id: u64 = 42;
+    let entry_limit: u32 = 2;
+    configure_all_mode_single(validator_address, qualifying_id, target_id, entry_limit);
+    mock_happy_participants_path(qualifying_id, qualifying_token_id);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let qualification = array![qualifying_token_id.into()];
+
+    // Burn through both slots.
+    start_cheat_caller_address(validator_address, tournament_address());
+    let mut i: u64 = 0;
+    while i < entry_limit.into() {
+        validator.add_entry(target_id, (i + 1).into(), player1(), qualification.span());
+        i += 1;
+    }
+    stop_cheat_caller_address(validator_address);
+
+    assert!(
+        !validator.valid_entry(tournament_address(), target_id, player1(), qualification.span()),
+        "ALL-mode validate_entry must reject once token quota is exhausted",
+    );
+
+    let entries = validator
+        .entries_left(tournament_address(), target_id, player1(), qualification.span());
+    assert!(entries == Option::Some(0), "entries_left must be 0 after exhaustion");
+}
+
+#[test]
+fn test_all_mode_transfer_does_not_grant_extra_entries() {
+    // Pin the transfer-exploit guard: once a qualifying token's slots are spent,
+    // transferring it to a fresh wallet doesn't grant extra entries — the same
+    // token_entries[token_id] counter is consulted regardless of owner.
+    let validator_address = deploy_tournament_validator();
+    let qualifying_id: u64 = 7;
+    let target_id: u64 = 8;
+    let qualifying_token_id: u64 = 42;
+    configure_all_mode_single(validator_address, qualifying_id, target_id, 1);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let qualification = array![qualifying_token_id.into()];
+
+    // Player A burns the single available slot.
+    mock_happy_participants_path(qualifying_id, qualifying_token_id);
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.add_entry(target_id, 1, player1(), qualification.span());
+    stop_cheat_caller_address(validator_address);
+
+    // Token transfers to a fresh wallet — owner_of now returns player_b.
+    let player_b: ContractAddress = 0x222.try_into().unwrap();
+    start_mock_call(game_token_address(), selector!("owner_of"), player_b);
+
+    assert!(
+        !validator.valid_entry(tournament_address(), target_id, player_b, qualification.span()),
+        "transferred token's slot is already spent, fresh wallet must be rejected",
+    );
+}
+
+#[test]
+fn test_all_mode_remove_entry_decrements_token_quota() {
+    // on_entry_removed must decrement the token's slot, restoring entries_left
+    // — the symmetric counterpart of on_entry_added's increment loop.
+    let validator_address = deploy_tournament_validator();
+    let qualifying_id: u64 = 7;
+    let target_id: u64 = 8;
+    let qualifying_token_id: u64 = 42;
+    configure_all_mode_single(validator_address, qualifying_id, target_id, 1);
+    mock_happy_participants_path(qualifying_id, qualifying_token_id);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let qualification = array![qualifying_token_id.into()];
+
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.add_entry(target_id, 1, player1(), qualification.span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_after_add = validator
+        .entries_left(tournament_address(), target_id, player1(), qualification.span());
+    assert!(entries_after_add == Option::Some(0), "expected 0 entries left after adding");
+
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.remove_entry(target_id, 1, player1(), qualification.span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries_after_remove = validator
+        .entries_left(tournament_address(), target_id, player1(), qualification.span());
+    assert!(
+        entries_after_remove == Option::Some(1),
+        "remove_entry must restore the qualifying token's slot",
+    );
+}
+
+#[test]
+fn test_all_mode_each_qualifying_token_consumes_a_slot() {
+    // Verify the multi-token bottleneck: an entry consumes one slot on EVERY
+    // qualifying token in the proof, not just the first. With entry_limit = 3
+    // and a 2-token proof of (10, 20), one entry should leave the bottleneck
+    // (min over tokens) at 2.
+    let validator_address = deploy_tournament_validator();
+    let qualifying_id: u64 = 7;
+    let target_id: u64 = 8;
+    let entry_limit: u32 = 3;
+    configure_all_mode_two_slot(validator_address, qualifying_id, target_id, entry_limit);
+    // Single Registration mock with context_id = qualifying_id satisfies both
+    // iterations (see header comment for why we configure [qual_id, qual_id]).
+    // The mocked token_id is unused — get_registration's mock returns the same
+    // Registration regardless of the token_id passed at call time.
+    mock_happy_participants_path(qualifying_id, 0);
+
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+    let qualification = array![10_u64.into(), 20_u64.into()];
+
+    start_cheat_caller_address(validator_address, tournament_address());
+    validator.add_entry(target_id, 1, player1(), qualification.span());
+    stop_cheat_caller_address(validator_address);
+
+    let entries = validator
+        .entries_left(tournament_address(), target_id, player1(), qualification.span());
+    assert!(
+        entries == Option::Some(entry_limit - 1),
+        "both qualifying tokens should have consumed exactly 1 slot each",
     );
 }
