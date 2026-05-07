@@ -75,7 +75,6 @@ pub mod ERC20BalanceValidator {
         self.entry_validator.initializer();
     }
 
-    // Implement the EntryValidator trait for the contract
     impl EntryRequirementExtensionImplInternal of EntryRequirementExtension<ContractState> {
         fn validate_entry(
             self: @ContractState,
@@ -86,14 +85,37 @@ pub mod ERC20BalanceValidator {
         ) -> bool {
             assert!(qualification.len() == 0, "ERC20 Entry Validator: Qualification data invalid");
 
-            // Must meet balance requirements AND have entries available
-            self.check_balance_requirements(context_owner, context_id, player_address)
-                && self.has_entries_available(context_owner, context_id, player_address)
+            // Single-pass: one balance_of fetch covers both threshold and quota checks.
+            let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
+            let max_entries = self.context_max_entries.read((context_owner, context_id));
+
+            let (meets_thresholds, total_entries_allowed) = self
+                .collect_player_balance_state(
+                    context_owner, context_id, player_address, value_per_entry, max_entries,
+                );
+
+            if !meets_thresholds {
+                return false;
+            }
+
+            let used_entries = self
+                .context_entries_per_address
+                .read((context_owner, context_id, player_address));
+
+            if value_per_entry > 0 {
+                used_entries < total_entries_allowed
+            } else {
+                let entry_limit = self.context_entry_limit.read((context_owner, context_id));
+                if entry_limit == 0 {
+                    return true;
+                }
+                used_entries < entry_limit
+            }
         }
 
-        /// Check if an existing entry should be banned
-        /// Returns true if the player's balance dropped below minimum/exceeded maximum OR is over
-        /// quota
+        /// Check if an existing entry should be banned.
+        /// Returns true if the player no longer meets the balance band, or has more entries
+        /// than their current balance now permits (WAD mode only).
         fn should_ban_entry(
             self: @ContractState,
             context_owner: ContractAddress,
@@ -102,59 +124,26 @@ pub mod ERC20BalanceValidator {
             current_owner: ContractAddress,
             qualification: Span<felt252>,
         ) -> bool {
-            // Ban if player no longer meets basic balance requirements
-            if !self.check_balance_requirements(context_owner, context_id, current_owner) {
+            let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
+            let max_entries = self.context_max_entries.read((context_owner, context_id));
+
+            let (meets_thresholds, total_entries_allowed) = self
+                .collect_player_balance_state(
+                    context_owner, context_id, current_owner, value_per_entry, max_entries,
+                );
+
+            if !meets_thresholds {
                 return true;
             }
 
-            // Check if player is over their quota
-            let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
             if value_per_entry > 0 {
-                // Calculate current allowed entries based on current balance
-                let token_address = self.context_token_address.read((context_owner, context_id));
-                let erc20 = IERC20Dispatcher { contract_address: token_address };
-                let balance = erc20.balance_of(current_owner);
-
-                let min_threshold = self.context_min_threshold.read((context_owner, context_id));
-                let max_threshold = self.context_max_threshold.read((context_owner, context_id));
-
-                // Determine the effective balance for calculation
-                let effective_balance = if max_threshold > 0 && balance > max_threshold {
-                    max_threshold
-                } else {
-                    balance
-                };
-
-                // Calculate total allowed entries
-                let total_allowed_entries = if effective_balance > min_threshold {
-                    (effective_balance - min_threshold) / value_per_entry
-                } else {
-                    0
-                };
-
-                let key = (context_owner, context_id, current_owner);
-                let used_entries = self.context_entries_per_address.read(key);
-
-                // Convert u256 to u32 safely for comparison
-                let total_allowed_u32: u32 = match total_allowed_entries.try_into() {
-                    Option::Some(val) => val,
-                    Option::None => 0,
-                };
-
-                // Apply max entries cap if set
-                let max_entries = self.context_max_entries.read((context_owner, context_id));
-                let final_allowed = if max_entries > 0 && total_allowed_u32 > max_entries {
-                    max_entries
-                } else {
-                    total_allowed_u32
-                };
-
-                // Ban if player has more entries than currently allowed
-                return used_entries > final_allowed;
+                let used_entries = self
+                    .context_entries_per_address
+                    .read((context_owner, context_id, current_owner));
+                return used_entries > total_entries_allowed;
             }
 
-            // For fixed entry limits, player shouldn't be over quota
-            // (they would have been blocked at entry time)
+            // Fixed-mode: a player can't be over quota (they'd have been blocked at entry time).
             false
         }
 
@@ -166,66 +155,40 @@ pub mod ERC20BalanceValidator {
             qualification: Span<felt252>,
         ) -> Option<u32> {
             let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
+            let max_entries = self.context_max_entries.read((context_owner, context_id));
+
+            // Run threshold check for both modes so fixed-mode entries_left agrees with
+            // validate_entry rejection semantics (matching the WAD-mode realignment).
+            let (meets_thresholds, total_entries_allowed) = self
+                .collect_player_balance_state(
+                    context_owner, context_id, player_address, value_per_entry, max_entries,
+                );
+            if !meets_thresholds {
+                return Option::Some(0);
+            }
+
+            let used_entries = self
+                .context_entries_per_address
+                .read((context_owner, context_id, player_address));
 
             if value_per_entry > 0 {
-                // Calculate entries based on token balance
-                let token_address = self.context_token_address.read((context_owner, context_id));
-                let erc20 = IERC20Dispatcher { contract_address: token_address };
-                let balance = erc20.balance_of(player_address);
-
-                let min_threshold = self.context_min_threshold.read((context_owner, context_id));
-                let max_threshold = self.context_max_threshold.read((context_owner, context_id));
-
-                // Check if balance is within valid range
-                if balance < min_threshold {
-                    return Option::Some(0);
-                }
-
-                // Determine the effective balance for calculation
-                let effective_balance = if max_threshold > 0 && balance > max_threshold {
-                    // If balance exceeds max, cap it at max_threshold
-                    max_threshold
+                if total_entries_allowed > used_entries {
+                    Option::Some(total_entries_allowed - used_entries)
                 } else {
-                    balance
-                };
-
-                // Calculate total entries: (effective_balance - min_threshold) / value_per_entry
-                let total_entries = if effective_balance > min_threshold {
-                    (effective_balance - min_threshold) / value_per_entry
-                } else {
-                    0
-                };
-
-                let key = (context_owner, context_id, player_address);
-                let used_entries = self.context_entries_per_address.read(key);
-
-                // Convert u256 to u32 safely
-                let mut total_entries_u32: u32 = match total_entries.try_into() {
-                    Option::Some(val) => val,
-                    Option::None => { return Option::Some(0); },
-                };
-
-                // Apply max entries cap if set
-                let max_entries = self.context_max_entries.read((context_owner, context_id));
-                if max_entries > 0 && total_entries_u32 > max_entries {
-                    total_entries_u32 = max_entries;
-                }
-
-                if total_entries_u32 > used_entries {
-                    return Option::Some(total_entries_u32 - used_entries);
-                } else {
-                    return Option::Some(0);
+                    Option::Some(0)
                 }
             } else {
-                // Use fixed entry limit (original behavior)
                 let entry_limit = self.context_entry_limit.read((context_owner, context_id));
                 if entry_limit == 0 {
-                    return Option::None; // Unlimited entries
+                    return Option::None; // unlimited entries
                 }
-                let key = (context_owner, context_id, player_address);
-                let current_entries = self.context_entries_per_address.read(key);
-                let remaining_entries = entry_limit - current_entries;
-                return Option::Some(remaining_entries);
+                // Saturating subtraction: protects against owner re-config lowering the
+                // limit below current used_entries (would otherwise underflow + panic).
+                if entry_limit > used_entries {
+                    Option::Some(entry_limit - used_entries)
+                } else {
+                    Option::Some(0)
+                }
             }
         }
 
@@ -241,12 +204,10 @@ pub mod ERC20BalanceValidator {
             // max_entries, bannable]
             let token_address: ContractAddress = (*config.at(0)).try_into().unwrap();
 
-            // Reconstruct min_threshold from low and high parts
             let min_threshold_low: u128 = (*config.at(1)).try_into().unwrap();
             let min_threshold_high: u128 = (*config.at(2)).try_into().unwrap();
             let min_threshold: u256 = u256 { low: min_threshold_low, high: min_threshold_high };
 
-            // Reconstruct max_threshold from low and high parts
             let max_threshold_low: u128 = if config.len() > 3 {
                 (*config.at(3)).try_into().unwrap()
             } else {
@@ -259,7 +220,6 @@ pub mod ERC20BalanceValidator {
             };
             let max_threshold: u256 = u256 { low: max_threshold_low, high: max_threshold_high };
 
-            // Reconstruct value_per_entry from low and high parts
             let value_per_entry_low: u128 = if config.len() > 5 {
                 (*config.at(5)).try_into().unwrap()
             } else {
@@ -326,98 +286,65 @@ pub mod ERC20BalanceValidator {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        /// Check if a player meets the balance requirements for a context
-        fn check_balance_requirements(
+        /// Single source of truth for ERC20 balance evaluation. Reads the per-context
+        /// thresholds and the player's `balance_of` once, then returns:
+        /// - `meets_thresholds`: balance lies in `[min_threshold, max_threshold]` (max_threshold
+        ///   = 0 means "no upper bound").
+        /// - `total_entries_allowed`: WAD-mode entries computed as
+        ///   `(balance - min_threshold) / value_per_entry`, capped at `max_entries`. Always
+        ///   `0` when `value_per_entry == 0`; callers must consult `context_entry_limit` in
+        ///   that case.
+        ///
+        /// Callers pre-read `value_per_entry` and `max_entries` so a single call to
+        /// `validate_entry` doesn't double-fetch them across helpers.
+        ///
+        /// Behavior change: the prior `entries_left` capped at `max_threshold` instead of
+        /// rejecting; now any balance > max_threshold yields `meets_thresholds = false`,
+        /// matching `validate_entry`'s rejection semantics.
+        ///
+        /// Overflow handling: when `(balance - min_threshold) / value_per_entry` exceeds u32
+        /// the entries count saturates to `u32::MAX`. The subsequent `max_entries` cap then
+        /// clamps it to the configured ceiling; uncapped contexts get effectively-unlimited
+        /// allowance instead of silently rejecting a maximally-eligible player.
+        fn collect_player_balance_state(
             self: @ContractState,
             context_owner: ContractAddress,
             context_id: u64,
             player_address: ContractAddress,
-        ) -> bool {
+            value_per_entry: u256,
+            max_entries: u32,
+        ) -> (bool, u32) {
             let token_address = self.context_token_address.read((context_owner, context_id));
-            let erc20 = IERC20Dispatcher { contract_address: token_address };
-            let balance = erc20.balance_of(player_address);
+            let balance = IERC20Dispatcher { contract_address: token_address }
+                .balance_of(player_address);
 
-            // Check if balance meets the minimum threshold
             let min_threshold = self.context_min_threshold.read((context_owner, context_id));
-            let max_threshold = self.context_max_threshold.read((context_owner, context_id));
-
-            // Balance must be >= min_threshold
             if balance < min_threshold {
-                return false;
+                return (false, 0);
             }
 
-            // If max_threshold is set (> 0), balance must be <= max_threshold
+            let max_threshold = self.context_max_threshold.read((context_owner, context_id));
             if max_threshold > 0 && balance > max_threshold {
-                return false;
+                return (false, 0);
             }
 
-            true
-        }
-
-        /// Check if player has entries available (quota not exhausted)
-        fn has_entries_available(
-            self: @ContractState,
-            context_owner: ContractAddress,
-            context_id: u64,
-            player_address: ContractAddress,
-        ) -> bool {
-            let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
-
-            if value_per_entry > 0 {
-                // Check quota based on balance
-                let used_entries = self
-                    .context_entries_per_address
-                    .read((context_owner, context_id, player_address));
-
-                // If no entries used yet, they have entries available
-                if used_entries == 0 {
-                    return true;
-                }
-
-                // Calculate current allowed entries based on balance
-                let token_address = self.context_token_address.read((context_owner, context_id));
-                let erc20 = IERC20Dispatcher { contract_address: token_address };
-                let balance = erc20.balance_of(player_address);
-
-                let min_threshold = self.context_min_threshold.read((context_owner, context_id));
-                let max_threshold = self.context_max_threshold.read((context_owner, context_id));
-
-                let effective_balance = if max_threshold > 0 && balance > max_threshold {
-                    max_threshold
-                } else {
-                    balance
-                };
-
-                let total_allowed_entries = if effective_balance > min_threshold {
-                    (effective_balance - min_threshold) / value_per_entry
-                } else {
-                    0
-                };
-
-                let total_allowed_u32: u32 = match total_allowed_entries.try_into() {
-                    Option::Some(val) => val,
-                    Option::None => 0,
-                };
-
-                let max_entries = self.context_max_entries.read((context_owner, context_id));
-                let final_allowed = if max_entries > 0 && total_allowed_u32 > max_entries {
-                    max_entries
-                } else {
-                    total_allowed_u32
-                };
-
-                return used_entries < final_allowed;
-            } else {
-                // Fixed entry limit mode
-                let entry_limit = self.context_entry_limit.read((context_owner, context_id));
-                if entry_limit == 0 {
-                    return true; // Unlimited
-                }
-                let used_entries = self
-                    .context_entries_per_address
-                    .read((context_owner, context_id, player_address));
-                return used_entries < entry_limit;
+            if value_per_entry == 0 {
+                return (true, 0);
             }
+
+            // Past the bounds checks balance is in [min_threshold, max_threshold (or ∞)],
+            // so effective_balance == balance.
+            let total_entries_u256: u256 = (balance - min_threshold) / value_per_entry;
+            let mut total_entries: u32 = match total_entries_u256.try_into() {
+                Option::Some(val) => val,
+                Option::None => 0xffffffff_u32,
+            };
+
+            if max_entries > 0 && total_entries > max_entries {
+                total_entries = max_entries;
+            }
+
+            (true, total_entries)
         }
     }
 
