@@ -8,6 +8,7 @@ Pre-built entry validator contracts for tournament platforms like [Budokan](http
 |-----------|-------------|
 | `erc20_balance_validator` | Entries based on ERC-20 token balance |
 | `governance_validator` | Entries based on voting power / participation |
+| `merkle_validator` | Entries based on Merkle tree allowlists |
 | `opus_troves_validator` | Entries based on Opus Protocol debt positions |
 | `tournament_validator` | Entries based on prior tournament qualification |
 | `zkpassport_validator` | Entries based on ZK passport proofs via Garaga |
