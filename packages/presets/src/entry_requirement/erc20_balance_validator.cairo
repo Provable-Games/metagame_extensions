@@ -155,19 +155,23 @@ pub mod ERC20BalanceValidator {
             qualification: Span<felt252>,
         ) -> Option<u32> {
             let value_per_entry = self.context_value_per_entry.read((context_owner, context_id));
+            let max_entries = self.context_max_entries.read((context_owner, context_id));
+
+            // Run threshold check for both modes so fixed-mode entries_left agrees with
+            // validate_entry rejection semantics (matching the WAD-mode realignment).
+            let (meets_thresholds, total_entries_allowed) = self
+                .collect_player_balance_state(
+                    context_owner, context_id, player_address, value_per_entry, max_entries,
+                );
+            if !meets_thresholds {
+                return Option::Some(0);
+            }
+
+            let used_entries = self
+                .context_entries_per_address
+                .read((context_owner, context_id, player_address));
 
             if value_per_entry > 0 {
-                let max_entries = self.context_max_entries.read((context_owner, context_id));
-                let (meets_thresholds, total_entries_allowed) = self
-                    .collect_player_balance_state(
-                        context_owner, context_id, player_address, value_per_entry, max_entries,
-                    );
-                if !meets_thresholds {
-                    return Option::Some(0);
-                }
-                let used_entries = self
-                    .context_entries_per_address
-                    .read((context_owner, context_id, player_address));
                 if total_entries_allowed > used_entries {
                     Option::Some(total_entries_allowed - used_entries)
                 } else {
@@ -178,10 +182,13 @@ pub mod ERC20BalanceValidator {
                 if entry_limit == 0 {
                     return Option::None; // unlimited entries
                 }
-                let used_entries = self
-                    .context_entries_per_address
-                    .read((context_owner, context_id, player_address));
-                Option::Some(entry_limit - used_entries)
+                // Saturating subtraction: protects against owner re-config lowering the
+                // limit below current used_entries (would otherwise underflow + panic).
+                if entry_limit > used_entries {
+                    Option::Some(entry_limit - used_entries)
+                } else {
+                    Option::Some(0)
+                }
             }
         }
 
@@ -294,6 +301,11 @@ pub mod ERC20BalanceValidator {
         /// Behavior change: the prior `entries_left` capped at `max_threshold` instead of
         /// rejecting; now any balance > max_threshold yields `meets_thresholds = false`,
         /// matching `validate_entry`'s rejection semantics.
+        ///
+        /// Overflow handling: when `(balance - min_threshold) / value_per_entry` exceeds u32
+        /// the entries count saturates to `u32::MAX`. The subsequent `max_entries` cap then
+        /// clamps it to the configured ceiling; uncapped contexts get effectively-unlimited
+        /// allowance instead of silently rejecting a maximally-eligible player.
         fn collect_player_balance_state(
             self: @ContractState,
             context_owner: ContractAddress,
@@ -325,7 +337,7 @@ pub mod ERC20BalanceValidator {
             let total_entries_u256: u256 = (balance - min_threshold) / value_per_entry;
             let mut total_entries: u32 = match total_entries_u256.try_into() {
                 Option::Some(val) => val,
-                Option::None => 0,
+                Option::None => 0xffffffff_u32,
             };
 
             if max_entries > 0 && total_entries > max_entries {

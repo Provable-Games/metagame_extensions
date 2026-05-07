@@ -351,3 +351,69 @@ fn test_balance_at_exact_min_threshold_zero_entries_in_wad_mode() {
         "exactly-min balance with 0 quota should be rejected",
     );
 }
+
+#[test]
+fn test_wad_mode_overflow_caps_at_max_entries() {
+    // Behavior pin: a player with a balance that overflows u32 entries (huge balance,
+    // tiny value_per_entry) must end up at `max_entries`, not at 0. Pre-fix, the u256→u32
+    // try_into fallback was 0, so a maximally-eligible player got rejected. Now the
+    // overflow saturates to u32::MAX and `max_entries` clamps it to the configured cap.
+    let validator_address = deploy_validator();
+    // min = 0, no max_threshold, value_per_entry = 1 (smallest possible), max_entries = 10.
+    configure_wad_mode(validator_address, 1, 0, 0, 1, 10);
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    // Massive balance — the u256 entries division produces a value far beyond u32::MAX.
+    mock_balance(u256 { low: 0xffffffffffffffffffffffffffffffff_u128, high: 0 });
+
+    let entries = validator.entries_left(owner_address(), 1, player1(), array![].span());
+    assert!(entries == Option::Some(10), "overflow must saturate then cap at max_entries");
+
+    assert!(
+        validator.valid_entry(owner_address(), 1, player1(), array![].span()),
+        "overflow-eligible player must be admitted, not silently rejected",
+    );
+}
+
+#[test]
+fn test_fixed_mode_entries_left_zero_when_below_threshold() {
+    // Behavior pin: fixed-mode entries_left now respects min_threshold (was previously
+    // bypassed — entries_left reported entry_limit even when validate_entry would reject).
+    let validator_address = deploy_validator();
+    configure_fixed_mode(validator_address, 1, 5 * ONE_TOKEN, 5);
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    // Balance well below the 5-token min.
+    mock_balance(u256 { low: ONE_TOKEN, high: 0 });
+
+    let entries = validator.entries_left(owner_address(), 1, player1(), array![].span());
+    assert!(entries == Option::Some(0), "below-min in fixed mode must report 0 entries");
+
+    assert!(
+        !validator.valid_entry(owner_address(), 1, player1(), array![].span()),
+        "validate_entry rejects below-min, entries_left now agrees",
+    );
+}
+
+#[test]
+fn test_fixed_mode_entries_left_zero_at_exact_limit() {
+    // Saturation guard: when used_entries reaches entry_limit exactly, fixed-mode
+    // entries_left returns 0 (and would not panic if a future config change pushed
+    // used_entries past entry_limit).
+    let validator_address = deploy_validator();
+    configure_fixed_mode(validator_address, 1, ONE_TOKEN, 3);
+    let validator = IEntryRequirementExtensionDispatcher { contract_address: validator_address };
+
+    mock_balance(u256 { low: 10 * ONE_TOKEN, high: 0 });
+
+    start_cheat_caller_address(validator_address, owner_address());
+    let mut i: u64 = 1;
+    while i <= 3 {
+        validator.add_entry(1, i.into(), player1(), array![].span());
+        i += 1;
+    }
+    stop_cheat_caller_address(validator_address);
+
+    let entries = validator.entries_left(owner_address(), 1, player1(), array![].span());
+    assert!(entries == Option::Some(0), "fixed-mode entries_left must saturate at 0");
+}
