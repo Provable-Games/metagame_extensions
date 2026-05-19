@@ -36,11 +36,16 @@ pub mod PrizeExtensionComponent {
             config: Span<felt252>,
         );
 
-        /// Claim a prize for a context
+        /// Claim a specific prize for a context. `prize_id` is forwarded
+        /// from the host's prize ledger and identifies which prize within
+        /// `(context_owner, context_id)` is being claimed. Implementors
+        /// MUST scope their state by this `prize_id` rather than
+        /// re-decoding it from `claim_params`.
         fn claim_prize(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
+            prize_id: u64,
             claim_params: Span<felt252>,
         );
 
@@ -82,12 +87,15 @@ pub mod PrizeExtensionComponent {
         }
 
         fn claim_prize(
-            ref self: ComponentState<TContractState>, context_id: u64, claim_params: Span<felt252>,
+            ref self: ComponentState<TContractState>,
+            context_id: u64,
+            prize_id: u64,
+            claim_params: Span<felt252>,
         ) {
             let caller = get_caller_address();
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
-            PrizeExtension::claim_prize(ref contract, caller, context_id, claim_params);
+            PrizeExtension::claim_prize(ref contract, caller, context_id, prize_id, claim_params);
         }
 
         fn get_config(

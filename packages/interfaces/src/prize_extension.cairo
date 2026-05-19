@@ -6,12 +6,11 @@ use starknet::ContractAddress;
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `add_prize` for that `context_id`.
 ///
-/// NOTE: this ID is regenerated whenever the trait surface changes. The
-/// previous value (with only is_context_registered/add_prize/claim_prize)
-/// was 0x3f058684a2de48c9135820c54730c368696c0b35df75942716d0d6537d18bac;
-/// run `src5_rs` against the current trait to regenerate after any change.
+/// NOTE: this ID is regenerated whenever the trait surface changes. Run
+/// `src5_rs parse` against the current trait (with the `<TState>` generic
+/// removed so the tool can compute) to regenerate after any change.
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x12a5f38bd1e9397d6ca0151207457b6a54ae1f5e750719d6d0a3afde2ca827e;
+    0x330f2322cddf690fbb8ae19203ea346ab0151007e3e1a53cccd67ea45c5d486;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {
@@ -26,9 +25,15 @@ pub trait IPrizeExtension<TState> {
     /// caller cannot add prizes to an already-registered context.
     fn add_prize(ref self: TState, context_id: u64, prize_id: u64, config: Span<felt252>);
 
-    /// Claim a prize for a context.
+    /// Claim a specific prize for a context. `prize_id` identifies the prize
+    /// being claimed within `(caller, context_id)` and is forwarded by the
+    /// host from its prize ledger — extensions MUST scope their state
+    /// reads/writes by this prize_id rather than re-decoding it from
+    /// `claim_params` (which carries only extension-specific arguments
+    /// like merkle proofs, leaderboard positions, etc.).
+    ///
     /// Caller must be the owner that previously called `add_prize` for this context.
-    fn claim_prize(ref self: TState, context_id: u64, claim_params: Span<felt252>);
+    fn claim_prize(ref self: TState, context_id: u64, prize_id: u64, claim_params: Span<felt252>);
 
     /// Return the original `config` blob the host passed to `add_prize`
     /// for this `(context_owner, context_id, prize_id)`. Implementors

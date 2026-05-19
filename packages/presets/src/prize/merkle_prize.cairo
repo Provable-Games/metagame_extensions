@@ -20,7 +20,8 @@
 /// 3. Submit the prize with config = `[token_address, root]`.
 ///
 /// Config layout (`add_prize`):     [token_address, merkle_root]
-/// Claim params (`claim_prize`):    [prize_id, account, amount_low, amount_high, ...proof]
+/// Claim params (`claim_prize`):    [account, amount_low, amount_high, ...proof]   (prize_id is a
+/// top-level arg)
 
 #[starknet::interface]
 pub trait IMerklePrize<TState> {
@@ -169,18 +170,18 @@ pub mod merkle_prize {
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
+            prize_id: u64,
             claim_params: Span<felt252>,
         ) {
             assert!(
-                claim_params.len() >= 4,
-                "MerklePrize: claim_params must be [prize_id, account, amount_low, amount_high, ...proof]",
+                claim_params.len() >= 3,
+                "MerklePrize: claim_params must be [account, amount_low, amount_high, ...proof]",
             );
-            let prize_id: u64 = (*claim_params.at(0)).try_into().unwrap();
-            let account: ContractAddress = (*claim_params.at(1)).try_into().unwrap();
-            let amount_low: u128 = (*claim_params.at(2)).try_into().unwrap();
-            let amount_high: u128 = (*claim_params.at(3)).try_into().unwrap();
+            let account: ContractAddress = (*claim_params.at(0)).try_into().unwrap();
+            let amount_low: u128 = (*claim_params.at(1)).try_into().unwrap();
+            let amount_high: u128 = (*claim_params.at(2)).try_into().unwrap();
             let amount = u256 { low: amount_low, high: amount_high };
-            let proof = claim_params.slice(4, claim_params.len() - 4);
+            let proof = claim_params.slice(3, claim_params.len() - 3);
 
             let key = (context_owner, context_id, prize_id);
             let root = self.prize_root.read(key);

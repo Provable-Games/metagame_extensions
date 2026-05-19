@@ -105,11 +105,11 @@ fn test_merkle_prize_add_and_claim_valid_proof() {
     dispatcher
         .claim_prize(
             1,
+            1, // prize_id
             array![
-                1, // prize_id
                 alice.into(), // account
-                alice_amount.low.into(),
-                alice_amount.high.into(), leaf_bob,
+                alice_amount.low.into(), alice_amount.high.into(),
+                leaf_bob,
             ]
                 .span(),
         );
@@ -137,7 +137,8 @@ fn test_merkle_prize_rejects_bad_proof() {
     dispatcher
         .claim_prize(
             1,
-            array![1, alice.into(), wrong_amount.low.into(), wrong_amount.high.into(), leaf_alice]
+            1,
+            array![alice.into(), wrong_amount.low.into(), wrong_amount.high.into(), leaf_alice]
                 .span(),
         );
 }
@@ -159,10 +160,10 @@ fn test_merkle_prize_rejects_double_claim() {
     start_cheat_caller_address(merkle_prize_addr, host);
     dispatcher.add_prize(1, 1, array![token_address().into(), root].span());
     mock_call(token_address(), selector!("transfer"), true, 10);
-    let claim = array![1, alice.into(), alice_amount.low.into(), alice_amount.high.into(), leaf_bob]
+    let claim = array![alice.into(), alice_amount.low.into(), alice_amount.high.into(), leaf_bob]
         .span();
-    dispatcher.claim_prize(1, claim);
-    dispatcher.claim_prize(1, claim); // second claim → panic
+    dispatcher.claim_prize(1, 1, claim);
+    dispatcher.claim_prize(1, 1, claim); // second claim → panic
 }
 
 #[test]
@@ -230,7 +231,7 @@ fn test_nft_prize_add_and_claim_position() {
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.claim_prize(1, array![1, 1].span());
+    dispatcher.claim_prize(1, 1, array![1].span());
     stop_cheat_caller_address(nft_prize_addr);
 
     assert!(view.is_position_claimed(host, 1, 1, 1), "should be claimed after");
@@ -269,5 +270,5 @@ fn test_nft_prize_rejects_out_of_range_position() {
         .add_prize(
             1, 1, array![prize_nft.into(), host.into(), 1_u32.into(), 7_u128.into(), 0].span(),
         );
-    dispatcher.claim_prize(1, array![1, 2].span()); // only 1 position configured
+    dispatcher.claim_prize(1, 1, array![2].span()); // only 1 position configured
 }

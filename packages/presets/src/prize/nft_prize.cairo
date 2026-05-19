@@ -27,7 +27,7 @@
 ///
 /// Config layout (`add_prize`):
 ///   [token_address, host_address, num_positions, id_0_low, id_0_high, id_1_low, id_1_high, ...]
-/// Claim params (`claim_prize`):  [prize_id, position]   (1-indexed position)
+/// Claim params (`claim_prize`):  [position]   (1-indexed position; prize_id is a top-level arg)
 
 #[starknet::interface]
 pub trait INFTPrize<TState> {
@@ -218,11 +218,11 @@ pub mod nft_prize {
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
+            prize_id: u64,
             claim_params: Span<felt252>,
         ) {
-            assert!(claim_params.len() == 2, "NFTPrize: claim_params must be [prize_id, position]");
-            let prize_id: u64 = (*claim_params.at(0)).try_into().unwrap();
-            let position: u32 = (*claim_params.at(1)).try_into().unwrap();
+            assert!(claim_params.len() == 1, "NFTPrize: claim_params must be [position]");
+            let position: u32 = (*claim_params.at(0)).try_into().unwrap();
             assert!(position > 0, "NFTPrize: position must be 1-indexed");
 
             let key = (context_owner, context_id, prize_id);
