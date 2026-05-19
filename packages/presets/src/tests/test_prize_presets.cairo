@@ -2,9 +2,11 @@
 //
 // Strategy: deploy the preset and drive it through its IPrizeExtension
 // trait directly (no host contract). Token interactions (ERC721
-// owner_of / transfer_from) are stubbed with `mock_call`. The host is
-// responsible for resolving recipient — extensions just transfer escrow
-// to whatever address the host computes.
+// owner_of / transfer_from) and host callbacks (ILeaderboard, IMinigame)
+// are stubbed with `mock_call`. NFTPrize self-validates: callers can't
+// redirect payouts — the extension queries the host's leaderboard to
+// determine the canonical recipient and asserts the host-supplied one
+// matches.
 
 use metagame_extensions_interfaces::prize_extension::{
     IPrizeExtensionDispatcher, IPrizeExtensionDispatcherTrait,
@@ -49,25 +51,37 @@ fn test_nft_prize_add_and_payout_position_to_winner() {
     let view = INFTPrizeDispatcher { contract_address: nft_prize_addr };
     let host = host_address();
     let prize_nft = token_address();
+    let sponsor = addr(0x5b0b);
 
     // Pre-transfer model: mock owner_of to return the extension contract.
     mock_call(prize_nft, selector!("owner_of"), nft_prize_addr, 10);
 
-    // Config: one position with token_id = 7. host_address is no longer in
-    // config — the host computes recipient on its side now.
+    // Config: [token, sponsor, num_positions=1, token_id=7]
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
+    dispatcher
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
     stop_cheat_caller_address(nft_prize_addr);
 
     assert!(view.get_token_address(host, 1, 1) == prize_nft, "token addr not stored");
-    let expected: u256 = 7;
-    assert!(view.get_position_token_id(host, 1, 1, 1) == expected, "token id not stored");
-    assert!(!view.is_position_claimed(host, 1, 1, 1), "should not be claimed yet");
+    assert!(view.get_sponsor(host, 1, 1) == sponsor, "sponsor not stored");
 
-    // Host computes winner and tells the extension where to send.
+    // Stub host: leaderboard length 1, winner token_id 99.
+    mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
+    let entries = array![
+        metagame_extensions_presets::prize::externals::game_components::LeaderboardEntry {
+            token_id: 99, score: 1000,
+        },
+    ];
+    mock_call(host, selector!("get_entries"), entries, 10);
+    let game_token = addr(0x6A4E);
+    mock_call(host, selector!("token_address"), game_token, 10);
     let winner = addr(0xFEED);
+    mock_call(game_token, selector!("owner_of"), winner, 10);
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
 
+    // Caller supplies the correct recipient (winner) — extension validates.
     start_cheat_caller_address(nft_prize_addr, host);
     dispatcher.payout_prize(1, 1, Option::Some(1_u32), winner, array![].span());
     stop_cheat_caller_address(nft_prize_addr);
@@ -87,16 +101,51 @@ fn test_nft_prize_payout_to_sponsor_for_unclaimed_position() {
     mock_call(prize_nft, selector!("owner_of"), nft_prize_addr, 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
+    dispatcher
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
 
-    // Host decides this position has no winner → refund to sponsor.
-    // Extension doesn't know or care which case it is — it just transfers
-    // to whatever address the host supplied.
+    // Leaderboard has zero entries -> refund path: expected recipient = sponsor.
+    mock_call(host, selector!("get_leaderboard_length"), 0_u32, 10);
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
     dispatcher.payout_prize(1, 1, Option::Some(1_u32), sponsor, array![].span());
     stop_cheat_caller_address(nft_prize_addr);
 
     assert!(view.is_position_claimed(host, 1, 1, 1), "position should be marked claimed");
+}
+
+#[test]
+#[should_panic(expected: "NFTPrize: recipient does not match expected winner")]
+fn test_nft_prize_rejects_wrong_recipient() {
+    let nft_prize_addr = deploy_nft_prize();
+    let dispatcher = IPrizeExtensionDispatcher { contract_address: nft_prize_addr };
+    let host = host_address();
+    let prize_nft = token_address();
+    let sponsor = addr(0x5b0b);
+
+    mock_call(prize_nft, selector!("owner_of"), nft_prize_addr, 10);
+
+    start_cheat_caller_address(nft_prize_addr, host);
+    dispatcher
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
+
+    // Leaderboard length 1, winner is addr(0xFEED). Caller supplies addr(0xBAD)
+    // -> extension rejects.
+    mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
+    let entries = array![
+        metagame_extensions_presets::prize::externals::game_components::LeaderboardEntry {
+            token_id: 99, score: 1000,
+        },
+    ];
+    mock_call(host, selector!("get_entries"), entries, 10);
+    let game_token = addr(0x6A4E);
+    mock_call(host, selector!("token_address"), game_token, 10);
+    mock_call(game_token, selector!("owner_of"), addr(0xFEED), 10);
+
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), addr(0xBAD), array![].span());
 }
 
 #[test]
@@ -106,12 +155,16 @@ fn test_nft_prize_rejects_unfunded() {
     let dispatcher = IPrizeExtensionDispatcher { contract_address: nft_prize_addr };
     let host = host_address();
     let prize_nft = token_address();
+    let sponsor = addr(0x5b0b);
 
     // owner_of returns somebody other than the extension.
     mock_call(prize_nft, selector!("owner_of"), addr(0xDEAD), 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
+    dispatcher
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
 }
 
 #[test]
@@ -121,15 +174,16 @@ fn test_nft_prize_rejects_out_of_range_position() {
     let dispatcher = IPrizeExtensionDispatcher { contract_address: nft_prize_addr };
     let host = host_address();
     let prize_nft = token_address();
+    let sponsor = addr(0x5b0b);
 
     mock_call(prize_nft, selector!("owner_of"), nft_prize_addr, 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
     dispatcher
-        .payout_prize(
-            1, 1, Option::Some(2_u32), addr(0xFEED), array![].span(),
-        ); // only 1 position configured
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
+    dispatcher.payout_prize(1, 1, Option::Some(2_u32), addr(0xFEED), array![].span());
 }
 
 #[test]
@@ -139,16 +193,19 @@ fn test_nft_prize_rejects_double_payout() {
     let dispatcher = IPrizeExtensionDispatcher { contract_address: nft_prize_addr };
     let host = host_address();
     let prize_nft = token_address();
-    let recipient = addr(0xFEED);
+    let sponsor = addr(0x5b0b);
 
     mock_call(prize_nft, selector!("owner_of"), nft_prize_addr, 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
-    mock_call(prize_nft, selector!("transfer_from"), (), 10);
-    dispatcher.payout_prize(1, 1, Option::Some(1_u32), recipient, array![].span());
     dispatcher
-        .payout_prize(
-            1, 1, Option::Some(1_u32), recipient, array![].span(),
-        ); // second payout → panic
+        .add_prize(
+            1, 1, array![prize_nft.into(), sponsor.into(), 1_u32.into(), 7_u128.into(), 0].span(),
+        );
+
+    // Refund path twice -> second call rejected by "already claimed".
+    mock_call(host, selector!("get_leaderboard_length"), 0_u32, 10);
+    mock_call(prize_nft, selector!("transfer_from"), (), 10);
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), sponsor, array![].span());
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), sponsor, array![].span());
 }
