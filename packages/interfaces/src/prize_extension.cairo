@@ -11,7 +11,7 @@ use starknet::ContractAddress;
 /// was 0x3f058684a2de48c9135820c54730c368696c0b35df75942716d0d6537d18bac;
 /// run `src5_rs` against the current trait to regenerate after any change.
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x3f058684a2de48c9135820c54730c368696c0b35df75942716d0d6537d18bac;
+    0x12a5f38bd1e9397d6ca0151207457b6a54ae1f5e750719d6d0a3afde2ca827e;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {
