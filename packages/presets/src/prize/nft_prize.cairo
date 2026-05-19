@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 /// NFTPrize — sponsor escrows a set of ERC721 token IDs assigned to specific
-/// leaderboard positions. On claim, the extension resolves the rightful
-/// recipient by querying the host's leaderboard (via the minimal
-/// `ILeaderboard` interface in `externals`) and looking up the current
-/// `owner_of` for that leaderboard slot's game token.
+/// positions of a prize. The host (e.g. budokan) decides who receives each
+/// position (typically the leaderboard winner at that rank, or the sponsor
+/// when no winner qualifies) and tells this contract via `payout_prize`;
+/// this contract is just an escrow manager that transfers the right NFT
+/// to the right recipient.
 ///
 /// This is the leaderboard-aware counterpart to the built-in single-ERC721
 /// prize path: the built-in flow can hold at most one NFT per prize, while
-/// this preset distributes N NFTs across the top N positions in one prize.
+/// this preset distributes N NFTs across N positions in one prize.
 ///
 /// Sponsor responsibilities
 /// ------------------------
@@ -19,15 +20,13 @@
 ///    contract, not the EOA that initiated the transaction. The contract
 ///    verifies ownership of each declared token ID at registration time
 ///    (sanity check) and rejects underfunded prizes.
-/// 2. Submit the prize with config = `[token_address, host_address, num_positions,
+/// 2. Submit the prize with config = `[token_address, num_positions,
 ///    token_id_0_low, token_id_0_high, token_id_1_low, token_id_1_high, ...]`.
-///    `host_address` is the contract that implements `ILeaderboard` (the
-///    tournament platform). `num_positions` MUST equal the number of
-///    (low, high) pairs following.
+///    `num_positions` MUST equal the number of (low, high) pairs following.
 ///
 /// Config layout (`add_prize`):
-///   [token_address, host_address, num_positions, id_0_low, id_0_high, id_1_low, id_1_high, ...]
-/// Claim params (`claim_prize`):  [position]   (1-indexed position; prize_id is a top-level arg)
+///   [token_address, num_positions, id_0_low, id_0_high, id_1_low, id_1_high, ...]
+/// Payout params (`payout_prize`): []   (position + recipient are top-level args)
 
 #[starknet::interface]
 pub trait INFTPrize<TState> {
@@ -61,10 +60,6 @@ pub mod nft_prize {
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_contract_address};
     use super::INFTPrize;
-    use super::super::externals::game_components::{
-        ILeaderboardDispatcher, ILeaderboardDispatcherTrait, IMinigameDispatcher,
-        IMinigameDispatcherTrait,
-    };
 
     component!(path: PrizeExtensionComponent, storage: prize, event: PrizeEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -84,7 +79,6 @@ pub mod nft_prize {
         #[substorage(v0)]
         src5: SRC5Component::Storage,
         prize_token_address: Map<(ContractAddress, u64, u64), ContractAddress>,
-        prize_host_address: Map<(ContractAddress, u64, u64), ContractAddress>,
         prize_num_positions: Map<(ContractAddress, u64, u64), u32>,
         /// (context_owner, context_id, prize_id, 1-indexed position) -> token id
         prize_position_token_id: Map<(ContractAddress, u64, u64, u32), u256>,
@@ -142,31 +136,29 @@ pub mod nft_prize {
             prize_id: u64,
             config: Span<felt252>,
         ) {
-            // Minimum: [token, host, num_positions] (3) + at least 1 NFT (2)
+            // Minimum: [token, num_positions] (2) + at least 1 NFT (2)
             assert!(
-                config.len() >= 5,
-                "NFTPrize: config must be [token, host, num_positions, ...id_low_high pairs]",
+                config.len() >= 4,
+                "NFTPrize: config must be [token, num_positions, ...id_low_high pairs]",
             );
             let token: ContractAddress = (*config.at(0)).try_into().unwrap();
-            let host: ContractAddress = (*config.at(1)).try_into().unwrap();
-            let num_positions: u32 = (*config.at(2)).try_into().unwrap();
+            let num_positions: u32 = (*config.at(1)).try_into().unwrap();
             assert!(num_positions > 0, "NFTPrize: num_positions must be > 0");
             assert!(
-                config.len() == 3 + (num_positions * 2),
-                "NFTPrize: config length must equal 3 + num_positions * 2",
+                config.len() == 2 + (num_positions * 2),
+                "NFTPrize: config length must equal 2 + num_positions * 2",
             );
 
             let key = (context_owner, context_id, prize_id);
             assert!(self.prize_num_positions.read(key) == 0, "NFTPrize: prize already configured");
             self.prize_token_address.write(key, token);
-            self.prize_host_address.write(key, host);
             self.prize_num_positions.write(key, num_positions);
 
             let erc721 = IERC721Dispatcher { contract_address: token };
             let self_address = get_contract_address();
             let mut i: u32 = 0;
             while i < num_positions {
-                let pair_base: u32 = 3 + (i * 2);
+                let pair_base: u32 = 2 + (i * 2);
                 let id_low: u128 = (*config.at(pair_base)).try_into().unwrap();
                 let id_high: u128 = (*config.at(pair_base + 1)).try_into().unwrap();
                 let token_id = u256 { low: id_low, high: id_high };
@@ -187,20 +179,18 @@ pub mod nft_prize {
             self: @ContractState, context_owner: ContractAddress, context_id: u64, prize_id: u64,
         ) -> Span<felt252> {
             // Re-serialize the stored fields back to the original
-            // `[token_address, host_address, num_positions, id_0_lo,
-            //   id_0_hi, id_1_lo, id_1_hi, ...]` shape passed to
-            // add_prize. Returns an empty span for unknown prizes
-            // (num_positions == 0 — add_prize asserts > 0 so unambiguous).
+            // `[token_address, num_positions, id_0_lo, id_0_hi, ...]`
+            // shape passed to add_prize. Returns an empty span for unknown
+            // prizes (num_positions == 0 — add_prize asserts > 0 so
+            // unambiguous).
             let key = (context_owner, context_id, prize_id);
             let num_positions = self.prize_num_positions.read(key);
             if num_positions == 0 {
                 return array![].span();
             }
             let token = self.prize_token_address.read(key);
-            let host = self.prize_host_address.read(key);
             let mut out: Array<felt252> = array![];
             out.append(token.into());
-            out.append(host.into());
             out.append(num_positions.into());
             let mut i: u32 = 1;
             while i <= num_positions {
@@ -214,15 +204,23 @@ pub mod nft_prize {
             out.span()
         }
 
-        fn claim_prize(
+        /// Transfer the NFT escrowed for `position` to `recipient`. The host
+        /// (typically budokan) is responsible for picking the recipient —
+        /// the leaderboard winner for a normal payout, or the original
+        /// sponsor for a refund when no winner qualified at this position.
+        /// This contract has no opinion about which case it is.
+        ///
+        /// `payout_params` is unused for NFTPrize.
+        fn payout_prize(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            claim_params: Span<felt252>,
+            position: u32,
+            recipient: ContractAddress,
+            payout_params: Span<felt252>,
         ) {
-            assert!(claim_params.len() == 1, "NFTPrize: claim_params must be [position]");
-            let position: u32 = (*claim_params.at(0)).try_into().unwrap();
+            let _ = payout_params;
             assert!(position > 0, "NFTPrize: position must be 1-indexed");
 
             let key = (context_owner, context_id, prize_id);
@@ -234,28 +232,6 @@ pub mod nft_prize {
             assert!(
                 !self.prize_position_claimed.read(claim_key), "NFTPrize: position already claimed",
             );
-
-            // Resolve recipient: look up the leaderboard slot's game token
-            // on the host, then resolve its current owner. We trust the host
-            // contract — it is the same contract that called `add_prize` on
-            // us (so `context_owner == host` by construction here).
-            let host = self.prize_host_address.read(key);
-            let leaderboard = ILeaderboardDispatcher { contract_address: host };
-            let length = leaderboard.get_leaderboard_length(context_id);
-            assert!(position <= length, "NFTPrize: leaderboard has no entry at position");
-
-            let entries = leaderboard.get_entries(context_id);
-            let winner_token_id_felt = (*entries.at(position - 1)).token_id;
-            let winner_token_id: u256 = winner_token_id_felt.into();
-
-            // Resolve the game token contract via the host. We assume
-            // `host` implements `IMinigame.token_address()` — true for
-            // any host using the standard game-components stack. If the
-            // host doesn't, sponsors can deploy a dedicated NFTPrize variant
-            // that takes the game_token_address directly in config.
-            let game_token_address = IMinigameDispatcher { contract_address: host }.token_address();
-            let game_token = IERC721Dispatcher { contract_address: game_token_address };
-            let recipient = game_token.owner_of(winner_token_id);
 
             self.prize_position_claimed.write(claim_key, true);
 

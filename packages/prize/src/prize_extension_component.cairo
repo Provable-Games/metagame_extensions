@@ -36,17 +36,21 @@ pub mod PrizeExtensionComponent {
             config: Span<felt252>,
         );
 
-        /// Claim a specific prize for a context. `prize_id` is forwarded
-        /// from the host's prize ledger and identifies which prize within
-        /// `(context_owner, context_id)` is being claimed. Implementors
-        /// MUST scope their state by this `prize_id` rather than
-        /// re-decoding it from `claim_params`.
-        fn claim_prize(
+        /// Transfer the escrowed asset at `(context_owner, context_id,
+        /// prize_id, position)` to `recipient`. The host (e.g. budokan)
+        /// computes the recipient — either the leaderboard winner or
+        /// the original sponsor for refunds — and the extension is just
+        /// an asset manager that executes the transfer. Implementors MUST
+        /// scope their state by `(prize_id, position)` and mark each
+        /// payout to prevent double-payout.
+        fn payout_prize(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            claim_params: Span<felt252>,
+            position: u32,
+            recipient: ContractAddress,
+            payout_params: Span<felt252>,
         );
 
         /// Return the original `config` blob the host passed to
@@ -86,16 +90,20 @@ pub mod PrizeExtensionComponent {
             PrizeExtension::add_prize(ref contract, caller, context_id, prize_id, config);
         }
 
-        fn claim_prize(
+        fn payout_prize(
             ref self: ComponentState<TContractState>,
             context_id: u64,
             prize_id: u64,
-            claim_params: Span<felt252>,
+            position: u32,
+            recipient: ContractAddress,
+            payout_params: Span<felt252>,
         ) {
             let caller = get_caller_address();
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
-            PrizeExtension::claim_prize(ref contract, caller, context_id, prize_id, claim_params);
+            PrizeExtension::payout_prize(
+                ref contract, caller, context_id, prize_id, position, recipient, payout_params,
+            );
         }
 
         fn get_config(

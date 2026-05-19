@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 /// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
-/// - is_context_registered, add_prize, claim_prize, get_config
+/// - is_context_registered, add_prize, payout_prize, get_config
 ///
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `add_prize` for that `context_id`.
@@ -10,7 +10,7 @@ use starknet::ContractAddress;
 /// `src5_rs parse` against the current trait (with the `<TState>` generic
 /// removed so the tool can compute) to regenerate after any change.
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x330f2322cddf690fbb8ae19203ea346ab0151007e3e1a53cccd67ea45c5d486;
+    0x62c64112b54fab70916909570b8b6f65f2e77f2f5447ae4f4475f94f317a9d;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {
@@ -25,15 +25,36 @@ pub trait IPrizeExtension<TState> {
     /// caller cannot add prizes to an already-registered context.
     fn add_prize(ref self: TState, context_id: u64, prize_id: u64, config: Span<felt252>);
 
-    /// Claim a specific prize for a context. `prize_id` identifies the prize
-    /// being claimed within `(caller, context_id)` and is forwarded by the
-    /// host from its prize ledger — extensions MUST scope their state
-    /// reads/writes by this prize_id rather than re-decoding it from
-    /// `claim_params` (which carries only extension-specific arguments
-    /// like merkle proofs, leaderboard positions, etc.).
+    /// Transfer the escrowed asset at `(caller, context_id, prize_id, position)`
+    /// to `recipient`. The host computes `recipient` — either the
+    /// leaderboard winner (normal payout) or the original sponsor (refund
+    /// when no winner qualifies) — and the extension is just an asset
+    /// manager that executes the transfer. Extensions MUST NOT branch on
+    /// who the recipient is or query host state to decide; that's a
+    /// host-level concern.
+    ///
+    /// `position` is the 1-indexed slot within the prize (typically a
+    /// leaderboard rank). Extensions that allocate escrow per position
+    /// (e.g. NFTPrize with multiple NFTs) use it to look up the correct
+    /// asset; single-slot prizes pass `1`.
+    ///
+    /// `payout_params` is extension-defined for any additional metadata
+    /// the extension needs to identify exactly what to transfer beyond
+    /// `(prize_id, position)`. Most positional extensions leave it empty.
+    ///
+    /// Extensions MUST mark `(prize_id, position)` as paid to prevent
+    /// double-payout. The host does NOT track per-position payout state
+    /// for extensions — that's the extension's responsibility.
     ///
     /// Caller must be the owner that previously called `add_prize` for this context.
-    fn claim_prize(ref self: TState, context_id: u64, prize_id: u64, claim_params: Span<felt252>);
+    fn payout_prize(
+        ref self: TState,
+        context_id: u64,
+        prize_id: u64,
+        position: u32,
+        recipient: ContractAddress,
+        payout_params: Span<felt252>,
+    );
 
     /// Return the original `config` blob the host passed to `add_prize`
     /// for this `(context_owner, context_id, prize_id)`. Implementors
