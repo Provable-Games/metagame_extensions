@@ -9,17 +9,22 @@ pub trait IMinigame<TState> {
 }
 
 /// Minimal subset of `ILeaderboard`. Hosts that integrate the
-/// `LeaderboardComponent` (e.g. Budokan) implement this trait. `get_entries`
-/// returns the leaderboard slots in ranked order — `entries[position - 1]`
-/// is the `token_id` at 1-indexed `position`.
+/// `LeaderboardComponent` (e.g. Budokan) implement this trait.
+/// `get_leaderboard_entry(context_id, position)` returns the `token_id`
+/// (and live score) at the 1-indexed `position` in O(1) — preferred
+/// over the canonical `get_entries` for per-position lookups since it
+/// avoids serializing the full leaderboard.
+///
+/// Field names mirror the canonical interface (`id` not `token_id`)
+/// so Serde decodes cross-contract responses without reordering.
 #[derive(Drop, Copy, Serde)]
 pub struct LeaderboardEntry {
-    pub token_id: felt252,
+    pub id: felt252,
     pub score: u64,
 }
 
 #[starknet::interface]
 pub trait ILeaderboard<TState> {
-    fn get_entries(self: @TState, context_id: u64) -> Array<LeaderboardEntry>;
     fn get_leaderboard_length(self: @TState, context_id: u64) -> u32;
+    fn get_leaderboard_entry(self: @TState, context_id: u64, position: u32) -> LeaderboardEntry;
 }

@@ -69,12 +69,10 @@ fn test_nft_prize_add_and_payout_position_to_winner() {
 
     // Stub host: leaderboard length 1, winner token_id 99.
     mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
-    let entries = array![
-        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
-            token_id: 99, score: 1000,
-        },
-    ];
-    mock_call(host, selector!("get_entries"), entries, 10);
+    let entry = metagame_extensions_presets::externals::game_components::LeaderboardEntry {
+        id: 99, score: 1000,
+    };
+    mock_call(host, selector!("get_leaderboard_entry"), entry, 10);
     let game_token = addr(0x6A4E);
     mock_call(host, selector!("token_address"), game_token, 10);
     let winner = addr(0xFEED);
@@ -135,12 +133,10 @@ fn test_nft_prize_rejects_wrong_recipient() {
     // Leaderboard length 1, winner is addr(0xFEED). Caller supplies addr(0xBAD)
     // -> extension rejects.
     mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
-    let entries = array![
-        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
-            token_id: 99, score: 1000,
-        },
-    ];
-    mock_call(host, selector!("get_entries"), entries, 10);
+    let entry = metagame_extensions_presets::externals::game_components::LeaderboardEntry {
+        id: 99, score: 1000,
+    };
+    mock_call(host, selector!("get_leaderboard_entry"), entry, 10);
     let game_token = addr(0x6A4E);
     mock_call(host, selector!("token_address"), game_token, 10);
     mock_call(game_token, selector!("owner_of"), addr(0xFEED), 10);

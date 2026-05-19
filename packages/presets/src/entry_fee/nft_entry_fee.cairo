@@ -224,8 +224,11 @@ pub mod nft_entry_fee {
             let length = leaderboard.get_leaderboard_length(context_id);
 
             let expected: ContractAddress = if position <= length {
-                let entries = leaderboard.get_entries(context_id);
-                let winner_token_id_felt = (*entries.at(position - 1)).token_id;
+                // O(1) per-position lookup; preferred over fetching the
+                // full leaderboard array.
+                let winner_token_id_felt = leaderboard
+                    .get_leaderboard_entry(context_id, position)
+                    .id;
                 let winner_token_id: u256 = winner_token_id_felt.into();
                 let game_token_address = IMinigameDispatcher { contract_address: context_owner }
                     .token_address();

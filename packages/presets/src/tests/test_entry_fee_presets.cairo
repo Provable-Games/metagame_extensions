@@ -69,15 +69,10 @@ fn test_nft_entry_fee_pay_and_payout_to_winner() {
     // Stub leaderboard: 2 entries. position 1 wins token 99 owned by carol;
     // position 2 wins token 88 owned by dave.
     mock_call(host, selector!("get_leaderboard_length"), 2_u32, 10);
-    let entries = array![
-        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
-            token_id: 99, score: 10,
-        },
-        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
-            token_id: 88, score: 5,
-        },
-    ];
-    mock_call(host, selector!("get_entries"), entries, 10);
+    let entry = metagame_extensions_presets::externals::game_components::LeaderboardEntry {
+        id: 99, score: 10,
+    };
+    mock_call(host, selector!("get_leaderboard_entry"), entry, 10);
     let game_token = addr(0x6A4E);
     mock_call(host, selector!("token_address"), game_token, 10);
     let carol = addr(0xCA01);
