@@ -70,7 +70,7 @@ fn test_nft_prize_add_and_payout_position_to_winner() {
     // Stub host: leaderboard length 1, winner token_id 99.
     mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
     let entries = array![
-        metagame_extensions_presets::prize::externals::game_components::LeaderboardEntry {
+        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
             token_id: 99, score: 1000,
         },
     ];
@@ -136,7 +136,7 @@ fn test_nft_prize_rejects_wrong_recipient() {
     // -> extension rejects.
     mock_call(host, selector!("get_leaderboard_length"), 1_u32, 10);
     let entries = array![
-        metagame_extensions_presets::prize::externals::game_components::LeaderboardEntry {
+        metagame_extensions_presets::externals::game_components::LeaderboardEntry {
             token_id: 99, score: 1000,
         },
     ];

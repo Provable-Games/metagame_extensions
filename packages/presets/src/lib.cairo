@@ -1,5 +1,6 @@
 pub mod entry_fee;
 pub mod entry_requirement;
+pub mod externals;
 pub mod prize;
 
 #[cfg(test)]

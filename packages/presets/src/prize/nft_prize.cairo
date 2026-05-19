@@ -61,6 +61,10 @@ pub trait INFTPrize<TState> {
 
 #[starknet::contract]
 pub mod nft_prize {
+    use metagame_extensions_presets::externals::game_components::{
+        ILeaderboardDispatcher, ILeaderboardDispatcherTrait, IMinigameDispatcher,
+        IMinigameDispatcherTrait,
+    };
     use metagame_extensions_prize::prize_extension_component::PrizeExtensionComponent;
     use metagame_extensions_prize::prize_extension_component::PrizeExtensionComponent::PrizeExtension;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
@@ -68,10 +72,6 @@ pub mod nft_prize {
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
     use starknet::{ContractAddress, get_contract_address};
     use super::INFTPrize;
-    use super::super::externals::game_components::{
-        ILeaderboardDispatcher, ILeaderboardDispatcherTrait, IMinigameDispatcher,
-        IMinigameDispatcherTrait,
-    };
 
     component!(path: PrizeExtensionComponent, storage: prize, event: PrizeEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
