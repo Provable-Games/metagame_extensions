@@ -69,7 +69,7 @@ fn test_nft_prize_add_and_payout_position_to_winner() {
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
 
     start_cheat_caller_address(nft_prize_addr, host);
-    dispatcher.payout_prize(1, 1, 1, winner, array![].span());
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), winner, array![].span());
     stop_cheat_caller_address(nft_prize_addr);
 
     assert!(view.is_position_claimed(host, 1, 1, 1), "should be claimed after");
@@ -93,7 +93,7 @@ fn test_nft_prize_payout_to_sponsor_for_unclaimed_position() {
     // Extension doesn't know or care which case it is — it just transfers
     // to whatever address the host supplied.
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
-    dispatcher.payout_prize(1, 1, 1, sponsor, array![].span());
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), sponsor, array![].span());
     stop_cheat_caller_address(nft_prize_addr);
 
     assert!(view.is_position_claimed(host, 1, 1, 1), "position should be marked claimed");
@@ -126,7 +126,10 @@ fn test_nft_prize_rejects_out_of_range_position() {
 
     start_cheat_caller_address(nft_prize_addr, host);
     dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
-    dispatcher.payout_prize(1, 1, 2, addr(0xFEED), array![].span()); // only 1 position configured
+    dispatcher
+        .payout_prize(
+            1, 1, Option::Some(2_u32), addr(0xFEED), array![].span(),
+        ); // only 1 position configured
 }
 
 #[test]
@@ -143,6 +146,9 @@ fn test_nft_prize_rejects_double_payout() {
     start_cheat_caller_address(nft_prize_addr, host);
     dispatcher.add_prize(1, 1, array![prize_nft.into(), 1_u32.into(), 7_u128.into(), 0].span());
     mock_call(prize_nft, selector!("transfer_from"), (), 10);
-    dispatcher.payout_prize(1, 1, 1, recipient, array![].span());
-    dispatcher.payout_prize(1, 1, 1, recipient, array![].span()); // second payout → panic
+    dispatcher.payout_prize(1, 1, Option::Some(1_u32), recipient, array![].span());
+    dispatcher
+        .payout_prize(
+            1, 1, Option::Some(1_u32), recipient, array![].span(),
+        ); // second payout → panic
 }

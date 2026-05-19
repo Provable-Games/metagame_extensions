@@ -40,15 +40,17 @@ pub mod PrizeExtensionComponent {
         /// prize_id, position)` to `recipient`. The host (e.g. budokan)
         /// computes the recipient — either the leaderboard winner or
         /// the original sponsor for refunds — and the extension is just
-        /// an asset manager that executes the transfer. Implementors MUST
-        /// scope their state by `(prize_id, position)` and mark each
-        /// payout to prevent double-payout.
+        /// an asset manager that executes the transfer. Positional
+        /// prizes get `Some(position)`; non-positional prizes get
+        /// `None`. Implementors MUST scope their state by whatever
+        /// uniquely identifies a payout slot and mark each payout to
+        /// prevent double-payout.
         fn payout_prize(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            position: u32,
+            position: Option<u32>,
             recipient: ContractAddress,
             payout_params: Span<felt252>,
         );
@@ -94,7 +96,7 @@ pub mod PrizeExtensionComponent {
             ref self: ComponentState<TContractState>,
             context_id: u64,
             prize_id: u64,
-            position: u32,
+            position: Option<u32>,
             recipient: ContractAddress,
             payout_params: Span<felt252>,
         ) {

@@ -210,17 +210,22 @@ pub mod nft_prize {
         /// sponsor for a refund when no winner qualified at this position.
         /// This contract has no opinion about which case it is.
         ///
-        /// `payout_params` is unused for NFTPrize.
+        /// `payout_params` is unused for NFTPrize. NFTPrize is positional
+        /// — non-positional callers (`position == Option::None`) panic.
         fn payout_prize(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            position: u32,
+            position: Option<u32>,
             recipient: ContractAddress,
             payout_params: Span<felt252>,
         ) {
             let _ = payout_params;
+            let position = match position {
+                Option::Some(p) => p,
+                Option::None => panic!("NFTPrize: position is required"),
+            };
             assert!(position > 0, "NFTPrize: position must be 1-indexed");
 
             let key = (context_owner, context_id, prize_id);

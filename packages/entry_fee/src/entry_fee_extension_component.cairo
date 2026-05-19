@@ -59,6 +59,16 @@ pub mod EntryFeeExtensionComponent {
             position: Option<u32>,
             claim_params: Span<felt252>,
         );
+
+        /// Return the original `config` blob the host passed to
+        /// `set_entry_fee_config` for `(context_owner, context_id)`.
+        /// Implementors MUST re-serialize whatever they stored back to
+        /// the original `Span<felt252>` shape — host viewers depend on
+        /// this for uniform extension-fee rendering. Returns an empty
+        /// span when the tuple is unknown.
+        fn get_config(
+            self: @TContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> Span<felt252>;
     }
 
     #[embeddable_as(EntryFeeExtensionImpl)]
@@ -106,6 +116,13 @@ pub mod EntryFeeExtensionComponent {
             EntryFeeExtension::payout_entry_fee(
                 ref contract, caller, context_id, recipient, position, claim_params,
             );
+        }
+
+        fn get_config(
+            self: @ComponentState<TContractState>, context_owner: ContractAddress, context_id: u64,
+        ) -> Span<felt252> {
+            let contract = self.get_contract();
+            EntryFeeExtension::get_config(contract, context_owner, context_id)
         }
     }
 

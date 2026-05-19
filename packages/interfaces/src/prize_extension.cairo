@@ -10,7 +10,7 @@ use starknet::ContractAddress;
 /// `src5_rs parse` against the current trait (with the `<TState>` generic
 /// removed so the tool can compute) to regenerate after any change.
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x62c64112b54fab70916909570b8b6f65f2e77f2f5447ae4f4475f94f317a9d;
+    0x2187266a58431bcbd583ba71c091289eb91506d4fcf6d8d30fbaeabf69ee871;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {
@@ -33,25 +33,28 @@ pub trait IPrizeExtension<TState> {
     /// who the recipient is or query host state to decide; that's a
     /// host-level concern.
     ///
-    /// `position` is the 1-indexed slot within the prize (typically a
-    /// leaderboard rank). Extensions that allocate escrow per position
-    /// (e.g. NFTPrize with multiple NFTs) use it to look up the correct
-    /// asset; single-slot prizes pass `1`.
+    /// `position` is the 1-indexed leaderboard slot when the prize is
+    /// positional (e.g. NFTPrize allocates per-position escrow). For
+    /// non-positional prize extensions (whole-pool raffle, dao
+    /// distribution, etc.) the host passes `Option::None`. Implementors
+    /// that require positional payouts MUST panic on `None`; implementors
+    /// that don't use positions MUST ignore the value.
     ///
     /// `payout_params` is extension-defined for any additional metadata
     /// the extension needs to identify exactly what to transfer beyond
     /// `(prize_id, position)`. Most positional extensions leave it empty.
     ///
-    /// Extensions MUST mark `(prize_id, position)` as paid to prevent
-    /// double-payout. The host does NOT track per-position payout state
-    /// for extensions — that's the extension's responsibility.
+    /// Extensions MUST mark `(prize_id, position)` as paid (or whatever
+    /// uniquely identifies the slot) to prevent double-payout. The host
+    /// does NOT track per-position payout state for extensions — that's
+    /// the extension's responsibility.
     ///
     /// Caller must be the owner that previously called `add_prize` for this context.
     fn payout_prize(
         ref self: TState,
         context_id: u64,
         prize_id: u64,
-        position: u32,
+        position: Option<u32>,
         recipient: ContractAddress,
         payout_params: Span<felt252>,
     );

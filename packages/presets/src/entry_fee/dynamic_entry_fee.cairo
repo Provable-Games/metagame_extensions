@@ -39,6 +39,7 @@ pub trait IDynamicEntryFee<TState> {
 
 #[starknet::contract]
 pub mod dynamic_entry_fee {
+    use core::num::traits::Zero;
     use metagame_extensions_entry_fee::entry_fee_extension_component::EntryFeeExtensionComponent;
     use metagame_extensions_entry_fee::entry_fee_extension_component::EntryFeeExtensionComponent::EntryFeeExtension;
     use openzeppelin_interfaces::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -173,6 +174,27 @@ pub mod dynamic_entry_fee {
             self.entry_count.write(key, n + 1);
             let prev_total = self.total_collected.read(key);
             self.total_collected.write(key, prev_total + fee);
+        }
+
+        /// Re-serialize the stored config back to the
+        /// `[token, base_low, base_high, inc_low, inc_high]` shape
+        /// passed to set_entry_fee_config. Returns an empty span when
+        /// the context tuple is unknown (token unset).
+        fn get_config(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> Span<felt252> {
+            let key = (context_owner, context_id);
+            let token = self.token.read(key);
+            if token.is_zero() {
+                return array![].span();
+            }
+            let base = self.base.read(key);
+            let increment = self.increment.read(key);
+            array![
+                token.into(), base.low.into(), base.high.into(), increment.low.into(),
+                increment.high.into(),
+            ]
+                .span()
         }
 
         /// DynamicEntryFee distributes the entire pool as a single payout

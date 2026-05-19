@@ -1,7 +1,8 @@
 use starknet::ContractAddress;
 
 /// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
-/// - is_context_registered, set_entry_fee_config, pay_entry_fee, payout_entry_fee
+/// - is_context_registered, set_entry_fee_config, pay_entry_fee,
+///   payout_entry_fee, get_config
 ///
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `set_entry_fee_config` for that `context_id`.
@@ -10,7 +11,7 @@ use starknet::ContractAddress;
 /// `src5_rs parse` against the current trait (with the `<TState>` generic
 /// removed so the tool can compute) to regenerate after any change.
 pub const IENTRY_FEE_EXTENSION_ID: felt252 =
-    0x218bc24367da0849cfca52603d6b10e9d3274475de13de06d9b11c76ad67f25;
+    0x1e982b6c4bfd4c1100d99f1bd74c95da47e1b98efb31515d7058f69b64c470b;
 
 #[starknet::interface]
 pub trait IEntryFeeExtension<TState> {
@@ -50,4 +51,17 @@ pub trait IEntryFeeExtension<TState> {
         position: Option<u32>,
         claim_params: Span<felt252>,
     );
+
+    /// Return the original `config` blob the host passed to
+    /// `set_entry_fee_config` for `(context_owner, context_id)`.
+    /// Implementors MUST re-serialize whatever they stored back to the
+    /// original `Span<felt252>` shape so host viewers (frontends, indexer
+    /// RPC fallbacks) can render extension entry-fee configs uniformly
+    /// without per-extension knowledge of internal storage layouts.
+    /// Returns an empty span when `(context_owner, context_id)` is unknown.
+    ///
+    /// Read-only view: takes explicit `context_owner` so external callers
+    /// (viewers, indexer RPC fallbacks) can query without needing to be
+    /// the registered owner.
+    fn get_config(self: @TState, context_owner: ContractAddress, context_id: u64) -> Span<felt252>;
 }

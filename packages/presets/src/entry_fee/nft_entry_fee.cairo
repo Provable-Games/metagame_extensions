@@ -41,6 +41,7 @@ pub trait INFTEntryFee<TState> {
 
 #[starknet::contract]
 pub mod nft_entry_fee {
+    use core::num::traits::Zero;
     use metagame_extensions_entry_fee::entry_fee_extension_component::EntryFeeExtensionComponent;
     use metagame_extensions_entry_fee::entry_fee_extension_component::EntryFeeExtensionComponent::EntryFeeExtension;
     use openzeppelin_interfaces::erc721::{IERC721Dispatcher, IERC721DispatcherTrait};
@@ -148,6 +149,20 @@ pub mod nft_entry_fee {
             let index = self.escrowed_count.read((context_owner, context_id));
             self.escrowed_token_id.write((context_owner, context_id, index), token_id);
             self.escrowed_count.write((context_owner, context_id), index + 1);
+        }
+
+        /// Re-serialize the stored config back to the
+        /// `[collection_address]` shape passed to set_entry_fee_config.
+        /// Returns an empty span when the context tuple is unknown
+        /// (collection unset).
+        fn get_config(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64,
+        ) -> Span<felt252> {
+            let collection = self.collection.read((context_owner, context_id));
+            if collection.is_zero() {
+                return array![].span();
+            }
+            array![collection.into()].span()
         }
 
         /// NFTEntryFee distributes one escrowed NFT per leaderboard
