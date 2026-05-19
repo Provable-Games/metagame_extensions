@@ -43,6 +43,16 @@ pub mod PrizeExtensionComponent {
             context_id: u64,
             claim_params: Span<felt252>,
         );
+
+        /// Return the original `config` blob the host passed to
+        /// `add_prize` for `(context_owner, context_id, prize_id)`.
+        /// Implementors MUST re-serialize whatever they stored back to
+        /// the original `Span<felt252>` shape — host viewers depend on
+        /// this for uniform extension-prize rendering. Returns an empty
+        /// span when the tuple is unknown.
+        fn get_config(
+            self: @TContractState, context_owner: ContractAddress, context_id: u64, prize_id: u64,
+        ) -> Span<felt252>;
     }
 
     #[embeddable_as(PrizeExtensionImpl)]
@@ -78,6 +88,16 @@ pub mod PrizeExtensionComponent {
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
             PrizeExtension::claim_prize(ref contract, caller, context_id, claim_params);
+        }
+
+        fn get_config(
+            self: @ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+            prize_id: u64,
+        ) -> Span<felt252> {
+            let contract = self.get_contract();
+            PrizeExtension::get_config(contract, context_owner, context_id, prize_id)
         }
     }
 

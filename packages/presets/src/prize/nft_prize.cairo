@@ -183,6 +183,37 @@ pub mod nft_prize {
             }
         }
 
+        fn get_config(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64, prize_id: u64,
+        ) -> Span<felt252> {
+            // Re-serialize the stored fields back to the original
+            // `[token_address, host_address, num_positions, id_0_lo,
+            //   id_0_hi, id_1_lo, id_1_hi, ...]` shape passed to
+            // add_prize. Returns an empty span for unknown prizes
+            // (num_positions == 0 — add_prize asserts > 0 so unambiguous).
+            let key = (context_owner, context_id, prize_id);
+            let num_positions = self.prize_num_positions.read(key);
+            if num_positions == 0 {
+                return array![].span();
+            }
+            let token = self.prize_token_address.read(key);
+            let host = self.prize_host_address.read(key);
+            let mut out: Array<felt252> = array![];
+            out.append(token.into());
+            out.append(host.into());
+            out.append(num_positions.into());
+            let mut i: u32 = 1;
+            while i <= num_positions {
+                let token_id = self
+                    .prize_position_token_id
+                    .read((context_owner, context_id, prize_id, i));
+                out.append(token_id.low.into());
+                out.append(token_id.high.into());
+                i += 1;
+            }
+            out.span()
+        }
+
         fn claim_prize(
             ref self: ContractState,
             context_owner: ContractAddress,

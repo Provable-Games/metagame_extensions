@@ -149,6 +149,22 @@ pub mod merkle_prize {
             self.prize_root.write(key, root);
         }
 
+        fn get_config(
+            self: @ContractState, context_owner: ContractAddress, context_id: u64, prize_id: u64,
+        ) -> Span<felt252> {
+            // Re-serialize the stored fields back to the original
+            // `[token_address, merkle_root]` shape passed to add_prize.
+            // Returns an empty span when the prize is unknown (root is
+            // zero, which add_prize rejects so this is unambiguous).
+            let key = (context_owner, context_id, prize_id);
+            let root = self.prize_root.read(key);
+            if root == 0 {
+                return array![].span();
+            }
+            let token = self.prize_token.read(key);
+            array![token.into(), root].span()
+        }
+
         fn claim_prize(
             ref self: ContractState,
             context_owner: ContractAddress,
