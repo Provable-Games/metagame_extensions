@@ -11,7 +11,6 @@ pub mod tests {
     pub mod test_merkle_validator;
     pub mod test_opus_troves_validator;
     pub mod test_prize_presets;
-    pub mod test_snapshot_validator;
     pub mod test_tournament_validator;
     pub mod test_zkpassport_validator;
 }
