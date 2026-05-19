@@ -67,8 +67,8 @@ fn test_nft_entry_fee_pay_and_claim() {
 
     // Host claims both into different recipients.
     start_cheat_caller_address(ext_addr, host);
-    dispatcher.claim_entry_fee(1, array![alice.into(), 0_u32.into()].span());
-    dispatcher.claim_entry_fee(1, array![bob.into(), 1_u32.into()].span());
+    dispatcher.payout_entry_fee(1, alice, Option::Some(1_u32), array![].span());
+    dispatcher.payout_entry_fee(1, bob, Option::Some(2_u32), array![].span());
     stop_cheat_caller_address(ext_addr);
 
     assert!(view.is_claimed(host, 1, 0), "slot 0 should be claimed");
@@ -87,8 +87,8 @@ fn test_nft_entry_fee_rejects_double_claim() {
     dispatcher.set_entry_fee_config(1, array![collection.into()].span());
     mock_call(collection, selector!("transfer_from"), (), 10);
     dispatcher.pay_entry_fee(1, array![addr(0xAAA).into(), 1_u128.into(), 0].span());
-    dispatcher.claim_entry_fee(1, array![addr(0xBBB).into(), 0_u32.into()].span());
-    dispatcher.claim_entry_fee(1, array![addr(0xBBB).into(), 0_u32.into()].span());
+    dispatcher.payout_entry_fee(1, addr(0xBBB), Option::Some(1_u32), array![].span());
+    dispatcher.payout_entry_fee(1, addr(0xBBB), Option::Some(1_u32), array![].span());
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn test_nft_entry_fee_rejects_out_of_range_claim() {
     let host = host_address();
     start_cheat_caller_address(ext_addr, host);
     dispatcher.set_entry_fee_config(1, array![token_address().into()].span());
-    dispatcher.claim_entry_fee(1, array![addr(0xBBB).into(), 0_u32.into()].span());
+    dispatcher.payout_entry_fee(1, addr(0xBBB), Option::Some(1_u32), array![].span());
 }
 
 // ============================================================================
@@ -149,7 +149,7 @@ fn test_dynamic_entry_fee_pricing_and_claim() {
     mock_call(token, selector!("transfer"), true, 10);
     let recipient = addr(0xDEFEAD);
     start_cheat_caller_address(ext_addr, host);
-    dispatcher.claim_entry_fee(1, array![recipient.into()].span());
+    dispatcher.payout_entry_fee(1, recipient, Option::None, array![].span());
     stop_cheat_caller_address(ext_addr);
     assert!(view.is_claimed(host, 1), "should be claimed");
 }
@@ -166,6 +166,6 @@ fn test_dynamic_entry_fee_rejects_double_claim() {
             1, array![token_address().into(), 100_u128.into(), 0, 25_u128.into(), 0].span(),
         );
     mock_call(token_address(), selector!("transfer"), true, 10);
-    dispatcher.claim_entry_fee(1, array![addr(0x1).into()].span());
-    dispatcher.claim_entry_fee(1, array![addr(0x1).into()].span());
+    dispatcher.payout_entry_fee(1, addr(0x1), Option::None, array![].span());
+    dispatcher.payout_entry_fee(1, addr(0x1), Option::None, array![].span());
 }

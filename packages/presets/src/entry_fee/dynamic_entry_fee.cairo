@@ -175,14 +175,18 @@ pub mod dynamic_entry_fee {
             self.total_collected.write(key, prev_total + fee);
         }
 
-        fn claim_entry_fee(
+        /// DynamicEntryFee distributes the entire pool as a single payout
+        /// to the host-supplied recipient. Position is unused (the pool
+        /// isn't sliced by leaderboard); claim_params is empty.
+        fn payout_entry_fee(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
+            recipient: ContractAddress,
+            position: Option<u32>,
             claim_params: Span<felt252>,
         ) {
-            assert!(claim_params.len() == 1, "DynamicEntryFee: claim_params must be [recipient]");
-            let recipient: ContractAddress = (*claim_params.at(0)).try_into().unwrap();
+            let _ = (position, claim_params);
 
             let key = (context_owner, context_id);
             assert!(!self.claimed.read(key), "DynamicEntryFee: already claimed");

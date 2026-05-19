@@ -150,17 +150,26 @@ pub mod nft_entry_fee {
             self.escrowed_count.write((context_owner, context_id), index + 1);
         }
 
-        fn claim_entry_fee(
+        /// NFTEntryFee distributes one escrowed NFT per leaderboard
+        /// position. The host computes recipient (winner or sponsor)
+        /// and supplies `position` as Some(N) — `position - 1` indexes
+        /// into the escrowed NFTs in deposit order. `claim_params` is
+        /// unused.
+        fn payout_entry_fee(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
+            recipient: ContractAddress,
+            position: Option<u32>,
             claim_params: Span<felt252>,
         ) {
-            assert!(
-                claim_params.len() == 2, "NFTEntryFee: claim_params must be [recipient, index]",
-            );
-            let recipient: ContractAddress = (*claim_params.at(0)).try_into().unwrap();
-            let index: u32 = (*claim_params.at(1)).try_into().unwrap();
+            let _ = claim_params;
+            let position = match position {
+                Option::Some(p) => p,
+                Option::None => panic!("NFTEntryFee: position is required"),
+            };
+            assert!(position > 0, "NFTEntryFee: position must be 1-indexed");
+            let index: u32 = position - 1;
 
             let count = self.escrowed_count.read((context_owner, context_id));
             assert!(index < count, "NFTEntryFee: index out of range");
