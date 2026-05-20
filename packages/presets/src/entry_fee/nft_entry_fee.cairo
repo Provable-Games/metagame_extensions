@@ -2,12 +2,10 @@
 
 /// NFTEntryFee — entry requires transferring a specific ERC721 collection's
 /// NFT into the extension's escrow. On finalization the host distributes
-/// the escrowed NFTs by leaderboard position. The extension is self-
-/// validating: it queries the host's leaderboard to determine the
-/// canonical recipient for each position — winner-at-N for entries with
-/// a qualifying score, or the original payer-at-index for positions past
-/// the leaderboard length (refund branch) — and asserts the host-supplied
-/// `recipient` matches.
+/// the escrowed NFTs by leaderboard position. The extension is fully
+/// sovereign: the host dispatches with a `token_id` (or `None` for refunds)
+/// and NFTEntryFee resolves the position and recipient from its own state +
+/// the host's `ILeaderboard`.
 ///
 /// Demonstrates that the extension framework is not tied to fungible fees:
 /// a "fee pool" can be a heterogeneous bag of NFTs, indexed by the order
@@ -22,8 +20,13 @@
 /// 1. Set up with config = `[nft_collection_address]`.
 /// 2. Forward `pay_entry_fee` with pay_params = `[payer, token_id_low, token_id_high]`.
 ///    The payer is tracked per-index for the refund branch.
-/// 3. After finalization, drive `payout_entry_fee` per-position. Supply
-///    the expected recipient and let the extension self-validate.
+/// 3. After finalization, drive `payout_entry_fee` per-claim:
+///    - Claim: `token_id = Some(game_token)`, `claim_params = []`. Extension
+///      derives position via `ILeaderboard::get_position`, recipient as
+///      `owner_of(game_token)`, and transfers escrow slot `position - 1`.
+///    - Refund: `token_id = None`, `claim_params = [slot_index]`. Extension
+///      verifies `slot_index > leaderboard_length` and refunds escrow slot
+///      `slot_index - 1` to its original payer.
 
 #[starknet::interface]
 pub trait INFTEntryFee<TState> {
@@ -188,64 +191,78 @@ pub mod nft_entry_fee {
             array![collection.into()].span()
         }
 
-        /// Distribute one escrowed NFT per leaderboard position. NFTEntryFee
-        /// self-validates: queries the host's leaderboard to determine the
-        /// canonical recipient — winner-at-N for entries with a qualifying
-        /// score, or the original payer of escrow slot `N-1` for positions
-        /// past the leaderboard length (refund branch) — and asserts the
-        /// host-supplied `recipient` matches.
+        /// Dispatch a fee-pool NFT payout.
         ///
-        /// `claim_params` is unused. Position is required (positional only).
+        /// Claim path (`token_id = Some(game_token)`):
+        /// - Look up the token's leaderboard position via
+        ///   `ILeaderboard::get_position`. Reverts if the token is not on
+        ///   the leaderboard. Position 1 maps to escrow slot 0, position 2
+        ///   to slot 1, etc.
+        /// - Derive recipient as `owner_of(game_token)`.
+        /// - Transfer the escrowed NFT at slot `position - 1`.
+        ///
+        /// Refund path (`token_id = None`, `claim_params = [slot_index]`):
+        /// - `slot_index` must be 1-indexed and within
+        ///   `1..=escrowed_count`. Reverts if `slot_index <= leaderboard_length`
+        ///   (a qualifying winner exists for that slot — claim path applies).
+        /// - Refund the escrowed NFT at slot `slot_index - 1` to its
+        ///   original payer.
         fn payout_entry_fee(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
-            recipient: ContractAddress,
-            position: Option<u32>,
+            token_id: Option<felt252>,
             claim_params: Span<felt252>,
         ) {
-            let _ = claim_params;
-            let position = match position {
-                Option::Some(p) => p,
-                Option::None => panic!("NFTEntryFee: position is required"),
-            };
-            assert!(position > 0, "NFTEntryFee: position must be 1-indexed");
-            let index: u32 = position - 1;
-
             let count = self.escrowed_count.read((context_owner, context_id));
-            assert!(index < count, "NFTEntryFee: index out of range");
+            let leaderboard = ILeaderboardDispatcher { contract_address: context_owner };
+
+            let (position, recipient): (u32, ContractAddress) = match token_id {
+                Option::Some(claimant_token) => {
+                    let position = match leaderboard.get_position(context_id, claimant_token) {
+                        Option::Some(p) => p,
+                        Option::None => panic!("NFTEntryFee: token not on leaderboard"),
+                    };
+                    assert!(position <= count, "NFTEntryFee: position out of escrow range");
+
+                    let game_token_address = IMinigameDispatcher { contract_address: context_owner }
+                        .token_address();
+                    let game_token = IERC721Dispatcher { contract_address: game_token_address };
+                    let claimant_token_u256: u256 = claimant_token.into();
+                    let owner = game_token.owner_of(claimant_token_u256);
+                    (position, owner)
+                },
+                Option::None => {
+                    assert!(
+                        claim_params.len() == 1,
+                        "NFTEntryFee: refund requires claim_params = [slot_index]",
+                    );
+                    let slot_index: u32 = (*claim_params.at(0)).try_into().unwrap();
+                    assert!(slot_index > 0, "NFTEntryFee: slot_index must be 1-indexed");
+                    assert!(slot_index <= count, "NFTEntryFee: slot_index out of escrow range");
+
+                    let length = leaderboard.get_leaderboard_length(context_id);
+                    assert!(
+                        slot_index > length,
+                        "NFTEntryFee: slot has a qualifying winner; use the claim path",
+                    );
+
+                    // Refund to original payer of this escrow slot.
+                    let index: u32 = slot_index - 1;
+                    let payer = self.escrowed_payer.read((context_owner, context_id, index));
+                    (slot_index, payer)
+                },
+            };
+
+            let index: u32 = position - 1;
             let claim_key = (context_owner, context_id, index);
             assert!(!self.claimed.read(claim_key), "NFTEntryFee: already claimed");
-
-            // Self-validate recipient against the host's leaderboard.
-            // context_owner is the host that registered this context, so it
-            // hosts the canonical ILeaderboard for context_id.
-            let leaderboard = ILeaderboardDispatcher { contract_address: context_owner };
-            let length = leaderboard.get_leaderboard_length(context_id);
-
-            let expected: ContractAddress = if position <= length {
-                // O(1) per-position lookup; preferred over fetching the
-                // full leaderboard array.
-                let winner_token_id_felt = leaderboard
-                    .get_leaderboard_entry(context_id, position)
-                    .id;
-                let winner_token_id: u256 = winner_token_id_felt.into();
-                let game_token_address = IMinigameDispatcher { contract_address: context_owner }
-                    .token_address();
-                let game_token = IERC721Dispatcher { contract_address: game_token_address };
-                game_token.owner_of(winner_token_id)
-            } else {
-                // Position past the leaderboard: refund this NFT to the
-                // original payer (the entrant who escrowed slot `index`).
-                self.escrowed_payer.read(claim_key)
-            };
-            assert!(recipient == expected, "NFTEntryFee: recipient does not match expected winner");
-
             self.claimed.write(claim_key, true);
+
             let collection = self.collection.read((context_owner, context_id));
-            let token_id = self.escrowed_token_id.read(claim_key);
+            let stored_token_id = self.escrowed_token_id.read(claim_key);
             let erc721 = IERC721Dispatcher { contract_address: collection };
-            erc721.transfer_from(get_contract_address(), recipient, token_id);
+            erc721.transfer_from(get_contract_address(), recipient, stored_token_id);
         }
     }
 }

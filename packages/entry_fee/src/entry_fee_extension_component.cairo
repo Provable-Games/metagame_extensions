@@ -44,19 +44,18 @@ pub mod EntryFeeExtensionComponent {
             pay_params: Span<felt252>,
         );
 
-        /// Transfer the appropriate slice of the fee pool to `recipient`. The
-        /// host computes recipient (validating it against leaderboard state
-        /// when `position` is `Some`); the extension is just an asset
-        /// manager that executes the transfer. Implementors MUST scope
-        /// their dedupe by some subset of
-        /// `(context_owner, context_id, recipient, position, claim_params)`
-        /// so the same logical claim can't be replayed.
+        /// Dispatch a fee-pool payout for `(context_owner, context_id)`
+        /// keyed by `token_id`. The extension is fully sovereign on
+        /// recipient resolution, eligibility checks, and asset transfer.
+        /// `Some(token_id)` claims typically derive the recipient via
+        /// `owner_of`; `None` (sponsor refund / creator share / dao /
+        /// raffle) MUST encode whatever the extension needs in
+        /// `claim_params`. Implementors MUST track their own dedupe state.
         fn payout_entry_fee(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
-            recipient: ContractAddress,
-            position: Option<u32>,
+            token_id: Option<felt252>,
             claim_params: Span<felt252>,
         );
 
@@ -106,15 +105,14 @@ pub mod EntryFeeExtensionComponent {
         fn payout_entry_fee(
             ref self: ComponentState<TContractState>,
             context_id: u64,
-            recipient: ContractAddress,
-            position: Option<u32>,
+            token_id: Option<felt252>,
             claim_params: Span<felt252>,
         ) {
             let caller = get_caller_address();
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
             EntryFeeExtension::payout_entry_fee(
-                ref contract, caller, context_id, recipient, position, claim_params,
+                ref contract, caller, context_id, token_id, claim_params,
             );
         }
 

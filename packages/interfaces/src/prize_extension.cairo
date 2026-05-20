@@ -1,10 +1,8 @@
 use starknet::ContractAddress;
 
 /// SNIP-5 interface ID for `IPrizeExtension`. Derived via `src5_rs` as the
-/// XOR of the Starknet selectors of the four functions listed in the trait
-/// below (`is_context_registered`, `add_prize`, `payout_prize`, `get_config`),
-/// reflecting the full current surface including the `recipient` and
-/// `position` parameters on `payout_prize`.
+/// XOR of the Starknet selectors of the four functions on the trait below
+/// (`is_context_registered`, `add_prize`, `payout_prize`, `get_config`).
 ///
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `add_prize` for that `context_id`.
@@ -19,6 +17,8 @@ use starknet::ContractAddress;
 ///      below.
 ///   3. Update any host SRC5 advertisements (e.g. budokan's
 ///      `_register_supported_interfaces`).
+// TODO: regenerate via src5_rs after the trait change (recipient dropped,
+// position -> token_id).
 pub const IPRIZE_EXTENSION_ID: felt252 =
     0x2187266a58431bcbd583ba71c091289eb91506d4fcf6d8d30fbaeabf69ee871;
 
@@ -29,43 +29,42 @@ pub trait IPrizeExtension<TState> {
         self: @TState, context_owner: ContractAddress, context_id: u64,
     ) -> bool;
 
-    /// Add a prize configuration for `(caller, context_id)`.
+    /// Add a prize configuration for `(caller, context_id, prize_id)`.
     /// First call registers the caller as owner of that context_id on this contract.
-    /// Subsequent calls from the same caller may add more prizes, but a different
+    /// Subsequent calls from the same caller may add more prizes; a different
     /// caller cannot add prizes to an already-registered context.
     fn add_prize(ref self: TState, context_id: u64, prize_id: u64, config: Span<felt252>);
 
-    /// Transfer the escrowed asset at `(caller, context_id, prize_id, position)`
-    /// to `recipient`. The host computes `recipient` — either the
-    /// leaderboard winner (normal payout) or the original sponsor (refund
-    /// when no winner qualifies) — and the extension is just an asset
-    /// manager that executes the transfer. Extensions MUST NOT branch on
-    /// who the recipient is or query host state to decide; that's a
-    /// host-level concern.
+    /// Dispatch a payout for `(caller, context_id, prize_id)` keyed by
+    /// `token_id`. The extension is fully sovereign on recipient
+    /// resolution, eligibility checks, and asset transfer — the host
+    /// is a pure dispatcher.
     ///
-    /// `position` is the 1-indexed leaderboard slot when the prize is
-    /// positional (e.g. NFTPrize allocates per-position escrow). For
-    /// non-positional prize extensions (whole-pool raffle, dao
-    /// distribution, etc.) the host passes `Option::None`. Implementors
-    /// that require positional payouts MUST panic on `None`; implementors
-    /// that don't use positions MUST ignore the value.
+    /// `token_id`:
+    /// - `Some(id)` — the game token claiming this prize. The
+    ///   extension typically derives the recipient via
+    ///   `IERC721::owner_of(token_id)` (or any token-keyed scheme it
+    ///   chooses).
+    /// - `None` — non-claim flows (sponsor refund, dao distribution,
+    ///   raffle draw). The extension MUST encode whatever it needs to
+    ///   resolve the recipient in `payout_params` (e.g. a refund-slot
+    ///   index, a random seed, a list of payees).
     ///
-    /// `payout_params` is extension-defined for any additional metadata
-    /// the extension needs to identify exactly what to transfer beyond
-    /// `(prize_id, position)`. Most positional extensions leave it empty.
+    /// `payout_params` is extension-defined. For token-keyed claims
+    /// it's typically empty; for non-positional / non-token-keyed
+    /// flows it carries proofs, slot indices, merkle witnesses, etc.
     ///
-    /// Extensions MUST mark `(prize_id, position)` as paid (or whatever
-    /// uniquely identifies the slot) to prevent double-payout. The host
-    /// does NOT track per-position payout state for extensions — that's
-    /// the extension's responsibility.
+    /// Extensions MUST track their own dedupe state — usually keyed
+    /// by `(prize_id, token_id)` for the claim path and by whatever
+    /// the refund flow uses for `payout_params`. The host does NOT
+    /// track per-token-id payout state for extensions.
     ///
     /// Caller must be the owner that previously called `add_prize` for this context.
     fn payout_prize(
         ref self: TState,
         context_id: u64,
         prize_id: u64,
-        position: Option<u32>,
-        recipient: ContractAddress,
+        token_id: Option<felt252>,
         payout_params: Span<felt252>,
     );
 

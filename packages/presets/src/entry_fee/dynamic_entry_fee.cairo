@@ -218,29 +218,23 @@ pub mod dynamic_entry_fee {
         }
 
         /// DynamicEntryFee distributes the entire pool as a single payout
-        /// to the recipient configured at set_entry_fee_config time. Self-
-        /// validates: asserts the host-supplied `recipient` matches the
-        /// stored value so callers can't redirect the pool. Position and
-        /// claim_params are unused.
+        /// to the recipient configured at set_entry_fee_config time.
+        /// `token_id` and `claim_params` are unused — the recipient is
+        /// sovereign extension state, not host-supplied.
         fn payout_entry_fee(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
-            recipient: ContractAddress,
-            position: Option<u32>,
+            token_id: Option<felt252>,
             claim_params: Span<felt252>,
         ) {
-            let _ = (position, claim_params);
+            let _ = (token_id, claim_params);
 
             let key = (context_owner, context_id);
             assert!(!self.claimed.read(key), "DynamicEntryFee: already claimed");
-            let configured = self.recipient.read(key);
-            assert!(
-                recipient == configured,
-                "DynamicEntryFee: recipient does not match configured payout address",
-            );
             self.claimed.write(key, true);
 
+            let recipient = self.recipient.read(key);
             let total = self.total_collected.read(key);
             if total > 0 {
                 let token = self.token.read(key);

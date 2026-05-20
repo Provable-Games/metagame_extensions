@@ -36,22 +36,19 @@ pub mod PrizeExtensionComponent {
             config: Span<felt252>,
         );
 
-        /// Transfer the escrowed asset at `(context_owner, context_id,
-        /// prize_id, position)` to `recipient`. The host (e.g. budokan)
-        /// computes the recipient — either the leaderboard winner or
-        /// the original sponsor for refunds — and the extension is just
-        /// an asset manager that executes the transfer. Positional
-        /// prizes get `Some(position)`; non-positional prizes get
-        /// `None`. Implementors MUST scope their state by whatever
-        /// uniquely identifies a payout slot and mark each payout to
-        /// prevent double-payout.
+        /// Dispatch a payout for `(context_owner, context_id, prize_id)`
+        /// keyed by `token_id`. The extension is fully sovereign on
+        /// recipient resolution, eligibility checks, and asset transfer.
+        /// `Some(token_id)` claims typically derive the recipient via
+        /// `owner_of`; `None` (sponsor refund / dao / raffle) MUST
+        /// encode whatever the extension needs in `payout_params`.
+        /// Implementors MUST track their own dedupe state.
         fn payout_prize(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            position: Option<u32>,
-            recipient: ContractAddress,
+            token_id: Option<felt252>,
             payout_params: Span<felt252>,
         );
 
@@ -96,15 +93,14 @@ pub mod PrizeExtensionComponent {
             ref self: ComponentState<TContractState>,
             context_id: u64,
             prize_id: u64,
-            position: Option<u32>,
-            recipient: ContractAddress,
+            token_id: Option<felt252>,
             payout_params: Span<felt252>,
         ) {
             let caller = get_caller_address();
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
             PrizeExtension::payout_prize(
-                ref contract, caller, context_id, prize_id, position, recipient, payout_params,
+                ref contract, caller, context_id, prize_id, token_id, payout_params,
             );
         }
 

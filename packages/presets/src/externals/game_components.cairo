@@ -27,4 +27,9 @@ pub struct LeaderboardEntry {
 pub trait ILeaderboard<TState> {
     fn get_leaderboard_length(self: @TState, context_id: u64) -> u32;
     fn get_leaderboard_entry(self: @TState, context_id: u64, position: u32) -> LeaderboardEntry;
+    /// O(1) reverse lookup: returns the 1-indexed position of `token_id`
+    /// in the context's leaderboard, or `None` if the token has not
+    /// qualified. Used by token-keyed extensions (NFTPrize, NFTEntryFee)
+    /// to derive position from the dispatched token_id.
+    fn get_position(self: @TState, context_id: u64, token_id: felt252) -> Option<u32>;
 }
