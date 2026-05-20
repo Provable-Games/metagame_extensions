@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 /// NFTPrize — sponsor escrows a set of ERC721 token IDs assigned to specific
-/// positions of a prize. The extension is self-validating: on payout it
-/// queries the host's leaderboard (via the minimal `ILeaderboard` stub in
-/// `externals`) to determine the canonical recipient at the supplied
-/// position — either the current owner of the winner's game token, or
-/// the recorded sponsor when the position has no qualifying entry — and
-/// asserts that the host-supplied `recipient` matches. Callers can't
-/// redirect payouts; the host doesn't need to know NFTPrize-specific
-/// validation rules.
+/// leaderboard positions of a prize. The extension is fully sovereign: the
+/// host dispatches with a `token_id` (or `None` for sponsor refunds) and
+/// NFTPrize resolves the position and recipient from its own state +
+/// the host's `ILeaderboard`.
 ///
 /// This is the leaderboard-aware counterpart to the built-in single-ERC721
 /// prize path: the built-in flow can hold at most one NFT per prize, while
@@ -30,7 +26,17 @@
 ///
 /// Config layout (`add_prize`):
 ///   [token_address, sponsor_address, num_positions, id_0_low, id_0_high, id_1_low, id_1_high, ...]
-/// Payout params (`payout_prize`): []   (position + recipient are top-level args)
+///
+/// Payout shapes (`payout_prize`)
+/// ------------------------------
+/// - Claim: `token_id = Some(game_token)`, `payout_params = []`.
+///   NFTPrize queries `ILeaderboard::get_position(context_id, token_id)` to
+///   find the position, derives the recipient as the current owner of the
+///   game token, and transfers `prize_position_token_id[position]`.
+/// - Refund: `token_id = None`, `payout_params = [slot_index]`.
+///   NFTPrize verifies `slot_index > leaderboard_length` (no qualifying
+///   winner for that slot), and transfers `prize_position_token_id[slot_index]`
+///   to the recorded sponsor.
 
 #[starknet::interface]
 pub trait INFTPrize<TState> {
@@ -228,66 +234,86 @@ pub mod nft_prize {
             out.span()
         }
 
-        /// Transfer the NFT escrowed for `position` to `recipient`. NFTPrize
-        /// is self-validating: it queries the host (via the minimal
-        /// `ILeaderboard`/`IMinigame` stub) to determine the canonical
-        /// recipient for the position — the leaderboard winner if any,
-        /// otherwise the recorded sponsor — and asserts the host-supplied
-        /// `recipient` matches.
+        /// Dispatch a payout for this prize.
         ///
-        /// `payout_params` is unused for NFTPrize. NFTPrize is positional —
-        /// non-positional callers (`position == Option::None`) panic.
+        /// Claim path (`token_id = Some(game_token)`):
+        /// - Look up the token's leaderboard position via
+        ///   `ILeaderboard::get_position`. Reverts if the token is not on
+        ///   the leaderboard for `context_id` or its position exceeds
+        ///   `num_positions` for this prize.
+        /// - Derive recipient as `owner_of(game_token)` on the host's
+        ///   game-token contract (resolved via `IMinigame::token_address`).
+        /// - Transfer `prize_position_token_id[position]` to the recipient.
+        ///
+        /// Refund path (`token_id = None`, `payout_params = [slot_index]`):
+        /// - `slot_index` must be 1-indexed and within
+        ///   `1..=num_positions`. Reverts if `slot_index <= leaderboard_length`
+        ///   (a qualifying winner exists for that slot — claim path applies
+        ///   instead).
+        /// - Transfer `prize_position_token_id[slot_index]` to the recorded
+        ///   sponsor.
         fn payout_prize(
             ref self: ContractState,
             context_owner: ContractAddress,
             context_id: u64,
             prize_id: u64,
-            position: Option<u32>,
-            recipient: ContractAddress,
+            token_id: Option<felt252>,
             payout_params: Span<felt252>,
         ) {
-            let _ = payout_params;
-            let position = match position {
-                Option::Some(p) => p,
-                Option::None => panic!("NFTPrize: position is required"),
-            };
-            assert!(position > 0, "NFTPrize: position must be 1-indexed");
-
             let key = (context_owner, context_id, prize_id);
             let num_positions = self.prize_num_positions.read(key);
             assert!(num_positions > 0, "NFTPrize: prize not configured");
-            assert!(position <= num_positions, "NFTPrize: position out of range");
 
+            let leaderboard = ILeaderboardDispatcher { contract_address: context_owner };
+
+            // Resolve (position, recipient) from the dispatch shape.
+            let (position, recipient): (u32, ContractAddress) = match token_id {
+                Option::Some(claimant_token) => {
+                    // Claim path. Token must hold a leaderboard position
+                    // within the prize's distribution range.
+                    let position = match leaderboard.get_position(context_id, claimant_token) {
+                        Option::Some(p) => p,
+                        Option::None => panic!("NFTPrize: token not on leaderboard"),
+                    };
+                    assert!(position <= num_positions, "NFTPrize: position out of prize range");
+
+                    // Recipient = current owner of the game token. Resolve
+                    // the game token contract via the host.
+                    let game_token_address = IMinigameDispatcher { contract_address: context_owner }
+                        .token_address();
+                    let game_token = IERC721Dispatcher { contract_address: game_token_address };
+                    let claimant_token_u256: u256 = claimant_token.into();
+                    let owner = game_token.owner_of(claimant_token_u256);
+                    (position, owner)
+                },
+                Option::None => {
+                    // Refund path. `payout_params[0]` selects the slot.
+                    assert!(
+                        payout_params.len() == 1,
+                        "NFTPrize: refund requires payout_params = [slot_index]",
+                    );
+                    let slot_index: u32 = (*payout_params.at(0)).try_into().unwrap();
+                    assert!(slot_index > 0, "NFTPrize: slot_index must be 1-indexed");
+                    assert!(slot_index <= num_positions, "NFTPrize: slot_index out of prize range");
+
+                    // Refund is only valid when no qualifying winner exists
+                    // at this slot — claim path applies otherwise.
+                    let length = leaderboard.get_leaderboard_length(context_id);
+                    assert!(
+                        slot_index > length,
+                        "NFTPrize: slot has a qualifying winner; use the claim path",
+                    );
+
+                    (slot_index, self.prize_sponsor.read(key))
+                },
+            };
+
+            // Dedupe on the (prize, position) tuple — same slot can't be
+            // paid out twice via either path.
             let claim_key = (context_owner, context_id, prize_id, position);
             assert!(
                 !self.prize_position_claimed.read(claim_key), "NFTPrize: position already claimed",
             );
-
-            // Self-validate recipient against the host's leaderboard state.
-            // `context_owner` is the host that registered this prize, so it
-            // hosts the canonical `ILeaderboard` for `context_id`.
-            let leaderboard = ILeaderboardDispatcher { contract_address: context_owner };
-            let length = leaderboard.get_leaderboard_length(context_id);
-
-            let expected: ContractAddress = if position <= length {
-                // O(1) per-position lookup; preferred over fetching the
-                // full leaderboard array.
-                let winner_token_id_felt = leaderboard
-                    .get_leaderboard_entry(context_id, position)
-                    .id;
-                let winner_token_id: u256 = winner_token_id_felt.into();
-                // Resolve the game token contract via the host. Hosts using
-                // the standard game-components stack implement `IMinigame`.
-                let game_token_address = IMinigameDispatcher { contract_address: context_owner }
-                    .token_address();
-                let game_token = IERC721Dispatcher { contract_address: game_token_address };
-                game_token.owner_of(winner_token_id)
-            } else {
-                // No qualifying entry at this position -> refund to sponsor.
-                self.prize_sponsor.read(key)
-            };
-            assert!(recipient == expected, "NFTPrize: recipient does not match expected winner");
-
             self.prize_position_claimed.write(claim_key, true);
 
             let prize_token = self.prize_token_address.read(key);

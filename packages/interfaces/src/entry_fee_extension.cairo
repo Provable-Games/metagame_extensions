@@ -10,8 +10,20 @@ use starknet::ContractAddress;
 /// NOTE: this ID is regenerated whenever the trait surface changes. Run
 /// `src5_rs parse` against the current trait (with the `<TState>` generic
 /// removed so the tool can compute) to regenerate after any change.
+// Regenerated via src5_rs after the trait change (recipient dropped,
+// position -> token_id). Extended function selectors:
+//   is_context_registered(ContractAddress,u64)->E((),())
+//     -> 0x1bd720a7b1f7c926b9642d87cfaca619334de1b1cf76338d7520a9c08adea59
+//   set_entry_fee_config(u64,(@Array<felt252>))
+//     -> 0xdcc8540a5b2d29d9b8f1f762605e7e0711bf2f851821f08579bfd3fa17457a
+//   pay_entry_fee(u64,(@Array<felt252>))
+//     -> 0x157f02e782eb6de309ce1c9ed797e2d2c20b6b32e2a7ea976ae94d35883d6f6
+//   payout_entry_fee(u64,E(felt252,()),(@Array<felt252>))
+//     -> 0x2e080fa6f4757a38ed8a57919ffc7fc435618eadae8f30f6b87708dd5d2d1af
+//   get_config(ContractAddress,u64)->(@Array<felt252>)
+//     -> 0x3f13e92f2c274458cf13cd7bea27853394c6fdfb25228f5ba9e9eaedc9a382e
 pub const IENTRY_FEE_EXTENSION_ID: felt252 =
-    0x1e982b6c4bfd4c1100d99f1bd74c95da47e1b98efb31515d7058f69b64c470b;
+    0x127f41894efc483809bcb4854be559dc21fa0b2df7fe79bf59ccfbfa3719054;
 
 #[starknet::interface]
 pub trait IEntryFeeExtension<TState> {
@@ -29,27 +41,31 @@ pub trait IEntryFeeExtension<TState> {
     /// Caller must be the owner that previously called `set_entry_fee_config`.
     fn pay_entry_fee(ref self: TState, context_id: u64, pay_params: Span<felt252>);
 
-    /// Transfer the appropriate slice of the fee pool to `recipient`. The
-    /// host (e.g. budokan) computes recipient and passes it through —
-    /// when `position` is `Some(N)` the host has already validated that
-    /// `recipient` matches the leaderboard winner at position N (or the
-    /// recorded sponsor when the position has no qualifying entry).
-    /// When `position` is `None` the host doesn't validate recipient;
-    /// the extension is responsible for any eligibility logic it cares
-    /// about via `claim_params`.
+    /// Dispatch a fee-pool payout for `(caller, context_id)` keyed by
+    /// `token_id`. The extension is fully sovereign on recipient
+    /// resolution, eligibility checks, and asset transfer — the host
+    /// is a pure dispatcher.
     ///
-    /// Extensions MUST scope their dedupe by
-    /// `(context_owner, context_id, recipient, position, claim_params)`
-    /// — or whatever subset of those uniquely identifies a slot — so
-    /// the same logical claim cannot be replayed.
+    /// `token_id`:
+    /// - `Some(id)` — the game token claiming this share. The
+    ///   extension typically derives the recipient via
+    ///   `IERC721::owner_of(token_id)` (or any token-keyed scheme it
+    ///   chooses) and uses `id` as the dedupe key.
+    /// - `None` — non-claim flows (sponsor refund, creator share,
+    ///   dao distribution). The extension MUST encode whatever it
+    ///   needs to resolve the recipient in `claim_params`.
+    ///
+    /// `claim_params` is extension-defined. For token-keyed claims
+    /// it's typically empty; for non-token-keyed flows it carries
+    /// proofs, slot indices, merkle witnesses, etc.
+    ///
+    /// Extensions MUST track their own dedupe state so the same
+    /// logical claim cannot be replayed. The host does NOT track
+    /// per-token-id payout state for extensions.
     ///
     /// Caller must be the owner that previously called `set_entry_fee_config`.
     fn payout_entry_fee(
-        ref self: TState,
-        context_id: u64,
-        recipient: ContractAddress,
-        position: Option<u32>,
-        claim_params: Span<felt252>,
+        ref self: TState, context_id: u64, token_id: Option<felt252>, claim_params: Span<felt252>,
     );
 
     /// Return the original `config` blob the host passed to
