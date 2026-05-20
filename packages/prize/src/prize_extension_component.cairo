@@ -36,13 +36,34 @@ pub mod PrizeExtensionComponent {
             config: Span<felt252>,
         );
 
-        /// Claim a prize for a context
-        fn claim_prize(
+        /// Transfer the escrowed asset at `(context_owner, context_id,
+        /// prize_id, position)` to `recipient`. The host (e.g. budokan)
+        /// computes the recipient — either the leaderboard winner or
+        /// the original sponsor for refunds — and the extension is just
+        /// an asset manager that executes the transfer. Positional
+        /// prizes get `Some(position)`; non-positional prizes get
+        /// `None`. Implementors MUST scope their state by whatever
+        /// uniquely identifies a payout slot and mark each payout to
+        /// prevent double-payout.
+        fn payout_prize(
             ref self: TContractState,
             context_owner: ContractAddress,
             context_id: u64,
-            claim_params: Span<felt252>,
+            prize_id: u64,
+            position: Option<u32>,
+            recipient: ContractAddress,
+            payout_params: Span<felt252>,
         );
+
+        /// Return the original `config` blob the host passed to
+        /// `add_prize` for `(context_owner, context_id, prize_id)`.
+        /// Implementors MUST re-serialize whatever they stored back to
+        /// the original `Span<felt252>` shape — host viewers depend on
+        /// this for uniform extension-prize rendering. Returns an empty
+        /// span when the tuple is unknown.
+        fn get_config(
+            self: @TContractState, context_owner: ContractAddress, context_id: u64, prize_id: u64,
+        ) -> Span<felt252>;
     }
 
     #[embeddable_as(PrizeExtensionImpl)]
@@ -71,13 +92,30 @@ pub mod PrizeExtensionComponent {
             PrizeExtension::add_prize(ref contract, caller, context_id, prize_id, config);
         }
 
-        fn claim_prize(
-            ref self: ComponentState<TContractState>, context_id: u64, claim_params: Span<felt252>,
+        fn payout_prize(
+            ref self: ComponentState<TContractState>,
+            context_id: u64,
+            prize_id: u64,
+            position: Option<u32>,
+            recipient: ContractAddress,
+            payout_params: Span<felt252>,
         ) {
             let caller = get_caller_address();
             self.assert_registered(caller, context_id);
             let mut contract = self.get_contract_mut();
-            PrizeExtension::claim_prize(ref contract, caller, context_id, claim_params);
+            PrizeExtension::payout_prize(
+                ref contract, caller, context_id, prize_id, position, recipient, payout_params,
+            );
+        }
+
+        fn get_config(
+            self: @ComponentState<TContractState>,
+            context_owner: ContractAddress,
+            context_id: u64,
+            prize_id: u64,
+        ) -> Span<felt252> {
+            let contract = self.get_contract();
+            PrizeExtension::get_config(contract, context_owner, context_id, prize_id)
         }
     }
 

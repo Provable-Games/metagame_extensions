@@ -1,12 +1,17 @@
 use starknet::ContractAddress;
 
 /// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
-/// - is_context_registered, set_entry_fee_config, pay_entry_fee, claim_entry_fee
+/// - is_context_registered, set_entry_fee_config, pay_entry_fee,
+///   payout_entry_fee, get_config
 ///
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `set_entry_fee_config` for that `context_id`.
+///
+/// NOTE: this ID is regenerated whenever the trait surface changes. Run
+/// `src5_rs parse` against the current trait (with the `<TState>` generic
+/// removed so the tool can compute) to regenerate after any change.
 pub const IENTRY_FEE_EXTENSION_ID: felt252 =
-    0x15632998253d785958f8ca6392be14057aba5032e9b1ae9e779e0ed9f2307f3;
+    0x1e982b6c4bfd4c1100d99f1bd74c95da47e1b98efb31515d7058f69b64c470b;
 
 #[starknet::interface]
 pub trait IEntryFeeExtension<TState> {
@@ -24,7 +29,39 @@ pub trait IEntryFeeExtension<TState> {
     /// Caller must be the owner that previously called `set_entry_fee_config`.
     fn pay_entry_fee(ref self: TState, context_id: u64, pay_params: Span<felt252>);
 
-    /// Claim entry fee for a context.
+    /// Transfer the appropriate slice of the fee pool to `recipient`. The
+    /// host (e.g. budokan) computes recipient and passes it through —
+    /// when `position` is `Some(N)` the host has already validated that
+    /// `recipient` matches the leaderboard winner at position N (or the
+    /// recorded sponsor when the position has no qualifying entry).
+    /// When `position` is `None` the host doesn't validate recipient;
+    /// the extension is responsible for any eligibility logic it cares
+    /// about via `claim_params`.
+    ///
+    /// Extensions MUST scope their dedupe by
+    /// `(context_owner, context_id, recipient, position, claim_params)`
+    /// — or whatever subset of those uniquely identifies a slot — so
+    /// the same logical claim cannot be replayed.
+    ///
     /// Caller must be the owner that previously called `set_entry_fee_config`.
-    fn claim_entry_fee(ref self: TState, context_id: u64, claim_params: Span<felt252>);
+    fn payout_entry_fee(
+        ref self: TState,
+        context_id: u64,
+        recipient: ContractAddress,
+        position: Option<u32>,
+        claim_params: Span<felt252>,
+    );
+
+    /// Return the original `config` blob the host passed to
+    /// `set_entry_fee_config` for `(context_owner, context_id)`.
+    /// Implementors MUST re-serialize whatever they stored back to the
+    /// original `Span<felt252>` shape so host viewers (frontends, indexer
+    /// RPC fallbacks) can render extension entry-fee configs uniformly
+    /// without per-extension knowledge of internal storage layouts.
+    /// Returns an empty span when `(context_owner, context_id)` is unknown.
+    ///
+    /// Read-only view: takes explicit `context_owner` so external callers
+    /// (viewers, indexer RPC fallbacks) can query without needing to be
+    /// the registered owner.
+    fn get_config(self: @TState, context_owner: ContractAddress, context_id: u64) -> Span<felt252>;
 }

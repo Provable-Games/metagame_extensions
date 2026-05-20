@@ -25,8 +25,10 @@ version = "0.1.4"
 name = "metagame_extensions_presets"
 version = "0.1.4"
 dependencies = [
+ "metagame_extensions_entry_fee",
  "metagame_extensions_entry_requirement",
  "metagame_extensions_interfaces",
+ "metagame_extensions_prize",
  "metagame_extensions_test_common",
  "openzeppelin_interfaces",
  "openzeppelin_introspection",
