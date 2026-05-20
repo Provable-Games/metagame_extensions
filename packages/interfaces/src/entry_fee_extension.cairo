@@ -10,10 +10,20 @@ use starknet::ContractAddress;
 /// NOTE: this ID is regenerated whenever the trait surface changes. Run
 /// `src5_rs parse` against the current trait (with the `<TState>` generic
 /// removed so the tool can compute) to regenerate after any change.
-// TODO: regenerate via src5_rs after the trait change (recipient dropped,
-// position -> token_id).
+// Regenerated via src5_rs after the trait change (recipient dropped,
+// position -> token_id). Extended function selectors:
+//   is_context_registered(ContractAddress,u64)->E((),())
+//     -> 0x1bd720a7b1f7c926b9642d87cfaca619334de1b1cf76338d7520a9c08adea59
+//   set_entry_fee_config(u64,(@Array<felt252>))
+//     -> 0xdcc8540a5b2d29d9b8f1f762605e7e0711bf2f851821f08579bfd3fa17457a
+//   pay_entry_fee(u64,(@Array<felt252>))
+//     -> 0x157f02e782eb6de309ce1c9ed797e2d2c20b6b32e2a7ea976ae94d35883d6f6
+//   payout_entry_fee(u64,E(felt252,()),(@Array<felt252>))
+//     -> 0x2e080fa6f4757a38ed8a57919ffc7fc435618eadae8f30f6b87708dd5d2d1af
+//   get_config(ContractAddress,u64)->(@Array<felt252>)
+//     -> 0x3f13e92f2c274458cf13cd7bea27853394c6fdfb25228f5ba9e9eaedc9a382e
 pub const IENTRY_FEE_EXTENSION_ID: felt252 =
-    0x1e982b6c4bfd4c1100d99f1bd74c95da47e1b98efb31515d7058f69b64c470b;
+    0x127f41894efc483809bcb4854be559dc21fa0b2df7fe79bf59ccfbfa3719054;
 
 #[starknet::interface]
 pub trait IEntryFeeExtension<TState> {

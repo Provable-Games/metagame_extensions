@@ -17,10 +17,18 @@ use starknet::ContractAddress;
 ///      below.
 ///   3. Update any host SRC5 advertisements (e.g. budokan's
 ///      `_register_supported_interfaces`).
-// TODO: regenerate via src5_rs after the trait change (recipient dropped,
-// position -> token_id).
+// Regenerated via src5_rs after the trait change (recipient dropped,
+// position -> token_id). Extended function selectors:
+//   is_context_registered(ContractAddress,u64)->E((),())
+//     -> 0x1bd720a7b1f7c926b9642d87cfaca619334de1b1cf76338d7520a9c08adea59
+//   add_prize(u64,u64,(@Array<felt252>))
+//     -> 0x2e2c4fca53b00f6e879e79a8ed547a632475ca8d7f4d49bf35519ff0d0d47e8
+//   payout_prize(u64,u64,E(felt252,()),(@Array<felt252>))
+//     -> 0x3e5a0ae816455e7afa3dae8774b2f0045ed6ba60725b9c9471d0257f6175a1e
+//   get_config(ContractAddress,u64,u64)->(@Array<felt252>)
+//     -> 0x2da0750f733771b47ff835d74075b8023dc2146baa728df1c673798d51b09d2
 pub const IPRIZE_EXTENSION_ID: felt252 =
-    0x2187266a58431bcbd583ba71c091289eb91506d4fcf6d8d30fbaeabf69ee871;
+    0x2601108a8735e986bb3fcf7f163f947c742c853768126b57f7d26ac26acfe7d;
 
 #[starknet::interface]
 pub trait IPrizeExtension<TState> {
