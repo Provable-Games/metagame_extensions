@@ -1,14 +1,24 @@
 use starknet::ContractAddress;
 
-/// SNIP-5 interface ID derived via src5_rs: XOR of extended function selectors
-/// - is_context_registered, add_prize, payout_prize, get_config
+/// SNIP-5 interface ID for `IPrizeExtension`. Derived via `src5_rs` as the
+/// XOR of the Starknet selectors of the four functions listed in the trait
+/// below (`is_context_registered`, `add_prize`, `payout_prize`, `get_config`),
+/// reflecting the full current surface including the `recipient` and
+/// `position` parameters on `payout_prize`.
 ///
 /// Storage is namespaced by `(context_owner, context_id)` where `context_owner`
 /// is the contract that first called `add_prize` for that `context_id`.
 ///
-/// NOTE: this ID is regenerated whenever the trait surface changes. Run
-/// `src5_rs parse` against the current trait (with the `<TState>` generic
-/// removed so the tool can compute) to regenerate after any change.
+/// REGENERATION: whenever any function signature on the trait below changes
+/// (add/remove function, rename, or alter parameter list), this ID MUST be
+/// recomputed:
+///   1. Copy the trait into a scratch file with `<TState>` stripped (so
+///      `fn foo(self: @TState, ...)` becomes `fn foo(self: @State, ...)`)
+///      because `src5_rs` cannot resolve generic self types.
+///   2. Run `src5_rs parse <scratch_file>` and paste the resulting felt
+///      below.
+///   3. Update any host SRC5 advertisements (e.g. budokan's
+///      `_register_supported_interfaces`).
 pub const IPRIZE_EXTENSION_ID: felt252 =
     0x2187266a58431bcbd583ba71c091289eb91506d4fcf6d8d30fbaeabf69ee871;
 
