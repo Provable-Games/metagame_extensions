@@ -240,6 +240,7 @@ echo "   - Proposal ID (optional)"
 echo "   - Check voted flag"
 echo "   - Votes threshold"
 echo "   - Votes per entry"
+echo "   - Bannable flag (0 or 1, optional - default 0)"
 echo "3. Players can enter if they meet governance requirements"
 echo ""
 
