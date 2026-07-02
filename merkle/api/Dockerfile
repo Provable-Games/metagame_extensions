@@ -1,11 +1,16 @@
 FROM node:22-slim
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable corepack; the pnpm version is pinned via package.json "packageManager"
+# so the image matches the pnpm major that generated pnpm-lock.yaml (v9 →
+# lockfileVersion 9.0). Do NOT use `pnpm@latest` here: a pnpm 10 roll made
+# `--frozen-lockfile` reject the v9 lockfile, breaking a previously-green build.
+RUN corepack enable
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod=false
+# `corepack pnpm` resolves the version from package.json "packageManager".
+RUN corepack pnpm install --frozen-lockfile --prod=false
 
 COPY . .
 
