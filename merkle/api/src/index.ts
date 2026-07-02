@@ -15,7 +15,6 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
 // Read endpoints: open CORS
 // Write endpoints: restricted to allowed origins
 app.use("/*", async (c, next) => {
-  const origin = c.req.header("origin") ?? "";
   const method = c.req.method;
 
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
@@ -23,8 +22,14 @@ app.use("/*", async (c, next) => {
     return cors()(c, next);
   }
 
-  // For write operations, check origin
-  if (ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
+  // Write operations. The `Origin` header is only sent by browsers; headless
+  // server-to-server callers (bots storing trees) send none. Writes are already
+  // bound to on-chain state — POST /trees recomputes the root and rejects any
+  // tree whose root != the on-chain root — so a missing Origin is safe to allow.
+  // Only enforce the allowlist against a real browser Origin; otherwise setting
+  // ALLOWED_ORIGINS silently 403s every headless store.
+  const origin = c.req.header("origin");
+  if (origin && ALLOWED_ORIGINS.length > 0 && !ALLOWED_ORIGINS.includes(origin)) {
     return c.json({ error: "Origin not allowed" }, 403);
   }
 
