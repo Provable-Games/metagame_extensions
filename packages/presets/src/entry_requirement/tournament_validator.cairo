@@ -60,11 +60,8 @@ pub mod TournamentValidator {
     use core::num::traits::Zero;
     use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent;
     use metagame_extensions_entry_requirement::entry_requirement_extension_component::EntryRequirementExtensionComponent::EntryRequirementExtension;
-    use metagame_extensions_interfaces::registration::{
-        IRegistrationDispatcher, IRegistrationDispatcherTrait,
-    };
     use metagame_extensions_interfaces::tournament::{
-        ITournamentDispatcher, ITournamentDispatcherTrait, Phase,
+        IBudokanValidatorReadsDispatcher, IBudokanValidatorReadsDispatcherTrait, Phase,
     };
     use metagame_extensions_presets::entry_requirement::externals::game_components::{
         IMinigameDispatcher, IMinigameDispatcherTrait,
@@ -151,7 +148,7 @@ pub mod TournamentValidator {
         /// Entry count per (context_owner, tournament_id, qualifying_token_id). Used by both
         /// PER_TOKEN mode (one slot per entry) and ALL mode (every qualifying token in the
         /// proof gets a slot).
-        token_entries: Map<(ContractAddress, u64, u64), u32>,
+        token_entries: Map<(ContractAddress, u64, felt252), u32>,
     }
 
     #[event]
@@ -210,7 +207,7 @@ pub mod TournamentValidator {
                 if cfg.entry_limit == 0 {
                     return true;
                 }
-                let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+                let qualifying_token_id: felt252 = *qualification.at(1);
                 let current_entries = self
                     .token_entries
                     .read((context_owner, context_id, qualifying_token_id));
@@ -291,7 +288,7 @@ pub mod TournamentValidator {
                 let mut min_remaining: u32 = cfg.entry_limit;
                 let mut i: u32 = 0;
                 while i < qualification.len() {
-                    let token_id: u64 = (*qualification.at(i)).try_into().unwrap();
+                    let token_id: felt252 = *qualification.at(i);
                     let used = self.token_entries.read((context_owner, context_id, token_id));
                     let remaining = if used >= cfg.entry_limit {
                         0
@@ -305,7 +302,7 @@ pub mod TournamentValidator {
                 }
                 Option::Some(min_remaining)
             } else {
-                let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+                let qualifying_token_id: felt252 = *qualification.at(1);
                 let current_entries = self
                     .token_entries
                     .read((context_owner, context_id, qualifying_token_id));
@@ -387,13 +384,13 @@ pub mod TournamentValidator {
                 };
                 let mut i: u32 = 0;
                 while i < qualification.len() {
-                    let token_id: u64 = (*qualification.at(i)).try_into().unwrap();
+                    let token_id: felt252 = *qualification.at(i);
                     let key = (context_owner, context_id, token_id);
                     self.token_entries.write(key, self.token_entries.read(key) + 1);
                     i += stride;
                 }
             } else {
-                let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+                let qualifying_token_id: felt252 = *qualification.at(1);
                 let key = (context_owner, context_id, qualifying_token_id);
                 self.token_entries.write(key, self.token_entries.read(key) + 1);
             }
@@ -417,7 +414,7 @@ pub mod TournamentValidator {
                 };
                 let mut i: u32 = 0;
                 while i < qualification.len() {
-                    let token_id: u64 = (*qualification.at(i)).try_into().unwrap();
+                    let token_id: felt252 = *qualification.at(i);
                     let key = (context_owner, context_id, token_id);
                     let current = self.token_entries.read(key);
                     if current > 0 {
@@ -426,7 +423,7 @@ pub mod TournamentValidator {
                     i += stride;
                 }
             } else {
-                let qualifying_token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+                let qualifying_token_id: felt252 = *qualification.at(1);
                 let key = (context_owner, context_id, qualifying_token_id);
                 let current_entries = self.token_entries.read(key);
                 if current_entries > 0 {
@@ -473,14 +470,14 @@ pub mod TournamentValidator {
                     break true;
                 }
                 let qualifying_tournament_id = vec.at(i.into()).read();
-                let (token_id, position): (u64, Option<u8>) =
+                let (token_id, position): (felt252, Option<u8>) =
                     if qualifier_type == QUALIFIER_TYPE_TOP_POSITION {
                     (
-                        (*qualification.at(i * 2)).try_into().unwrap(),
+                        *qualification.at(i * 2),
                         Option::Some((*qualification.at(i * 2 + 1)).try_into().unwrap()),
                     )
                 } else {
-                    ((*qualification.at(i)).try_into().unwrap(), Option::None)
+                    (*qualification.at(i), Option::None)
                 };
 
                 if !self
@@ -525,7 +522,7 @@ pub mod TournamentValidator {
             }
 
             let qualifying_tournament_id: u64 = (*qualification.at(0)).try_into().unwrap();
-            let token_id: u64 = (*qualification.at(1)).try_into().unwrap();
+            let token_id: felt252 = *qualification.at(1);
 
             if !self
                 .is_qualifying_tournament(context_owner, tournament_id, qualifying_tournament_id) {
@@ -557,67 +554,74 @@ pub mod TournamentValidator {
         /// `qualifying_tournament_id`, and (TOP_POSITION only) that the leaderboard
         /// position is in range. `qualifier_type` and `top_positions` are passed in to
         /// avoid repeated storage reads inside the ALL-mode loop.
+        ///
+        /// Reads mirror how Budokan resolves a token itself (game-components v1.1.10):
+        ///   - `get_config(id).game_address` — qualifying tournament's game contract
+        ///     (0 => tournament unknown/unconfigured).
+        ///   - `context_details(token).id` — token -> registered tournament (PARTICIPANTS).
+        ///   - `current_phase(id)` + `get_position(id, token)` — finalized + leaderboard
+        ///     placement (TOP_POSITION). Being on the leaderboard is itself proof the
+        ///     token submitted a score, so no separate `has_submitted` read is needed.
         fn validate_token_participation(
             self: @ContractState,
             context_owner: ContractAddress,
             qualifying_tournament_id: u64,
-            token_id: u64,
+            token_id: felt252,
             player_address: ContractAddress,
             position: Option<u8>,
             qualifier_type: felt252,
             top_positions: u32,
         ) -> bool {
-            let tournament = ITournamentDispatcher { contract_address: context_owner };
-            let registration_dispatcher = IRegistrationDispatcher {
-                contract_address: context_owner,
-            };
+            let budokan = IBudokanValidatorReadsDispatcher { contract_address: context_owner };
 
-            let qualifying_tournament = tournament.tournament(qualifying_tournament_id);
-            let game_address = qualifying_tournament.game_config.address;
-
-            let registration = registration_dispatcher.get_registration(game_address, token_id);
-            if registration.entry_number == 0
-                || registration.context_id != qualifying_tournament_id {
+            // Resolve the qualifying tournament's game contract from its leaderboard
+            // config (Budokan writes game_address there at creation). Zero => unknown.
+            let game_address = budokan.get_config(qualifying_tournament_id).game_address;
+            if game_address.is_zero() {
                 return false;
             }
 
-            let game_dispatcher = IMinigameDispatcher { contract_address: game_address };
-            let game_token_address = game_dispatcher.token_address();
-            let erc721 = IERC721Dispatcher { contract_address: game_token_address };
-            let token_owner = erc721.owner_of(token_id.into());
-
+            // The caller must own the qualifying game token.
+            let game_token_address = IMinigameDispatcher { contract_address: game_address }
+                .token_address();
+            let token_owner = IERC721Dispatcher { contract_address: game_token_address }
+                .owner_of(token_id.into());
             if token_owner != player_address {
                 return false;
             }
 
             if qualifier_type != QUALIFIER_TYPE_TOP_POSITION {
-                return true;
+                // PARTICIPANTS: the token only needs to be registered in the
+                // qualifying tournament (Budokan's own token -> context lookup).
+                let ctx_id = budokan.context_details(token_id).id;
+                return ctx_id == Option::Some(
+                    qualifying_tournament_id.try_into().expect('tournament id exceeds u32'),
+                );
             }
 
-            if tournament.current_phase(qualifying_tournament_id) != Phase::Finalized {
-                return false;
-            }
-            if !registration.has_submitted {
+            // TOP_POSITION: qualifying tournament must be finalized and the token must
+            // sit within the configured top positions on its leaderboard.
+            if budokan.current_phase(qualifying_tournament_id) != Phase::Finalized {
                 return false;
             }
 
-            let position = match position {
+            let real_position = match budokan.get_position(qualifying_tournament_id, token_id) {
                 Option::Some(p) => p,
                 Option::None => { return false; },
             };
-            if position == 0 {
+            if real_position == 0 {
                 return false;
             }
-            if top_positions > 0 && position.into() > top_positions {
+            if top_positions > 0 && real_position > top_positions {
                 return false;
             }
 
-            let leaderboard = tournament.get_leaderboard(qualifying_tournament_id);
-            if position.into() > leaderboard.len() {
-                return false;
+            // The proof's claimed position must match the real leaderboard slot; this
+            // preserves the [.., token_id, position] proof shape and rejects spoofers.
+            match position {
+                Option::Some(claimed) => real_position == claimed.into(),
+                Option::None => false,
             }
-            let leaderboard_token_id = *leaderboard.at((position - 1).into());
-            leaderboard_token_id == token_id
         }
 
         fn is_qualifying_tournament(

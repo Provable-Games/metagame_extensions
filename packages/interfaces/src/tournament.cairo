@@ -1,24 +1,26 @@
-pub use metagame_extensions_interfaces::distribution::Distribution;
-pub use metagame_extensions_interfaces::entry_requirement::{
-    EntryRequirement, EntryRequirementType, ExtensionConfig, NFTQualification, QualificationProof,
-};
-pub use metagame_extensions_interfaces::prize::{
-    ERC20Data, ERC721Data, Prize, PrizeType, TokenTypeData,
-};
+//! Minimal read surface of the deployed Budokan needed by the
+//! `TournamentValidator` entry-requirement extension.
+//!
+//! Budokan embeds the game-components v1.1.10 component ABIs. The validator
+//! resolves a qualifying game token exactly the way Budokan's OWN code does:
+//!   - token -> tournament (context) via `context_details(token_id).id`
+//!     (public mirror of `registration._get_token_context(token_id)`)
+//!   - token -> leaderboard position via `get_position(context_id, token_id)`
+//!     (public mirror of the leaderboard's `get_token_position`)
+//!   - qualifying tournament's game contract via
+//!     `get_config(context_id).game_address` (the leaderboard config Budokan
+//!     writes at tournament creation)
+//!   - tournament lifecycle via `current_phase(tournament_id)`
+//!
+//! All of these selectors are exposed by Budokan (`IBudokan` +
+//! `ILeaderboard` + `IMetagameContextDetails`), so a single dispatcher against
+//! the Budokan address can read them all.
+
 use starknet::ContractAddress;
 
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
-pub struct Schedule {
-    pub registration: Option<Period>,
-    pub game: Period,
-    pub submission_duration: u64,
-}
-
-#[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
-pub struct Period {
-    pub start: u64,
-    pub end: u64,
-}
+// ==============================================
+// PHASE (mirrors budokan_interfaces::budokan::Phase)
+// ==============================================
 
 #[derive(Copy, Drop, Serde, PartialEq)]
 pub enum Phase {
@@ -30,89 +32,56 @@ pub enum Phase {
     Finalized,
 }
 
-#[derive(Drop, Serde)]
-pub struct EntryFee {
-    pub token_address: ContractAddress,
-    pub amount: u128,
-    pub distribution: Distribution,
-    pub tournament_creator_share: Option<u16>,
-    pub game_creator_share: Option<u16>,
-    pub refund_share: Option<u16>,
-    pub distribution_positions: Option<u32>,
+// ==============================================
+// LEADERBOARD CONFIG (mirrors game_components leaderboard LeaderboardStoreConfig)
+// ==============================================
+
+#[derive(Copy, Drop, Serde)]
+pub struct LeaderboardStoreConfig {
+    pub max_entries: u32,
+    pub ascending: bool,
+    pub game_address: ContractAddress,
 }
 
-#[derive(Drop, Serde)]
-pub struct Tournament {
-    pub id: u64,
-    pub created_at: u64,
-    pub created_by: ContractAddress,
-    pub creator_token_id: u64,
-    pub metadata: Metadata,
-    pub schedule: Schedule,
-    pub game_config: GameConfig,
-    pub entry_fee: Option<EntryFee>,
-    pub entry_requirement: Option<EntryRequirement>,
-}
+// ==============================================
+// METAGAME CONTEXT (mirrors game_components GameContextDetails)
+// ==============================================
 
-#[derive(Clone, Drop, Serde, starknet::Store)]
-pub struct Metadata {
+#[derive(Drop, Serde, Copy, Clone)]
+pub struct GameContext {
     pub name: felt252,
+    pub value: felt252,
+}
+
+#[derive(Drop, Serde, Clone)]
+pub struct GameContextDetails {
+    pub name: ByteArray,
     pub description: ByteArray,
+    pub id: Option<u32>,
+    pub context: Span<GameContext>,
 }
 
-#[derive(Drop, Serde)]
-pub struct GameConfig {
-    pub address: ContractAddress,
-    pub settings_id: u32,
-    pub soulbound: bool,
-    pub play_url: ByteArray,
-}
+// ==============================================
+// INTERFACE
+// ==============================================
 
-#[derive(Copy, Drop, Serde)]
-pub enum EntryFeeRewardType {
-    Position: u32,
-    TournamentCreator,
-    GameCreator,
-    Refund: u64,
-}
-
-#[derive(Copy, Drop, Serde)]
-pub enum RewardType {
-    Prize: PrizeType,
-    EntryFee: EntryFeeRewardType,
-}
-
+/// Combined read dispatcher for the Budokan contract. Each method dispatches
+/// by selector to Budokan's embedded component impls:
+///   - `current_phase`   -> `IBudokan`
+///   - `get_config`      -> `ILeaderboard`
+///   - `get_position`    -> `ILeaderboard`
+///   - `context_details` -> `IMetagameContextDetails`
 #[starknet::interface]
-pub trait ITournament<TState> {
-    fn total_tournaments(self: @TState) -> u64;
-    fn tournament(self: @TState, tournament_id: u64) -> Tournament;
-    fn tournament_entries(self: @TState, tournament_id: u64) -> u32;
-    fn get_leaderboard(self: @TState, tournament_id: u64) -> Array<u64>;
+pub trait IBudokanValidatorReads<TState> {
+    /// Tournament lifecycle phase.
     fn current_phase(self: @TState, tournament_id: u64) -> Phase;
-    fn create_tournament(
-        ref self: TState,
-        creator_rewards_address: ContractAddress,
-        metadata: Metadata,
-        schedule: Schedule,
-        game_config: GameConfig,
-        entry_fee: Option<EntryFee>,
-        entry_requirement: Option<EntryRequirement>,
-    ) -> Tournament;
-    fn enter_tournament(
-        ref self: TState,
-        tournament_id: u64,
-        player_name: felt252,
-        player_address: ContractAddress,
-        qualification: Option<QualificationProof>,
-    ) -> (u64, u32);
-    fn ban_entry(ref self: TState, tournament_id: u64, game_token_id: u64, proof: Span<felt252>);
-    fn submit_score(ref self: TState, tournament_id: u64, token_id: u64, position: u8);
-    fn claim_reward(ref self: TState, tournament_id: u64, reward_type: RewardType);
-    fn add_prize(
-        ref self: TState,
-        tournament_id: u64,
-        token_address: ContractAddress,
-        token_type: TokenTypeData,
-        position: Option<u32>,
-    ) -> Prize;
+    /// Leaderboard config for a context; `game_address` is the qualifying
+    /// tournament's game contract (used to resolve the ERC721 for ownership).
+    fn get_config(self: @TState, context_id: u64) -> LeaderboardStoreConfig;
+    /// 1-indexed leaderboard position of `token_id` in `context_id`, or
+    /// `None` if the token has not placed (i.e. never submitted a score).
+    fn get_position(self: @TState, context_id: u64, token_id: felt252) -> Option<u32>;
+    /// Metagame context details for a game token; `id` is `Some(tournament_id)`
+    /// the token is registered in, or `Some(0)`/`None` when unregistered.
+    fn context_details(self: @TState, token_id: felt252) -> GameContextDetails;
 }

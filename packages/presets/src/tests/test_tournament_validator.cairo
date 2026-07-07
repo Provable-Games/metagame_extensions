@@ -8,9 +8,8 @@
 use metagame_extensions_interfaces::entry_requirement_extension::{
     IEntryRequirementExtensionDispatcher, IEntryRequirementExtensionDispatcherTrait,
 };
-use metagame_extensions_interfaces::registration::Registration;
 use metagame_extensions_interfaces::tournament::{
-    EntryFee, GameConfig, Metadata, Period, Phase, Schedule, Tournament,
+    GameContext, GameContextDetails, LeaderboardStoreConfig, Phase,
 };
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address, start_mock_call,
@@ -45,34 +44,22 @@ fn deploy_tournament_validator() -> ContractAddress {
     contract_address
 }
 
-/// Build a minimal Tournament struct. Only `game_config.address` is consulted by
-/// `validate_token_participation`; everything else is filler that satisfies serde.
-fn fake_tournament(id: u64) -> Tournament {
-    Tournament {
-        id,
-        created_at: 0,
-        created_by: 0_felt252.try_into().unwrap(),
-        creator_token_id: 0,
-        metadata: Metadata { name: 'fake', description: "" },
-        schedule: Schedule {
-            registration: Option::None, game: Period { start: 0, end: 0 }, submission_duration: 0,
-        },
-        game_config: GameConfig {
-            address: game_address(), settings_id: 0, soulbound: false, play_url: "",
-        },
-        entry_fee: Option::<EntryFee>::None,
-        entry_requirement: Option::None,
+/// Leaderboard config whose `game_address` is the only field the validator reads
+/// from `get_config` (to resolve the qualifying tournament's game contract).
+fn fake_leaderboard_config() -> LeaderboardStoreConfig {
+    LeaderboardStoreConfig {
+        max_entries: 0xFFFFFFFF, ascending: false, game_address: game_address(),
     }
 }
 
-fn fake_registration(token_id: u64, context_id: u64) -> Registration {
-    Registration {
-        game_address: game_address(),
-        game_token_id: token_id,
-        context_id,
-        entry_number: 1,
-        has_submitted: false,
-        is_banned: false,
+/// Metagame context details whose `id` is the tournament the token is registered
+/// in. Only `id` is consulted by the validator on the PARTICIPANTS path.
+fn fake_context_details(context_id: u64) -> GameContextDetails {
+    GameContextDetails {
+        name: "Budokan",
+        description: "",
+        id: Option::Some(context_id.try_into().unwrap()),
+        context: array![GameContext { name: 'Tournament ID', value: context_id.into() }].span(),
     }
 }
 
@@ -97,15 +84,15 @@ fn configure_per_token_participants(
     stop_cheat_caller_address(validator_address);
 }
 
-/// Mock all four cross-contract reads on the happy PARTICIPANTS path.
+/// Mock all cross-contract reads on the happy PARTICIPANTS path.
+/// `qualifying_token_id` is retained for call-site symmetry but the mocked
+/// `context_details` returns the same value regardless of the token argument.
 fn mock_happy_participants_path(qualifying_tournament_id: u64, qualifying_token_id: u64) {
-    start_mock_call(
-        tournament_address(), selector!("tournament"), fake_tournament(qualifying_tournament_id),
-    );
+    start_mock_call(tournament_address(), selector!("get_config"), fake_leaderboard_config());
     start_mock_call(
         tournament_address(),
-        selector!("get_registration"),
-        fake_registration(qualifying_token_id, qualifying_tournament_id),
+        selector!("context_details"),
+        fake_context_details(qualifying_tournament_id),
     );
     start_mock_call(game_address(), selector!("token_address"), game_token_address());
     start_mock_call(game_token_address(), selector!("owner_of"), player1());
@@ -217,17 +204,6 @@ fn test_invalid_qualification_rejects_before_quota_check() {
 //   2. validate_entry stays O(1) per round (no cumulative depth cost).
 //   3. add_entry under the new token-keyed quota model is callable each round.
 
-fn fake_registration_submitted(token_id: u64, context_id: u64) -> Registration {
-    Registration {
-        game_address: game_address(),
-        game_token_id: token_id,
-        context_id,
-        entry_number: 1,
-        has_submitted: true,
-        is_banned: false,
-    }
-}
-
 /// Configure round-N's tournament so entry requires winning round-N-1's tournament.
 fn configure_top_position_chain(
     validator_address: ContractAddress,
@@ -250,25 +226,17 @@ fn configure_top_position_chain(
     stop_cheat_caller_address(validator_address);
 }
 
-/// Mock the six cross-contract calls validate_token_participation makes on the
-/// happy TOP_POSITION path. Re-call each round to update the qualifying state.
+/// Mock the cross-contract calls validate_token_participation makes on the
+/// happy TOP_POSITION path. The winning token sits at leaderboard position 1
+/// (`get_position` returns `Some(1)`). Re-call each round to update state.
 fn mock_top_position_path(
     qualifying_tournament_id: u64, qualifying_token_id: u64, player: ContractAddress,
 ) {
-    start_mock_call(
-        tournament_address(), selector!("tournament"), fake_tournament(qualifying_tournament_id),
-    );
-    start_mock_call(
-        tournament_address(),
-        selector!("get_registration"),
-        fake_registration_submitted(qualifying_token_id, qualifying_tournament_id),
-    );
+    start_mock_call(tournament_address(), selector!("get_config"), fake_leaderboard_config());
     start_mock_call(game_address(), selector!("token_address"), game_token_address());
     start_mock_call(game_token_address(), selector!("owner_of"), player);
     start_mock_call(tournament_address(), selector!("current_phase"), Phase::Finalized);
-    start_mock_call(
-        tournament_address(), selector!("get_leaderboard"), array![qualifying_token_id],
-    );
+    start_mock_call(tournament_address(), selector!("get_position"), Option::<u32>::Some(1));
 }
 
 /// Configure a `2^rounds`-player single-elim bracket and walk one champion path
