@@ -1,0 +1,21 @@
+[package]
+name = "metagame_extensions_adventurer_oracle"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+openzeppelin_introspection.workspace = true
+
+[dev-dependencies]
+snforge_std.workspace = true
+assert_macros = "2.15.1"
+
+[lib]
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]

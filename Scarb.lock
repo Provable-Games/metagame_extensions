@@ -2,6 +2,14 @@
 version = 1
 
 [[package]]
+name = "metagame_extensions_adventurer_oracle"
+version = "0.1.5"
+dependencies = [
+ "openzeppelin_introspection",
+ "snforge_std",
+]
+
+[[package]]
 name = "metagame_extensions_entry_fee"
 version = "0.1.5"
 dependencies = [
