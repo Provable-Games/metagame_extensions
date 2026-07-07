@@ -109,7 +109,57 @@ pub fn scalar_value(adventurer: Adventurer, metric: Metric) -> u64 {
         Metric::ItemEquipped => core::panic_with_felt252('metric is not scalar'),
         Metric::ItemInBag => core::panic_with_felt252('metric is not scalar'),
         Metric::ItemGreatness => core::panic_with_felt252('metric is not scalar'),
+        Metric::ItemSetHeldAnywhere => core::panic_with_felt252('metric is not scalar'),
+        Metric::ItemSetEquipped => core::panic_with_felt252('metric is not scalar'),
+        Metric::ItemSetInBag => core::panic_with_felt252('metric is not scalar'),
     }
+}
+
+/// True for the `ItemSet*` metrics, which carry a stored item id list and are evaluated
+/// via `evaluate_item_set` (not `evaluate`).
+pub fn is_item_set_metric(metric: Metric) -> bool {
+    match metric {
+        Metric::ItemSetHeldAnywhere => true,
+        Metric::ItemSetEquipped => true,
+        Metric::ItemSetInBag => true,
+        _ => false,
+    }
+}
+
+/// Whether a single item id is held per an item-set metric's base predicate. A zero id
+/// is never considered held (empty slots share id 0). Returns false for non-set metrics.
+pub fn set_item_held(adventurer: Adventurer, bag: Bag, item_id: u8, metric: Metric) -> bool {
+    if item_id == 0 {
+        return false;
+    }
+    match metric {
+        Metric::ItemSetHeldAnywhere => is_equipped(adventurer.equipment, item_id)
+            || is_in_bag(bag, item_id),
+        Metric::ItemSetEquipped => is_equipped(adventurer.equipment, item_id),
+        Metric::ItemSetInBag => is_in_bag(bag, item_id),
+        _ => false,
+    }
+}
+
+/// Number of items from `items` the adventurer holds under the set metric's predicate.
+/// Duplicate ids in `items` are counted once each (the caller controls the list).
+pub fn count_items_held(adventurer: Adventurer, bag: Bag, items: Span<u8>, metric: Metric) -> u64 {
+    let mut count: u64 = 0;
+    for item_id in items {
+        if set_item_held(adventurer, bag, *item_id, metric) {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// Evaluate an item-set objective: compare the count of held set items against the
+/// configured `target` via `comparator`.
+pub fn evaluate_item_set(
+    adventurer: Adventurer, bag: Bag, items: Span<u8>, config: ObjectiveConfig,
+) -> bool {
+    let held = count_items_held(adventurer, bag, items, config.metric);
+    compare(held, config.comparator, config.target)
 }
 
 /// Apply a comparator between an extracted value and the target.
@@ -158,6 +208,11 @@ pub fn evaluate(adventurer: Adventurer, bag: Bag, config: ObjectiveConfig) -> bo
             let greatness: u64 = max_item_greatness(adventurer, bag, item_id).into();
             compare(greatness, config.comparator, config.aux)
         },
+        // Item-set metrics need the stored item id list, which `evaluate` does not have;
+        // the contract layer must route them through `evaluate_item_set`.
+        Metric::ItemSetHeldAnywhere => core::panic_with_felt252('metric needs item set'),
+        Metric::ItemSetEquipped => core::panic_with_felt252('metric needs item set'),
+        Metric::ItemSetInBag => core::panic_with_felt252('metric needs item set'),
         // Everything else is a scalar comparison.
         _ => {
             let value = scalar_value(adventurer, config.metric);

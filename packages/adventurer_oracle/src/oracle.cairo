@@ -16,12 +16,19 @@
 //!   2. the token's `settings_id` (from the token source) must equal the objective's
 //!      configured `settings_id` (else `false`);
 //!   3. fetch the live `(Adventurer, Bag)` from the adventurer source;
-//!   4. delegate the decision to the pure `oracle_lib::evaluate`.
+//!   4. delegate the decision to the pure `oracle_lib::evaluate` (or, for `ItemSet*`
+//!      objectives, to `oracle_lib::evaluate_item_set` with the stored item id list).
+//!
+//! ## Objective kinds
+//! - Scalar / single-item objectives are registered via `create_objective`.
+//! - Item-set objectives ("hold N of these item ids") are registered via
+//!   `create_item_set_objective`, which stores the item id list; the `ItemSet*` metrics
+//!   compare the count of held set items against `config.target`.
 //!
 //! ## Later layers
-//! A thin metagame *validator* (`examples/adventurer_validator.cairo`, out of scope for
-//! now) can implement the Budokan `entry_requirement` interface by delegating
-//! `validate_entry` to this oracle's `completed_objective` for a configured objective id.
+//! The thin metagame *validator* (`presets/.../entry_requirement/adventurer_validator.cairo`)
+//! implements the Budokan `entry_requirement` interface by delegating `validate_entry` to
+//! this oracle's `completed_objective` for a configured objective id.
 
 #[starknet::contract]
 pub mod AdventurerOracle {
@@ -61,6 +68,9 @@ pub mod AdventurerOracle {
         objectives: Map<u32, ObjectiveConfig>,
         objective_name: Map<u32, ByteArray>,
         objective_description: Map<u32, ByteArray>,
+        // Item id set for `ItemSet*` objectives (empty otherwise).
+        objective_item_len: Map<u32, u32>,
+        objective_items: Map<(u32, u32), u8>,
     }
 
     #[event]
@@ -92,6 +102,10 @@ pub mod AdventurerOracle {
         pub const NOT_OWNER: felt252 = 'Oracle: caller not owner';
         pub const SETTINGS_MISSING: felt252 = 'Oracle: settings do not exist';
         pub const OBJECTIVE_MISSING: felt252 = 'Oracle: objective missing';
+        pub const SET_METRIC_NEEDS_ITEMS: felt252 = 'Oracle: use item_set create';
+        pub const NOT_SET_METRIC: felt252 = 'Oracle: not an item-set metric';
+        pub const EMPTY_ITEM_SET: felt252 = 'Oracle: item set is empty';
+        pub const ZERO_ITEM_ID: felt252 = 'Oracle: item id is zero';
     }
 
     #[constructor]
@@ -140,7 +154,12 @@ pub mod AdventurerOracle {
                 contract_address: self.adventurer_source.read(),
             }
                 .load_assets(token_id);
-            oracle_lib::evaluate(adventurer, bag, config)
+            if oracle_lib::is_item_set_metric(config.metric) {
+                let items = self.read_objective_items(objective_id);
+                oracle_lib::evaluate_item_set(adventurer, bag, items, config)
+            } else {
+                oracle_lib::evaluate(adventurer, bag, config)
+            }
         }
 
         fn objective_exists_batch(self: @ContractState, objective_ids: Span<u32>) -> Array<bool> {
@@ -199,27 +218,53 @@ pub mod AdventurerOracle {
             config: ObjectiveConfig,
         ) -> u32 {
             self.assert_only_owner();
+            // Item-set metrics carry an item id list and must use
+            // `create_item_set_objective`.
+            assert(!oracle_lib::is_item_set_metric(config.metric), Errors::SET_METRIC_NEEDS_ITEMS);
+            self.register_objective(name, description, config)
+        }
 
-            // Validate the referenced game settings exist.
-            let exists = IGameSettingsSourceDispatcher {
-                contract_address: self.settings_source.read(),
+        fn create_item_set_objective(
+            ref self: ContractState,
+            name: ByteArray,
+            description: ByteArray,
+            config: ObjectiveConfig,
+            items: Span<u8>,
+        ) -> u32 {
+            self.assert_only_owner();
+            assert(oracle_lib::is_item_set_metric(config.metric), Errors::NOT_SET_METRIC);
+            assert(items.len() != 0, Errors::EMPTY_ITEM_SET);
+            for item_id in items {
+                assert(*item_id != 0, Errors::ZERO_ITEM_ID);
             }
-                .settings_exist(config.settings_id);
-            assert(exists, Errors::SETTINGS_MISSING);
 
-            let objective_id = self.objective_count.read() + 1;
-            self.objective_count.write(objective_id);
-            self.objectives.write(objective_id, config);
-            self.objective_name.write(objective_id, name);
-            self.objective_description.write(objective_id, description);
+            let objective_id = self.register_objective(name, description, config);
 
-            self.emit(ObjectiveCreated { objective_id, settings_id: config.settings_id });
+            // Persist the item id set alongside the objective.
+            self.objective_item_len.write(objective_id, items.len());
+            let mut index: u32 = 0;
+            for item_id in items {
+                self.objective_items.write((objective_id, index), *item_id);
+                index += 1;
+            }
             objective_id
         }
 
         fn get_objective(self: @ContractState, objective_id: u32) -> ObjectiveConfig {
             assert(self.objective_exists(objective_id), Errors::OBJECTIVE_MISSING);
             self.objectives.read(objective_id)
+        }
+
+        fn get_objective_items(self: @ContractState, objective_id: u32) -> Array<u8> {
+            assert(self.objective_exists(objective_id), Errors::OBJECTIVE_MISSING);
+            let len = self.objective_item_len.read(objective_id);
+            let mut items: Array<u8> = array![];
+            let mut index: u32 = 0;
+            while index != len {
+                items.append(self.objective_items.read((objective_id, index)));
+                index += 1;
+            }
+            items
         }
 
         fn owner(self: @ContractState) -> ContractAddress {
@@ -252,6 +297,43 @@ pub mod AdventurerOracle {
         fn assert_only_owner(self: @ContractState) {
             assert(get_caller_address() == self.owner.read(), Errors::NOT_OWNER);
         }
+
+        /// Validate settings + assign the next sequential id and persist the shared
+        /// objective fields (config/name/description). Callers add any metric-specific
+        /// state (e.g. the item set) afterwards. Assumes ownership was already checked.
+        fn register_objective(
+            ref self: ContractState,
+            name: ByteArray,
+            description: ByteArray,
+            config: ObjectiveConfig,
+        ) -> u32 {
+            let exists = IGameSettingsSourceDispatcher {
+                contract_address: self.settings_source.read(),
+            }
+                .settings_exist(config.settings_id);
+            assert(exists, Errors::SETTINGS_MISSING);
+
+            let objective_id = self.objective_count.read() + 1;
+            self.objective_count.write(objective_id);
+            self.objectives.write(objective_id, config);
+            self.objective_name.write(objective_id, name);
+            self.objective_description.write(objective_id, description);
+
+            self.emit(ObjectiveCreated { objective_id, settings_id: config.settings_id });
+            objective_id
+        }
+
+        /// Read the stored item id set for an objective as a span.
+        fn read_objective_items(self: @ContractState, objective_id: u32) -> Span<u8> {
+            let len = self.objective_item_len.read(objective_id);
+            let mut items: Array<u8> = array![];
+            let mut index: u32 = 0;
+            while index != len {
+                items.append(self.objective_items.read((objective_id, index)));
+                index += 1;
+            }
+            items.span()
+        }
     }
 
     fn metric_name(metric: Metric) -> felt252 {
@@ -273,6 +355,9 @@ pub mod AdventurerOracle {
             Metric::ItemEquipped => 'ItemEquipped',
             Metric::ItemInBag => 'ItemInBag',
             Metric::ItemGreatness => 'ItemGreatness',
+            Metric::ItemSetHeldAnywhere => 'ItemSetHeldAnywhere',
+            Metric::ItemSetEquipped => 'ItemSetEquipped',
+            Metric::ItemSetInBag => 'ItemSetInBag',
         }
     }
 

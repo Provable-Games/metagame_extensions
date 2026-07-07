@@ -86,6 +86,19 @@ pub enum Metric {
     /// equipped + bag copies, compared against `aux` via `comparator`. Absent item
     /// yields greatness 0 (fails an `AtLeast`/`GreaterThan` check).
     ItemGreatness,
+    // -- Item-set checks (item ids stored alongside the objective) -------
+    // For these metrics the extracted value is the *number of items from the
+    // configured set* that the adventurer holds, compared against `target` via
+    // `comparator`. "Hold all of {A,B,C}" is `target = 3, comparator = AtLeast`;
+    // "hold at least one of {A,B,C}" is `target = 1, comparator = AtLeast`. The item
+    // id list is supplied to `create_item_set_objective` (not to `create_objective`);
+    // `target`/`aux` in `ObjectiveConfig` are the count threshold, not item ids.
+    /// Count of set items held anywhere (equipped OR bag).
+    ItemSetHeldAnywhere,
+    /// Count of set items currently equipped.
+    ItemSetEquipped,
+    /// Count of set items present in the bag.
+    ItemSetInBag,
 }
 
 /// How the extracted value is compared against the objective target.
@@ -130,8 +143,27 @@ pub trait IAdventurerOracle<TState> {
         ref self: TState, name: ByteArray, description: ByteArray, config: ObjectiveConfig,
     ) -> u32;
 
+    /// Register an item-set objective ("hold N of these item ids"). Owner-only. Returns
+    /// the assigned objective id (shares the same sequential id space as
+    /// `create_objective`). `config.metric` must be one of the `ItemSet*` metrics and
+    /// `config.target` is the required count (compared via `config.comparator`).
+    /// `items` is the set of item ids (each non-zero); reverts if empty, if it contains
+    /// a zero id, if the metric is not an item-set metric, or if `config.settings_id`
+    /// does not exist.
+    fn create_item_set_objective(
+        ref self: TState,
+        name: ByteArray,
+        description: ByteArray,
+        config: ObjectiveConfig,
+        items: Span<u8>,
+    ) -> u32;
+
     /// The stored configuration for an objective (panics if it does not exist).
     fn get_objective(self: @TState, objective_id: u32) -> ObjectiveConfig;
+
+    /// The item id set registered for an item-set objective (empty for other
+    /// objectives). Panics if the objective does not exist.
+    fn get_objective_items(self: @TState, objective_id: u32) -> Array<u8>;
 
     fn owner(self: @TState) -> ContractAddress;
     fn transfer_ownership(ref self: TState, new_owner: ContractAddress);

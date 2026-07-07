@@ -498,3 +498,174 @@ fn test_transfer_ownership() {
     stop_cheat_caller_address(oracle.contract_address);
     assert!(id == 1, "new owner created objective");
 }
+
+// ---------------------------------------------------------------------------
+// Item-set objectives
+// ---------------------------------------------------------------------------
+
+/// Register an item-set objective as the owner.
+fn create_set(
+    oracle: IAdventurerOracleDispatcher, config: ObjectiveConfig, items: Span<u8>,
+) -> u32 {
+    start_cheat_caller_address(oracle.contract_address, owner_addr());
+    let id = oracle.create_item_set_objective("set", "hold the set", config, items);
+    stop_cheat_caller_address(oracle.contract_address);
+    id
+}
+
+// -- Pure library --
+
+#[test]
+fn test_count_items_held_variants() {
+    let mut adv = base_adventurer();
+    adv.equipment.weapon = item(10, 5);
+    adv.equipment.ring = item(20, 5);
+    let mut bag = empty_bag();
+    bag.item_1 = item(30, 5);
+    let set = array![10_u8, 20, 30, 40].span();
+
+    // Held anywhere: 10 (equipped), 20 (equipped), 30 (bag) => 3; 40 absent.
+    assert!(
+        oracle_lib::count_items_held(adv, bag, set, Metric::ItemSetHeldAnywhere) == 3,
+        "3 held anywhere",
+    );
+    // Equipped only: 10, 20 => 2.
+    assert!(
+        oracle_lib::count_items_held(adv, bag, set, Metric::ItemSetEquipped) == 2, "2 equipped",
+    );
+    // In bag only: 30 => 1.
+    assert!(oracle_lib::count_items_held(adv, bag, set, Metric::ItemSetInBag) == 1, "1 in bag");
+}
+
+#[test]
+fn test_set_item_held_ignores_zero_id() {
+    let adv = base_adventurer(); // all empty slots have id 0
+    let bag = empty_bag();
+    // A zero id must never be counted even though empty slots carry id 0.
+    assert!(
+        !oracle_lib::set_item_held(adv, bag, 0, Metric::ItemSetHeldAnywhere), "zero id not held",
+    );
+    assert!(
+        oracle_lib::count_items_held(
+            adv, bag, array![0_u8, 0].span(), Metric::ItemSetHeldAnywhere,
+        ) == 0,
+        "zeros count as 0",
+    );
+}
+
+// -- Contract layer --
+
+#[test]
+fn test_item_set_hold_all() {
+    let (mock, oracle) = setup();
+    // Require all 3 of {10, 20, 30} held anywhere.
+    let id = create_set(
+        oracle,
+        config(Metric::ItemSetHeldAnywhere, Comparator::AtLeast, 3, 0),
+        array![10_u8, 20, 30].span(),
+    );
+    let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
+
+    let token_id: felt252 = 900;
+    mock.set_token_settings(token_id, 0);
+
+    // Only 2 of 3 held -> incomplete.
+    let mut adv = base_adventurer();
+    adv.equipment.weapon = item(10, 1);
+    let mut bag = empty_bag();
+    bag.item_1 = item(20, 1);
+    mock.set_assets(token_id, adv, bag);
+    assert!(!objectives.completed_objective(token_id, id), "2 of 3 -> incomplete");
+
+    // All 3 held -> complete.
+    bag.item_2 = item(30, 1);
+    mock.set_assets(token_id, adv, bag);
+    assert!(objectives.completed_objective(token_id, id), "3 of 3 -> complete");
+
+    // Stored item set is retrievable.
+    assert!(oracle.get_objective_items(id) == array![10_u8, 20, 30], "items round-trip");
+}
+
+#[test]
+fn test_item_set_hold_any() {
+    let (mock, oracle) = setup();
+    // "Hold at least one of {5, 6}" equipped.
+    let id = create_set(
+        oracle, config(Metric::ItemSetEquipped, Comparator::AtLeast, 1, 0), array![5_u8, 6].span(),
+    );
+    let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
+
+    let token_id: felt252 = 901;
+    mock.set_token_settings(token_id, 0);
+
+    // None equipped (6 only in bag) -> incomplete.
+    let mut bag = empty_bag();
+    bag.item_1 = item(6, 1);
+    mock.set_assets(token_id, base_adventurer(), bag);
+    assert!(!objectives.completed_objective(token_id, id), "bag copy does not satisfy equipped");
+
+    // One equipped -> complete.
+    let mut adv = base_adventurer();
+    adv.equipment.head = item(6, 1);
+    mock.set_assets(token_id, adv, empty_bag());
+    assert!(objectives.completed_objective(token_id, id), "one equipped -> complete");
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: use item_set create')]
+fn test_create_objective_rejects_set_metric() {
+    let (_mock, oracle) = setup();
+    start_cheat_caller_address(oracle.contract_address, owner_addr());
+    oracle.create_objective("n", "d", config(Metric::ItemSetEquipped, Comparator::AtLeast, 1, 0));
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: not an item-set metric')]
+fn test_create_item_set_rejects_scalar_metric() {
+    let (_mock, oracle) = setup();
+    start_cheat_caller_address(oracle.contract_address, owner_addr());
+    oracle
+        .create_item_set_objective(
+            "n", "d", config(Metric::Gold, Comparator::AtLeast, 1, 0), array![1_u8].span(),
+        );
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: item set is empty')]
+fn test_create_item_set_rejects_empty() {
+    let (_mock, oracle) = setup();
+    start_cheat_caller_address(oracle.contract_address, owner_addr());
+    oracle
+        .create_item_set_objective(
+            "n",
+            "d",
+            config(Metric::ItemSetHeldAnywhere, Comparator::AtLeast, 1, 0),
+            array![].span(),
+        );
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: item id is zero')]
+fn test_create_item_set_rejects_zero_id() {
+    let (_mock, oracle) = setup();
+    start_cheat_caller_address(oracle.contract_address, owner_addr());
+    oracle
+        .create_item_set_objective(
+            "n",
+            "d",
+            config(Metric::ItemSetHeldAnywhere, Comparator::AtLeast, 1, 0),
+            array![1_u8, 0, 3].span(),
+        );
+}
+
+#[test]
+fn test_item_set_shares_id_space_with_scalar() {
+    let (_mock, oracle) = setup();
+    let a = create(oracle, config(Metric::Xp, Comparator::AtLeast, 1, 0));
+    let b = create_set(
+        oracle, config(Metric::ItemSetHeldAnywhere, Comparator::AtLeast, 1, 0), array![7_u8].span(),
+    );
+    assert!(a == 1 && b == 2, "sequential ids across both creators");
+    // A scalar objective has no item set.
+    assert!(oracle.get_objective_items(a).len() == 0, "scalar has no items");
+}
