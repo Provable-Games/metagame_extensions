@@ -1,7 +1,7 @@
 use metagame_extensions_adventurer_oracle::interface::{
-    Comparator, IAdventurerOracleDispatcher, IAdventurerOracleDispatcherTrait,
+    Comparator, Condition, IAdventurerOracleDispatcher, IAdventurerOracleDispatcherTrait,
     IMinigameObjectivesDetailsDispatcher, IMinigameObjectivesDetailsDispatcherTrait,
-    IMinigameObjectivesDispatcher, IMinigameObjectivesDispatcherTrait, Metric, ObjectiveConfig,
+    IMinigameObjectivesDispatcher, IMinigameObjectivesDispatcherTrait, Metric,
 };
 use metagame_extensions_adventurer_oracle::mock_game::{
     IMockGameDispatcher, IMockGameDispatcherTrait,
@@ -89,8 +89,8 @@ fn base_adventurer() -> Adventurer {
     }
 }
 
-fn config(metric: Metric, comparator: Comparator, target: u64, aux: u64) -> ObjectiveConfig {
-    ObjectiveConfig { settings_id: 0, metric, comparator, target, aux }
+fn config(metric: Metric, comparator: Comparator, target: u64, aux: u64) -> Condition {
+    Condition { metric, comparator, target, aux }
 }
 
 // ---------------------------------------------------------------------------
@@ -149,51 +149,74 @@ fn test_evaluate_scalar_metrics() {
     adv.stats.luck = 21;
     let bag = empty_bag();
 
-    assert!(oracle_lib::evaluate(adv, bag, config(Metric::Xp, Comparator::AtLeast, 400, 0)), "xp");
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Level, Comparator::AtLeast, 20, 0)), "level",
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Xp, Comparator::AtLeast, 400, 0)),
+        "xp",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Gold, Comparator::AtLeast, 250, 0)), "gold",
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Level, Comparator::AtLeast, 20, 0)),
+        "level",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Health, Comparator::Equal, 80, 0)), "health",
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Gold, Comparator::AtLeast, 250, 0)),
+        "gold",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::BeastHealth, Comparator::AtMost, 30, 0)),
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Health, Comparator::Equal, 80, 0)),
+        "health",
+    );
+    assert!(
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::BeastHealth, Comparator::AtMost, 30, 0),
+        ),
         "beast",
     );
     assert!(
-        oracle_lib::evaluate(
+        oracle_lib::evaluate_condition(
             adv, bag, config(Metric::StatUpgradesAvailable, Comparator::Equal, 3, 0),
         ),
         "upgrades",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Strength, Comparator::GreaterThan, 10, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::Strength, Comparator::GreaterThan, 10, 0),
+        ),
         "str",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Dexterity, Comparator::Equal, 7, 0)), "dex",
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::Dexterity, Comparator::Equal, 7, 0),
+        ),
+        "dex",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Vitality, Comparator::Equal, 9, 0)), "vit",
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Vitality, Comparator::Equal, 9, 0)),
+        "vit",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Intelligence, Comparator::Equal, 4, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::Intelligence, Comparator::Equal, 4, 0),
+        ),
         "int",
     );
-    assert!(oracle_lib::evaluate(adv, bag, config(Metric::Wisdom, Comparator::Equal, 6, 0)), "wis");
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Charisma, Comparator::Equal, 11, 0)), "cha",
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Wisdom, Comparator::Equal, 6, 0)),
+        "wis",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::Luck, Comparator::AtLeast, 20, 0)), "luck",
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::Charisma, Comparator::Equal, 11, 0),
+        ),
+        "cha",
+    );
+    assert!(
+        oracle_lib::evaluate_condition(adv, bag, config(Metric::Luck, Comparator::AtLeast, 20, 0)),
+        "luck",
     );
 
     // Negative case.
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::Xp, Comparator::AtLeast, 401, 0)),
+        !oracle_lib::evaluate_condition(adv, bag, config(Metric::Xp, Comparator::AtLeast, 401, 0)),
         "xp 400 !>= 401",
     );
 }
@@ -205,21 +228,29 @@ fn test_evaluate_item_equipped() {
     let bag = empty_bag();
 
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 42, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 42, 0),
+        ),
         "equipped 42",
     );
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 7, 0)),
+        !oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 7, 0),
+        ),
         "not equipped 7",
     );
     // Equipped counts as held-anywhere.
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::ItemHeldAnywhere, Comparator::Equal, 42, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemHeldAnywhere, Comparator::Equal, 42, 0),
+        ),
         "held 42",
     );
     // Equipped item is not in bag.
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::ItemInBag, Comparator::Equal, 42, 0)),
+        !oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemInBag, Comparator::Equal, 42, 0),
+        ),
         "not in bag",
     );
 }
@@ -231,20 +262,26 @@ fn test_evaluate_item_in_bag_and_held_anywhere() {
     bag.item_9 = item(77, 50);
 
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::ItemInBag, Comparator::Equal, 77, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemInBag, Comparator::Equal, 77, 0),
+        ),
         "in bag 77",
     );
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::ItemHeldAnywhere, Comparator::Equal, 77, 0)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemHeldAnywhere, Comparator::Equal, 77, 0),
+        ),
         "held 77",
     );
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 77, 0)),
+        !oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemEquipped, Comparator::Equal, 77, 0),
+        ),
         "not equipped 77",
     );
     // Item id beyond u8 range is unsatisfiable.
     assert!(
-        !oracle_lib::evaluate(
+        !oracle_lib::evaluate_condition(
             adv, bag, config(Metric::ItemHeldAnywhere, Comparator::Equal, 999, 0),
         ),
         "oversized id",
@@ -260,16 +297,22 @@ fn test_evaluate_item_greatness() {
 
     // aux is the greatness threshold; comparator applied to greatness.
     assert!(
-        oracle_lib::evaluate(adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 5, 15)),
+        oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 5, 15),
+        ),
         "max greatness 15 >= 15",
     );
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 5, 16)),
+        !oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 5, 16),
+        ),
         "max greatness 15 !>= 16",
     );
     // Absent item -> greatness 0.
     assert!(
-        !oracle_lib::evaluate(adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 9, 1)),
+        !oracle_lib::evaluate_condition(
+            adv, bag, config(Metric::ItemGreatness, Comparator::AtLeast, 9, 1),
+        ),
         "absent item greatness 0",
     );
 }
@@ -281,7 +324,7 @@ fn test_fuzz_xp_atleast_matches_direct_compare(xp: u16, target: u16) {
     adv.xp = xp;
     let cfg = config(Metric::Xp, Comparator::AtLeast, target.into(), 0);
     let expected = xp >= target;
-    assert!(oracle_lib::evaluate(adv, empty_bag(), cfg) == expected, "fuzz xp atleast");
+    assert!(oracle_lib::evaluate_condition(adv, empty_bag(), cfg) == expected, "fuzz xp atleast");
 }
 
 #[test]
@@ -323,9 +366,20 @@ fn setup() -> (IMockGameDispatcher, IAdventurerOracleDispatcher) {
     (mock, oracle)
 }
 
-fn create(oracle: IAdventurerOracleDispatcher, config: ObjectiveConfig) -> u32 {
+/// Create a single-condition objective scoped to settings_id 0, no item set.
+fn create(oracle: IAdventurerOracleDispatcher, condition: Condition) -> u32 {
+    create_full(oracle, 0, array![condition], Option::None)
+}
+
+/// Create an objective with an explicit settings id, conditions, and optional item set.
+fn create_full(
+    oracle: IAdventurerOracleDispatcher,
+    settings_id: u32,
+    conditions: Array<Condition>,
+    items: Option<Array<u8>>,
+) -> u32 {
     start_cheat_caller_address(oracle.contract_address, owner_addr());
-    let id = oracle.create_objective("name", "desc", config);
+    let id = oracle.create_objective("name", "desc", settings_id, conditions, items);
     stop_cheat_caller_address(oracle.contract_address);
     id
 }
@@ -344,9 +398,11 @@ fn test_create_objective_increments_ids() {
     assert!(!objectives.objective_exists(3), "obj 3 missing");
     assert!(!objectives.objective_exists(0), "obj 0 missing");
 
-    let stored = oracle.get_objective(1);
-    assert!(stored.target == 100, "stored target");
-    assert!(stored.metric == Metric::Xp, "stored metric");
+    let stored = oracle.get_objective_conditions(1);
+    assert!(stored.len() == 1, "one condition");
+    assert!(*stored.at(0).target == 100, "stored target");
+    assert!(*stored.at(0).metric == Metric::Xp, "stored metric");
+    assert!(oracle.get_objective_settings_id(1) == 0, "settings id");
 }
 
 #[test]
@@ -354,7 +410,10 @@ fn test_create_objective_increments_ids() {
 fn test_create_objective_only_owner() {
     let (_mock, oracle) = setup();
     start_cheat_caller_address(oracle.contract_address, stranger_addr());
-    oracle.create_objective("n", "d", config(Metric::Xp, Comparator::AtLeast, 1, 0));
+    oracle
+        .create_objective(
+            "n", "d", 0, array![config(Metric::Xp, Comparator::AtLeast, 1, 0)], Option::None,
+        );
 }
 
 #[test]
@@ -362,12 +421,7 @@ fn test_create_objective_only_owner() {
 fn test_create_objective_unknown_settings() {
     let (_mock, oracle) = setup();
     // settings_id 5 was never registered on the mock.
-    create(
-        oracle,
-        ObjectiveConfig {
-            settings_id: 5, metric: Metric::Xp, comparator: Comparator::AtLeast, target: 1, aux: 0,
-        },
-    );
+    create_full(oracle, 5, array![config(Metric::Xp, Comparator::AtLeast, 1, 0)], Option::None);
 }
 
 #[test]
@@ -427,11 +481,8 @@ fn test_completed_objective_bag_item() {
 fn test_settings_id_mismatch_returns_false() {
     let (mock, oracle) = setup();
     // Objective requires settings_id 1.
-    let id = create(
-        oracle,
-        ObjectiveConfig {
-            settings_id: 1, metric: Metric::Xp, comparator: Comparator::AtLeast, target: 1, aux: 0,
-        },
+    let id = create_full(
+        oracle, 1, array![config(Metric::Xp, Comparator::AtLeast, 1, 0)], Option::None,
     );
     let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
 
@@ -477,7 +528,8 @@ fn test_batch_helpers_and_details() {
     };
     assert!(details.objectives_count() == 2, "count 2");
     let d = details.objectives_details(id1);
-    assert!(d.objectives.len() == 5, "5 detail rows");
+    // Settings Id + (metric + comparator) for the single condition.
+    assert!(d.objectives.len() == 3, "3 detail rows");
     let batch = details.objectives_details_batch(array![id1, id2].span());
     assert!(batch.len() == 2, "batch len 2");
 }
@@ -494,7 +546,117 @@ fn test_transfer_ownership() {
 
     // New owner can create; settings 0 is registered.
     start_cheat_caller_address(oracle.contract_address, stranger_addr());
-    let id = oracle.create_objective("n", "d", config(Metric::Gold, Comparator::AtLeast, 1, 0));
+    let id = oracle
+        .create_objective(
+            "n", "d", 0, array![config(Metric::Gold, Comparator::AtLeast, 1, 0)], Option::None,
+        );
     stop_cheat_caller_address(oracle.contract_address);
     assert!(id == 1, "new owner created objective");
+}
+
+// ---------------------------------------------------------------------------
+// Composite conditions + item sets (unified create_objective)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_composite_conditions_all_required() {
+    let (mock, oracle) = setup();
+    // One objective: level >= 5 AND gold >= 200.
+    let id = create_full(
+        oracle,
+        0,
+        array![
+            config(Metric::Level, Comparator::AtLeast, 5, 0),
+            config(Metric::Gold, Comparator::AtLeast, 200, 0),
+        ],
+        Option::None,
+    );
+    let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
+    let token_id: felt252 = 700;
+    mock.set_token_settings(token_id, 0);
+
+    // Level ok (xp 25 -> level 5) but gold short -> incomplete.
+    let mut adv = base_adventurer();
+    adv.xp = 25;
+    adv.gold = 199;
+    mock.set_assets(token_id, adv, empty_bag());
+    assert!(!objectives.completed_objective(token_id, id), "gold short -> incomplete");
+
+    // Both satisfied -> complete.
+    adv.gold = 200;
+    mock.set_assets(token_id, adv, empty_bag());
+    assert!(objectives.completed_objective(token_id, id), "both -> complete");
+
+    assert!(oracle.get_objective_conditions(id).len() == 2, "two conditions stored");
+}
+
+#[test]
+fn test_item_set_hold_all() {
+    let (mock, oracle) = setup();
+    // Own the whole set {10, 20, 30} (held anywhere), plus a scalar condition.
+    let id = create_full(
+        oracle,
+        0,
+        array![config(Metric::Level, Comparator::AtLeast, 1, 0)],
+        Option::Some(array![10_u8, 20, 30]),
+    );
+    let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
+    let token_id: felt252 = 701;
+    mock.set_token_settings(token_id, 0);
+
+    // Missing item 30 -> incomplete.
+    let mut adv = base_adventurer();
+    adv.equipment.weapon = item(10, 1);
+    let mut bag = empty_bag();
+    bag.item_1 = item(20, 1);
+    mock.set_assets(token_id, adv, bag);
+    assert!(!objectives.completed_objective(token_id, id), "missing item -> incomplete");
+
+    // All three held -> complete.
+    bag.item_2 = item(30, 1);
+    mock.set_assets(token_id, adv, bag);
+    assert!(objectives.completed_objective(token_id, id), "full set -> complete");
+
+    assert!(oracle.get_objective_items(id) == array![10_u8, 20, 30], "items round-trip");
+}
+
+#[test]
+fn test_items_only_objective() {
+    let (mock, oracle) = setup();
+    // No conditions — only an item requirement.
+    let id = create_full(oracle, 0, array![], Option::Some(array![42_u8]));
+    let objectives = IMinigameObjectivesDispatcher { contract_address: oracle.contract_address };
+    let token_id: felt252 = 702;
+    mock.set_token_settings(token_id, 0);
+
+    let mut adv = base_adventurer();
+    adv.equipment.ring = item(42, 1);
+    mock.set_assets(token_id, adv, empty_bag());
+    assert!(objectives.completed_objective(token_id, id), "holds the item -> complete");
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: objective is empty')]
+fn test_empty_objective_rejected() {
+    let (_mock, oracle) = setup();
+    create_full(oracle, 0, array![], Option::None);
+}
+
+#[test]
+#[should_panic(expected: 'Oracle: item id is zero')]
+fn test_zero_item_id_rejected() {
+    let (_mock, oracle) = setup();
+    create_full(oracle, 0, array![], Option::Some(array![1_u8, 0, 3]));
+}
+
+#[test]
+fn test_holds_all_items_pure() {
+    let mut adv = base_adventurer();
+    adv.equipment.weapon = item(10, 1);
+    let mut bag = empty_bag();
+    bag.item_1 = item(20, 1);
+    assert!(oracle_lib::holds_all_items(adv, bag, array![10_u8, 20].span()), "has both");
+    assert!(!oracle_lib::holds_all_items(adv, bag, array![10_u8, 99].span()), "missing 99");
+    assert!(oracle_lib::holds_all_items(adv, bag, array![].span()), "empty vacuously true");
+    assert!(!oracle_lib::holds_all_items(adv, bag, array![0_u8].span()), "zero id not held");
 }

@@ -1,9 +1,9 @@
 //! Pure objective-evaluation logic. No storage, no syscalls — trivially unit/fuzz
 //! testable and portable. The oracle contract layer only fetches state and delegates
-//! the actual decision to `evaluate`.
+//! the actual decision to `evaluate_condition` / `holds_all_items`.
 
 use core::num::traits::Sqrt;
-use crate::interface::{Comparator, Metric, ObjectiveConfig};
+use crate::interface::{Comparator, Condition, Metric};
 use crate::types::{Adventurer, Bag, Equipment, Item};
 
 /// Max item greatness, mirrors `death_mountain` `ITEM_MAX_GREATNESS`.
@@ -124,44 +124,56 @@ pub fn compare(value: u64, comparator: Comparator, target: u64) -> bool {
     }
 }
 
-/// Evaluate an objective against a fully-loaded adventurer + bag.
-pub fn evaluate(adventurer: Adventurer, bag: Bag, config: ObjectiveConfig) -> bool {
-    match config.metric {
+/// Evaluate ONE condition against a fully-loaded adventurer + bag.
+pub fn evaluate_condition(adventurer: Adventurer, bag: Bag, condition: Condition) -> bool {
+    match condition.metric {
         // Boolean "holds item X" checks: target encodes the item id. A target that
         // does not fit in a u8 can never match an item id, so it is unsatisfiable.
         Metric::ItemHeldAnywhere => {
-            let item_id: u8 = match config.target.try_into() {
+            let item_id: u8 = match condition.target.try_into() {
                 Option::Some(v) => v,
                 Option::None => { return false; },
             };
             is_equipped(adventurer.equipment, item_id) || is_in_bag(bag, item_id)
         },
         Metric::ItemEquipped => {
-            let item_id: u8 = match config.target.try_into() {
+            let item_id: u8 = match condition.target.try_into() {
                 Option::Some(v) => v,
                 Option::None => { return false; },
             };
             is_equipped(adventurer.equipment, item_id)
         },
         Metric::ItemInBag => {
-            let item_id: u8 = match config.target.try_into() {
+            let item_id: u8 = match condition.target.try_into() {
                 Option::Some(v) => v,
                 Option::None => { return false; },
             };
             is_in_bag(bag, item_id)
         },
         Metric::ItemGreatness => {
-            let item_id: u8 = match config.target.try_into() {
+            let item_id: u8 = match condition.target.try_into() {
                 Option::Some(v) => v,
                 Option::None => { return false; },
             };
             let greatness: u64 = max_item_greatness(adventurer, bag, item_id).into();
-            compare(greatness, config.comparator, config.aux)
+            compare(greatness, condition.comparator, condition.aux)
         },
         // Everything else is a scalar comparison.
         _ => {
-            let value = scalar_value(adventurer, config.metric);
-            compare(value, config.comparator, config.target)
+            let value = scalar_value(adventurer, condition.metric);
+            compare(value, condition.comparator, condition.target)
         },
     }
+}
+
+/// True iff the adventurer holds EVERY item id in `items` (equipped or in the bag).
+/// An empty list is vacuously true. A zero id is never held, so it fails the check.
+pub fn holds_all_items(adventurer: Adventurer, bag: Bag, items: Span<u8>) -> bool {
+    for item_id in items {
+        let id = *item_id;
+        if id == 0 || !(is_equipped(adventurer.equipment, id) || is_in_bag(bag, id)) {
+            return false;
+        }
+    }
+    true
 }

@@ -50,11 +50,15 @@ pub trait IMinigameObjectivesDetails<TState> {
 // Objective configuration schema
 // ---------------------------------------------------------------------------
 
-/// The adventurer attribute an objective evaluates.
+/// The adventurer attribute a single objective CONDITION evaluates.
 ///
-/// Scalar metrics compare a single numeric attribute against `ObjectiveConfig.target`
-/// using `ObjectiveConfig.comparator`. Item metrics use `target` as the item id (and,
+/// Scalar metrics compare a single numeric attribute against `Condition.target`
+/// using `Condition.comparator`. Item metrics use `target` as the item id (and,
 /// for `ItemGreatness`, `aux` as the greatness threshold compared via `comparator`).
+///
+/// "Own a whole SET of items" is NOT a metric — it is the objective-level `items`
+/// list (see `create_objective`), so a set requirement is one entry, not one
+/// condition per id.
 ///
 /// Adding a new scalar metric is a one-line change in `oracle_lib::scalar_value`.
 #[allow(starknet::store_no_default_variant)]
@@ -100,17 +104,17 @@ pub enum Comparator {
     NotEqual,
 }
 
-/// A registered objective definition.
+/// One check within an objective. An objective is a CONJUNCTION of conditions (all
+/// must pass), so a single-metric objective is one condition and a "score + gold +
+/// item" objective is several. Fixed-size (no item list) — the objective's item set
+/// lives separately (see `create_objective`'s `items`).
 ///
-/// - `settings_id`: the game settings the adventurer token must have been minted with.
-///   Validated to exist at `create_objective` time and re-checked against the token at
-///   `completed_objective` time (mismatch => not completed).
-/// - `metric` / `comparator` / `target`: the attribute check.
+/// - `metric` / `comparator` / `target`: the attribute check (`target` is the item id
+///   for the single-item metrics).
 /// - `aux`: auxiliary parameter (currently only the greatness threshold for
 ///   `Metric::ItemGreatness`; must be 0 otherwise for clarity).
 #[derive(Drop, Copy, Serde, PartialEq, starknet::Store)]
-pub struct ObjectiveConfig {
-    pub settings_id: u32,
+pub struct Condition {
     pub metric: Metric,
     pub comparator: Comparator,
     pub target: u64,
@@ -124,14 +128,31 @@ pub struct ObjectiveConfig {
 #[starknet::interface]
 pub trait IAdventurerOracle<TState> {
     /// Register a new objective. Owner-only. Returns the assigned objective id
-    /// (sequential, starting at 1). Reverts if `config.settings_id` does not exist on
-    /// the configured settings source.
+    /// (sequential, starting at 1).
+    ///
+    /// An objective is complete for a token iff the token's `settings_id` matches AND
+    /// every condition in `conditions` passes AND — when `items` is `Some` — the
+    /// adventurer holds ALL of those item ids (equipped or in the bag). `items` is
+    /// `None` (or an empty array) for objectives with no set requirement.
+    ///
+    /// Reverts if `settings_id` does not exist on the settings source, if the objective
+    /// has no requirements at all (no conditions and no items), or if `items` contains a
+    /// zero id.
     fn create_objective(
-        ref self: TState, name: ByteArray, description: ByteArray, config: ObjectiveConfig,
+        ref self: TState,
+        name: ByteArray,
+        description: ByteArray,
+        settings_id: u32,
+        conditions: Array<Condition>,
+        items: Option<Array<u8>>,
     ) -> u32;
 
-    /// The stored configuration for an objective (panics if it does not exist).
-    fn get_objective(self: @TState, objective_id: u32) -> ObjectiveConfig;
+    /// The settings id an objective is scoped to (panics if it does not exist).
+    fn get_objective_settings_id(self: @TState, objective_id: u32) -> u32;
+    /// The conditions registered for an objective (panics if it does not exist).
+    fn get_objective_conditions(self: @TState, objective_id: u32) -> Array<Condition>;
+    /// The required item id set for an objective (empty when there is none).
+    fn get_objective_items(self: @TState, objective_id: u32) -> Array<u8>;
 
     fn owner(self: @TState) -> ContractAddress;
     fn transfer_ownership(ref self: TState, new_owner: ContractAddress);
