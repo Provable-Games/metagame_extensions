@@ -1,0 +1,23 @@
+{
+  "agents": [
+    {
+      "agent_id": "contracts",
+      "agent_name": "Cairo/Starknet Contract Reviewer",
+      "prompt_file": ".github/prompts/cairo-review.md",
+      "diff_paths": ["packages/", "examples/"]
+    },
+    {
+      "agent_id": "client",
+      "agent_name": "React/Frontend Reviewer",
+      "prompt_file": ".github/prompts/client-review.md",
+      "diff_paths": ["client/", "merkle/"]
+    },
+    {
+      "agent_id": "general",
+      "agent_name": "General Engineering Reviewer",
+      "prompt_file": ".github/prompts/general-purpose.md",
+      "diff_paths": ["."],
+      "exclude_paths": ["packages/", "examples/", "client/", "merkle/"]
+    }
+  ]
+}

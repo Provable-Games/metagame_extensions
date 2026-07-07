@@ -1,0 +1,25 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# Matrixed Claude + Codex review delegated to the org-shared reusable
+# workflow so review logic and model config live in one place. This repo
+# supplies only .github/review-agents.json + .github/prompts/*.md.
+jobs:
+  review:
+    uses: Provable-Games/.github/.github/workflows/code-review.yml@v1
+    # Repo default workflow token is read-only; a reusable workflow's job
+    # permissions can't exceed the caller's, so grant the write scopes the
+    # review jobs need here.
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+    secrets: inherit
