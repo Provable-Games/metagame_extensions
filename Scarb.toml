@@ -6,6 +6,7 @@ members = [
     "packages/prize",
     "packages/presets",
     "packages/test_common",
+    "packages/adventurer_oracle",
 ]
 
 [workspace.package]
@@ -24,6 +25,7 @@ metagame_extensions_entry_fee = { path = "packages/entry_fee" }
 metagame_extensions_prize = { path = "packages/prize" }
 metagame_extensions_presets = { path = "packages/presets" }
 metagame_extensions_test_common = { path = "packages/test_common" }
+metagame_extensions_adventurer_oracle = { path = "packages/adventurer_oracle" }
 
 [workspace.tool.fmt]
 sort-module-level-items = true
