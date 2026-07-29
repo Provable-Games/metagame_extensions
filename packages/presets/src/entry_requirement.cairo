@@ -1,3 +1,4 @@
+pub mod adventurer_validator;
 pub mod erc20_balance_validator;
 pub mod governance_validator;
 pub mod merkle_validator;

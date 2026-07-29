@@ -5,6 +5,7 @@ pub mod prize;
 
 #[cfg(test)]
 pub mod tests {
+    pub mod test_adventurer_validator;
     pub mod test_entry_fee_presets;
     pub mod test_entry_validator;
     pub mod test_erc20_balance_validator;
