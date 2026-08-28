@@ -558,7 +558,7 @@ pub mod TournamentValidator {
         /// Reads mirror how Budokan resolves a token itself (game-components v1.1.10):
         ///   - `get_config(id).game_address` — qualifying tournament's game contract
         ///     (0 => tournament unknown/unconfigured).
-        ///   - `context_details(token).id` — token -> registered tournament (PARTICIPANTS).
+        ///   - `is_token_registered(id, token)` — registered here? (PARTICIPANTS).
         ///   - `current_phase(id)` + `get_position(id, token)` — finalized + leaderboard
         ///     placement (TOP_POSITION). Being on the leaderboard is itself proof the
         ///     token submitted a score, so no separate `has_submitted` read is needed.
@@ -592,11 +592,18 @@ pub mod TournamentValidator {
 
             if qualifier_type != QUALIFIER_TYPE_TOP_POSITION {
                 // PARTICIPANTS: the token only needs to be registered in the
-                // qualifying tournament (Budokan's own token -> context lookup).
-                let ctx_id = budokan.context_details(token_id).id;
-                return ctx_id == Option::Some(
-                    qualifying_tournament_id.try_into().expect('tournament id exceeds u32'),
-                );
+                // qualifying tournament.
+                //
+                // Was `context_details(token_id).id == qualifying_tournament_id`
+                // — asking which tournament a bare token id belongs to, and
+                // AUTHORIZING on the answer. Budokan v2 removed that entrypoint
+                // because an id is unique only within the game that minted it,
+                // so the lookup could name the wrong tournament. Griefable:
+                // register a colliding id in a cheap tournament and a rival's
+                // qualification silently fails.
+                //
+                // The direct question is exact and needs no u32 narrowing.
+                return budokan.is_token_registered(qualifying_tournament_id, token_id);
             }
 
             // TOP_POSITION: qualifying tournament must be finalized and the token must
