@@ -1,7 +1,7 @@
 //! Tournament Validator tests
 //!
 //! Focused on the new quota-in-validate_entry behavior. Cross-contract dispatches
-//! (ITournament / IRegistration / IMinigame / IERC721) are mocked via `start_mock_call`
+//! (ITournament / IMinigame / IERC721) are mocked via `start_mock_call`
 //! so we can exercise both the happy path and the quota-exhausted path without
 //! standing up a real tournament contract.
 
