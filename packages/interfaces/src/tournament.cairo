@@ -3,7 +3,7 @@
 //!
 //! Budokan embeds the game-components v1.1.10 component ABIs. The validator
 //! resolves a qualifying game token exactly the way Budokan's OWN code does:
-//!   - token -> tournament (context) via `context_details(token_id).id`
+//!   - is this token registered here, via `is_token_registered(tournament_id, token_id)`
 //!     (public mirror of `registration._get_token_context(token_id)`)
 //!   - token -> leaderboard position via `get_position(context_id, token_id)`
 //!     (public mirror of the leaderboard's `get_token_position`)
@@ -70,7 +70,7 @@ pub struct GameContextDetails {
 ///   - `current_phase`   -> `IBudokan`
 ///   - `get_config`      -> `ILeaderboard`
 ///   - `get_position`    -> `ILeaderboard`
-///   - `context_details` -> `IMetagameContextDetails`
+///   - `is_token_registered` -> `IBudokan`
 #[starknet::interface]
 pub trait IBudokanValidatorReads<TState> {
     /// Tournament lifecycle phase.
@@ -81,7 +81,17 @@ pub trait IBudokanValidatorReads<TState> {
     /// 1-indexed leaderboard position of `token_id` in `context_id`, or
     /// `None` if the token has not placed (i.e. never submitted a score).
     fn get_position(self: @TState, context_id: u64, token_id: felt252) -> Option<u32>;
-    /// Metagame context details for a game token; `id` is `Some(tournament_id)`
-    /// the token is registered in, or `Some(0)`/`None` when unregistered.
-    fn context_details(self: @TState, token_id: felt252) -> GameContextDetails;
+    /// Is `token_id` registered in `tournament_id`?
+    ///
+    /// Replaces `context_details(token_id).id`, which asked "which tournament
+    /// is this token in" from a bare id. Budokan v2 removed that entrypoint
+    /// because the question is unanswerable: a game token id is unique only
+    /// within the contract that minted it, and every tournament brings its own
+    /// game, so several games can each hold the same id.
+    ///
+    /// This matters here specifically because this validator uses the answer
+    /// to AUTHORIZE entry. Against the old lookup that was griefable —
+    /// registering a colliding id in a cheap tournament made a rival's token
+    /// report the wrong context and silently fail qualification.
+    fn is_token_registered(self: @TState, tournament_id: u64, token_id: felt252) -> bool;
 }

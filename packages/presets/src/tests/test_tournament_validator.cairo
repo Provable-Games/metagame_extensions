@@ -52,17 +52,6 @@ fn fake_leaderboard_config() -> LeaderboardStoreConfig {
     }
 }
 
-/// Metagame context details whose `id` is the tournament the token is registered
-/// in. Only `id` is consulted by the validator on the PARTICIPANTS path.
-fn fake_context_details(context_id: u64) -> GameContextDetails {
-    GameContextDetails {
-        name: "Budokan",
-        description: "",
-        id: Option::Some(context_id.try_into().unwrap()),
-        context: array![GameContext { name: 'Tournament ID', value: context_id.into() }].span(),
-    }
-}
-
 fn configure_per_token_participants(
     validator_address: ContractAddress,
     qualifying_tournament_id: u64,
@@ -85,15 +74,15 @@ fn configure_per_token_participants(
 }
 
 /// Mock all cross-contract reads on the happy PARTICIPANTS path.
-/// `qualifying_token_id` is retained for call-site symmetry but the mocked
-/// `context_details` returns the same value regardless of the token argument.
+///
+/// `is_token_registered` is mocked to `true` regardless of arguments —
+/// start_mock_call cannot vary by argument, so the negative case is covered by
+/// mocking it `false` explicitly rather than by passing a different token.
+/// `qualifying_tournament_id` and `qualifying_token_id` are retained for
+/// call-site symmetry.
 fn mock_happy_participants_path(qualifying_tournament_id: u64, qualifying_token_id: u64) {
     start_mock_call(tournament_address(), selector!("get_config"), fake_leaderboard_config());
-    start_mock_call(
-        tournament_address(),
-        selector!("context_details"),
-        fake_context_details(qualifying_tournament_id),
-    );
+    start_mock_call(tournament_address(), selector!("is_token_registered"), true);
     start_mock_call(game_address(), selector!("token_address"), game_token_address());
     start_mock_call(game_token_address(), selector!("owner_of"), player1());
 }
