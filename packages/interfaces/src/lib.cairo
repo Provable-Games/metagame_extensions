@@ -5,5 +5,4 @@ pub mod entry_requirement_extension;
 pub mod extension;
 pub mod prize;
 pub mod prize_extension;
-pub mod registration;
 pub mod tournament;
