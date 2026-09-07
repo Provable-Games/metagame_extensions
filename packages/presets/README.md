@@ -8,6 +8,8 @@ Pre-built entry validator contracts for tournament platforms like [Budokan](http
 |-----------|-------------|
 | `erc20_balance_validator` | Entries based on ERC-20 token balance |
 | `governance_validator` | Entries based on voting power / participation |
+| `kyc_badge_validator` | Entries based on a soulbound KYC membership badge (reads `is_member`; the on-chain consumer of the off-chain zkpassport→badge flow) |
+| `kyc_registry_validator` | Entries based on a passport-proven zk-KYC registration (reads the zk-kyc-demo registry; admits registered + over-18) |
 | `merkle_validator` | Entries based on Merkle tree allowlists |
 | `opus_troves_validator` | Entries based on Opus Protocol debt positions |
 | `tournament_validator` | Entries based on prior tournament qualification |
